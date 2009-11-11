@@ -10,8 +10,9 @@ use Poisson;
 use AlnParser;
 use Statistics::Descriptive;
 use Math::CDF;
+use IO::File;
 
-my $version="BreakDancerMax-0.0.1r61";
+my $version="BreakDancerMax-0.0.1r70";
 my %opts = (i=>200, c=>3, m=>1000000, l=>35, q=>35, s=>7, r=>2, b=>100, p=>0.001);
 my %opts1;
 getopts('o:s:c:m:q:r:b:ep:tfd:g:', \%opts1);
@@ -218,59 +219,36 @@ my $reg_idx=0;
 my $normal_switch=0;
 my $nnormal_reads=0;
 
-my @FHs;
-my %Idxs;
-for(my $i=0;$i<=$#maps;$i++){
-  my $fh;
-  my $exe=$exes{$maps[$i]};
-  if($exe){
-    open($fh,"$exe $maps[$i] |") || die "unable to open $maps[$i]\n";
+#
+# open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
+# samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
+#
+
+my $merge_fh;
+if($#maps>0){
+  my $merge_command_line;
+  if($format[0] eq 'sam'){
+    $merge_command_line = sprintf("samtools merge - %s | samtools view - %s ", join(" ", @maps), $opts{o} || '');
   }
-  else{
-    open($fh,"<$maps[$i]") || die "unable to open $maps[$i]\n";
+  elsif($format[0] eq 'maq'){
+    $merge_command_line = sprintf("maq merge - %s | maq mapview - ", join(" ", @maps));
   }
-  push @FHs,$fh;
-  $Idxs{$i}=1;
+  else{}
+  $merge_fh = IO::File->new($merge_command_line . "|");
+}
+else{
+  my $command_line="$exes{$maps[0]} $maps[0]";
+  $merge_fh = IO::File->new($command_line . "|");;
 }
 
-my @buffer;
-my @cIdxs=keys %Idxs;
-while(keys %Idxs){
-  for(my $i=0;$i<=$#cIdxs;$i++){
-    my $idx=$cIdxs[$i];
-    my $fh=$FHs[$idx];
-    if(eof($fh)){
-      delete($Idxs{$idx});
-      next;
-    }
-    my $t;
-    do{
-      $_=<$fh>;
-      chomp;
-      $buffer[$idx]=$_;
-      $t=$AP->in($_,$format[$i]);
-    } until(!defined $opts{o} || $t->{chr} eq $opts{o} || eof($fh));  #analyze only 1 chromosome
-  }
-
-  my ($minchr,$minpos)=(chr(255),1e10);
-  my $minidx;
-  my $min_t;
-  my $library;
-  foreach my $i(keys %Idxs){
-    my $t=$AP->in($buffer[$i],$format[$i]);
-    next if($t->{chr} gt $minchr || $t->{chr} eq $minchr && $t->{pos} > $minpos);
-    $minchr=$t->{chr};
-    $minpos=$t->{pos};
-    $minidx=$i;
-    $min_t=$t;
-    $library=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[$i]};
-  }
-
-  if(defined $minidx){
-    &Analysis($library, $min_t) if(defined $library);
-    @cIdxs=($minidx);
-  }
+while(<$merge_fh>){
+  my $t = $AP->in($_, 'sam');
+  my $library= $readgroup_library{$t->{readgroup}};
+  next unless(!defined $opts{o} || $t->{chr} eq $opts{o});  #analyze only 1 chromosome
+  &Analysis($library, $t) if(defined $library);
 }
+$merge_fh->close();
+
 $final_buff=1;
 &buildConnection();
 
