@@ -12,10 +12,10 @@ use Statistics::Descriptive;
 use Math::CDF;
 use IO::File;
 
-my $version="BreakDancerMax-0.0.1r71";
-my %opts = (i=>200, c=>3, m=>1000000, l=>35, q=>35, s=>7, r=>2, b=>100, p=>0.001);
+my $version="BreakDancerMax-0.0.1r73";
+my %opts = (i=>200, c=>3, m=>1000000, q=>35, s=>7, r=>2, b=>100, p=>0.001);
 my %opts1;
-getopts('o:s:c:m:q:r:b:ep:tfd:g:', \%opts1);
+getopts('o:s:c:m:q:r:b:ep:tfd:g:l', \%opts1);
 die("
 Usage:   BreakDancerMax.pl <analysis_config.lst>
 Options:
@@ -24,6 +24,7 @@ Options:
          -t 	   only detect transchromosomal rearrangement
          -p FLOAT  prior probability of SV [$opts{p}]
          -e        learn parameters from data before applying to SV detection
+         -l        analyze Illumina long insert (mate-pair) library
          -f        use Fisher's method to combine P values from multiple library
          -d STRING prefix of fastq files that SV supporting reads will be saved by library
          -g FILE   dump SVs and supporting reads in BED format for GBrowse
@@ -41,14 +42,26 @@ foreach my $opt(keys %opts1){
   $opts{$opt}=$opts1{$opt};
 }
 
-my %SVtype=(
-	    '1'=>'INV',  #inversion
-	    '2'=>'DEL',  #deletion
-	    '3'=>'INS',  #insertion
-	    '4'=>'ITX',  #intra-chromosomal translocation
-	    '8'=>'INV',  #inversion
-	    '32'=>'CTX'  #inter-chromosomal translocation
-	   );
+my %SVtype;
+if($opts{l}){  #Illumina long insert
+  %SVtype=(
+	   '1'=>'INV',  #inversion
+	   '3'=>'INS',  #insertion
+	   '4'=>'DEL',  #intra-chromosomal translocation
+	   '8'=>'INV',  #inversion
+	   '32'=>'CTX'  #inter-chromosomal translocation
+	  );
+}
+else{
+  %SVtype=(
+	   '1'=>'INV',  #inversion
+	   '2'=>'DEL',  #deletion
+	   '3'=>'INS',  #insertion
+	   '4'=>'ITX',  #intra-chromosomal translocation
+	   '8'=>'INV',  #inversion
+	   '32'=>'CTX'  #inter-chromosomal translocation
+	  );
+}
 
 my $AP=new AlnParser();
 my $LZERO=-99;
@@ -173,11 +186,18 @@ for(my $i=0;$i<=$#maps;$i++){
     next if($t->{flag}==0); #return fragment reads
     next if($opts{t} && ($t->{flag}<32 || $t->{flag}>=64));  #only care flag >32 for CTX
 
-    $t->{flag}=2 if(abs($t->{dist})>$uppercutoff{$lib} && $t->{flag}==18);
-    $t->{flag}=18 if(abs($t->{dist})<$uppercutoff{$lib} && $t->{flag}==2);
-    $t->{flag}=3 if(abs($t->{dist})<$lowercutoff{$lib} && $t->{flag}==18);
+    if($opts{l}){
+      $t->{flag}=4 if(abs($t->{dist})>$uppercutoff{$lib} && $t->{flag}==20);
+      $t->{flag}=20 if(abs($t->{dist})<$uppercutoff{$lib} && $t->{flag}==4);
+      $t->{flag}=3 if(abs($t->{dist})<$lowercutoff{$lib} && $t->{flag}==20);
+    }
+    else{
+      $t->{flag}=2 if(abs($t->{dist})>$uppercutoff{$lib} && $t->{flag}==18);
+      $t->{flag}=18 if(abs($t->{dist})<$uppercutoff{$lib} && $t->{flag}==2);
+      $t->{flag}=3 if(abs($t->{dist})<$lowercutoff{$lib} && $t->{flag}==18);
+    }
 
-    next if ($t->{flag} == 18 || $t->{flag}==130);
+    next if ($t->{flag} == 18 || $t->{flag}==20 || $t->{flag}==130);
     $x_readcounts{$t->{flag}}{$lib}++;
   }
   close($fh);
@@ -219,14 +239,19 @@ my $reg_idx=0;
 my $normal_switch=0;
 my $nnormal_reads=0;
 
-if(defined $opts{o} && $format[0] eq 'sam'){  #take advantage of samtools random access for chomosomal-based detection
+if(defined $opts{o} && $format[0] eq 'sam' || $format[0] eq 'maq'){  #take advantage of samtools random access for chomosomal-based detection
   my @FHs;
   my %Idxs;
   for(my $i=0;$i<=$#maps;$i++){
     my $fh;
     my $exe=$exes{$maps[$i]};
-    $exe=join(" ", $exe, $maps[$i], $opts{o});
-    open($fh,"$exe |") || die "unable to open $maps[$i]\n";
+    if(defined $exe){
+      $exe=join(" ", $exe, $maps[$i], $opts{o}||'');
+      open($fh,"$exe |") || die "unable to open $maps[$i]\n";
+    }
+    else{
+      open($fh,"<$maps[$i]") || die "unable to open $maps[$i]\n";
+    }
     push @FHs,$fh;
     $Idxs{$i}=1;
   }
@@ -247,7 +272,7 @@ if(defined $opts{o} && $format[0] eq 'sam'){  #take advantage of samtools random
 	chomp;
 	$buffer[$idx]=$_;
 	$t=$AP->in($_,$format[$i]);
-      } until($t->{chr} eq $opts{o} || eof($fh));  #analyze only 1 chromosome
+      } until(defined $opts{o} && $t->{chr} eq $opts{o} || !defined $opts{o} || eof($fh));  #analyze only 1 chromosome
     }
 
     my ($minchr,$minpos)=(chr(255),1e10);
@@ -263,7 +288,6 @@ if(defined $opts{o} && $format[0] eq 'sam'){  #take advantage of samtools random
       $min_t=$t;
       $library=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[$i]};
     }
-
     if(defined $minidx){
       &Analysis($library, $min_t) if(defined $library);
       @cIdxs=($minidx);
@@ -288,13 +312,14 @@ else{
   }
   else{
     my $command_line="$exes{$maps[0]} $maps[0]";
-    $merge_fh = IO::File->new($command_line . "|");;
+    $merge_fh = IO::File->new($command_line . "|");
   }
 
   while(<$merge_fh>){
-    my $t = $AP->in($_, 'sam');
-    my $library=$readgroup_library{$t->{readgroup}};
+    my $t = $AP->in($_, $format[0]);
+    my $library=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[0]};  #use statistics from the first library
     next unless(!defined $opts{o} || $t->{chr} eq $opts{o});  #analyze only 1 chromosome
+
     &Analysis($library, $t) if(defined $library);
   }
   $merge_fh->close();
@@ -325,15 +350,22 @@ sub Analysis{
   return if($t->{flag}==0); #return fragment reads
   return if($opts{t} && ($t->{flag}<32  || $t->{flag}>=64));  #only care flag 32 for CTX
 
-  $t->{flag}=2 if(abs($t->{dist})>$uppercutoff{$lib} && $t->{flag}==18);
-  $t->{flag}=18 if(abs($t->{dist})<$uppercutoff{$lib} && $t->{flag}==2);
-  $t->{flag}=3 if(abs($t->{dist})<$lowercutoff{$lib} && $t->{flag}==18);
-  $t->{flag}=4 if($t->{dist}==20); #if it is RF orientation, then regardless of distance
+  if($opts{l}){  #for long insert
+    $t->{flag}=4 if(abs($t->{dist})>$uppercutoff{$lib} && $t->{flag}==20);
+    $t->{flag}=20 if(abs($t->{dist})<$uppercutoff{$lib} && $t->{flag}==4);
+    $t->{flag}=3 if(abs($t->{dist})<$lowercutoff{$lib} && $t->{flag}==20);
+  }
+  else{
+    $t->{flag}=2 if(abs($t->{dist})>$uppercutoff{$lib} && $t->{flag}==18);
+    $t->{flag}=18 if(abs($t->{dist})<$uppercutoff{$lib} && $t->{flag}==2);
+    $t->{flag}=3 if(abs($t->{dist})<$lowercutoff{$lib} && $t->{flag}==18);
+    $t->{flag}=4 if($t->{flag}==20); #if it is RF orientation, then regardless of distance
+  }
   $t->{flag}=1 if($t->{flag}==8);  #both flag 8 and 1 indicate inversion
 
   return if ($t->{flag}<32 && abs($t->{dist})>$opts{m});  #skip read pairs mapped too distantly on the same chromosome
 
-  if ($t->{flag} == 18 || $t->{flag} == 130){
+  if ($t->{flag} == 18 || $t->{flag} == 20 || $t->{flag} == 130){
     $nnormal_reads++ if($normal_switch && $t->{dist}>0);
     return;
   }
@@ -625,10 +657,9 @@ sub EstimatePriorParameters{
       $readlen_stat{$lib}=Statistics::Descriptive::Sparse->new() if(!defined $readlen_stat{$lib});
       $readlen_stat{$lib}->add_data($t->{readlen});
       next if ($t->{qual}<=$opts{q});  #skip low quality mapped reads
-      next if($t->{flag}!=18 || $t->{dist}<=0);
+      next if($t->{flag}!=18 && $t->{flag}!=20 || $t->{dist}<=0);
       $insert_stat{$lib}=Statistics::Descriptive::Sparse->new() if(!defined $insert_stat{$lib});
       $insert_stat{$lib}->add_data($t->{dist});
-
     }
     close($fh);
   }

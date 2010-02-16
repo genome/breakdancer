@@ -9,6 +9,7 @@ Options:
          -t        only detect transchromosomal rearrangement
          -p FLOAT  prior probability of SV [0.001]
          -e        learn parameters from data before applying to SV detection
+         -l        analyze Illumina long insert (mate-pair) library
          -f        use Fisher's method to combine P values from multiple library
          -d STRING prefix of fastq files that SV supporting reads will be saved by library
          -g FILE   dump SVs and supporting reads in BED format for GBrowse
@@ -18,7 +19,7 @@ Options:
          -b INT    buffer size for building connection [100]
          -r INT    minimum number of read pairs required to establish a connection
 
-Version: BreakDancer-0.0.1
+Version: BreakDancerMax-0.0.1r73
 
 Most of these options are self-explanatory.  It is convenient to use the -o option to parallelize SV detection for each chromosome.  When -o is used, the detection of inter-chromosomal translocation is disabled.  In that case, it may be convenient to use -t in a separate process to detect putative inter-chromosomal translocations without bothering to analyze read pairs that are mapped to the same chromosome.
 
@@ -54,6 +55,10 @@ The upper and the lower key:value pairs, when explicitly specified, take precede
 The -c option by default equals to 3. Therefore, the upper and the lower separation threshold would be: mean + 3 std and mean - 3 std respectively. It is useful to explicitly specify the upper and the lower separation thresholds when the insert size distribution is not symmetric to the mean. 
 
 When -e is on, BreakDancerMax tries to estimate the mean and the standard deviation insert size from the data instead of relying on user's spec in the configuration file. Current implementation of this estimation process is slow. So it is recommended that users can specify the accurate thresholds in the configuration file.
+
+The -l option tell BreakDancerMax that the data is produced from Illumina long insert circularized library
+
+The -f option uses the Fisher's methods to summarize scores from multiple libraries.  It is recommended when there are many libraries. It ensures that the scores are independent of the number of libraries (uniform distribution of the P values)
 
 The -q specifies the MAQ mapping quality threshold and can be used to skip reads that are not confidently mapped. 
 

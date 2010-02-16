@@ -33,7 +33,7 @@ sub in{
     $t->{flag}=0;  #fragment reads
     ($t->{readgroup})=($line=~/(RG\S+)/);
     $t->{readgroup}=~s/.*\://g if(defined $t->{readgroup});
-    $t->{readgroup}='NA' if(!defined $t->{readgroup});
+    #$t->{readgroup}='NA' if(!defined $t->{readgroup});
     if(! defined $alt){  #default to alternative mapping quality
       if($line=~/Aq\:i\:(\d+)/){  #if there is an alternative mapping quality flag
 	$t->{qual}=$1;
@@ -60,7 +60,23 @@ sub in{
 	  $t->{flag}=32;
 	}
 	elsif($flag & 0x0002 || $flag=~/P/){  #read properly mapped
-	  $t->{flag}=18;
+	  if($flag & 0x0040){  #first read
+	    if($flag & 0x0020){  #mate reversed
+	      $t->{flag}=18;
+	    }
+	    else{  #mate forward
+	      $t->{flag}=20;
+	    }
+	  }
+	  else{  #second read
+	    if($flag & 0x0010){  #itself reversed
+	      $t->{flag}=18;
+	    }
+	    else{
+	      $t->{flag}=20;
+	    }
+	  }
+
 	}
 	else{
 	  if($t->{ori} eq $ori2){   #RP mapped to the same unexpected orientation

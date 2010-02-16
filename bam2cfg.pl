@@ -69,9 +69,6 @@ foreach my $fbam(@ARGV){
     else{
       next if(/^\@/);
       my @libas=keys %libs;
-      if(!defined $expected_max){
-	$expected_max=3*($#libas+1)*$opts{n};
-      }
       my @selected_libs=keys %insert_stat;
       if($#libas<0){ 
 	if($#selected_libs>=0){
@@ -81,6 +78,9 @@ foreach my $fbam(@ARGV){
 	  $libs{'NA'}=1;
 	  $RGlib{'NA'}='NA';
 	}
+      }
+      if(!defined $expected_max || $expected_max<=0){
+	$expected_max=3*($#libas+1)*$opts{n};
       }
       last if($recordcounter>$expected_max);
 
@@ -100,7 +100,7 @@ foreach my $fbam(@ARGV){
 	delete $libs{$lib};
 	delete $insert_stat{$lib};
       }
-      next unless(($t->{flag}==18) && $t->{dist}>=0);
+      next unless(($t->{flag}==18 || $t->{flag}==20) && $t->{dist}>=0);
       $insert_stat{$lib}=Statistics::Descriptive::Full->new() if(!defined $insert_stat{$lib});
       $insert_stat{$lib}->add_data($t->{dist});
       if($insert_stat{$lib}->count()>$opts{n}){
