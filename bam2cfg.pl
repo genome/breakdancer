@@ -6,17 +6,18 @@ use warnings;
 use Getopt::Std;
 use Statistics::Descriptive;
 use GD::Graph::histogram;
-use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
+use lib '/gscuser/kchen/1000genomes/analysis/scripts/release-0.0.1r81';
 use AlnParser;
 
 my %opts = (q=>35, n=>10000, v=>1, c=>4, s=>50);
-getopts('q:n:c:p:hmf:ga', \%opts);
+getopts('q:n:c:p:hmf:gC', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
          -q INT    Minimum mapping quality [$opts{q}]
          -m        Using mapping quality instead of alternative mapping quality
          -s        Minimal mean insert size [$opts{s}]
+         -C        Change default system from Illumina to SOLiD
          -c FLOAT  Cutoff in unit of standard deviation [$opts{c}]
          -n INT    Number of observation required to estimate mean and s.d. insert size [$opts{n}]
          -v FLOAT  Cutoff on coefficients of variation [$opts{v}]
@@ -26,7 +27,7 @@ Options:
 \n
 ") unless (@ARGV);
 
-my $AP=new AlnParser(platform=>$opts{a});
+my $AP=new AlnParser(platform=>$opts{C});
 
 my %cRGlib; my %clibs;
 if($opts{f}){
@@ -80,7 +81,7 @@ foreach my $fbam(@ARGV){
 	else{
 	  $libs{'NA'}=1;
 	  $RGlib{'NA'}='NA';
-	  $RGplatform{'NA'}='illumina';
+	  $RGplatform{'NA'}=($opts{C})?'solid':'illumina';
 	}
       }
       if(!defined $expected_max || $expected_max<=0){
@@ -97,8 +98,11 @@ foreach my $fbam(@ARGV){
       next if ($t->{qual}<=$opts{q});  #skip low quality mapped reads
       $recordcounter++;
       $libpos{$lib}++;
-      $flagHgram{$t->{readgroup}}{$t->{flag}}++;
-      $flagHgram{$t->{readgroup}}{all}++;
+      if(defined $t->{readgroup}){
+	$flagHgram{$t->{readgroup}}{$t->{flag}}++;
+	$flagHgram{$t->{readgroup}}{all}++;
+      }
+
       my $nreads=(defined $insert_stat{$lib})?$insert_stat{$lib}->count():1;
       if($nreads/$libpos{$lib}<1e-4){  #single-end lane
 	delete $libs{$lib};
@@ -174,7 +178,7 @@ foreach my $fbam(@ARGV){
 
     printf "readgroup\:%s\tplatform:%s\tmap\:%s\treadlen\:%.2f\tlib\:%s\tnum:%d",$rg,$platform,$fbam,$readlen,$lib,$num;
     printf "\tlower\:%.2f\tupper\:%.2f",$lower,$upper if(defined $upper && defined $lower);
-    printf "\tmean\:%.2f\tstd\:%.2f\texe:/gsc/bin/samtools view",$mean,$std;
+    printf "\tmean\:%.2f\tstd\:%.2f",$mean,$std;
 
     if($opts{g}){
       printf "\tflag:";
@@ -184,7 +188,7 @@ foreach my $fbam(@ARGV){
       }
       printf "%d",$flagHgram{$rg}{all};
     }
-    print "\n";
+    printf "\texe:samtools view\n";
   }
 
   if($opts{h}){  # plot insert size histogram for each library

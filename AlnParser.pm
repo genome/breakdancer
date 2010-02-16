@@ -86,12 +86,25 @@ sub in{
 	    if($t->{ori} ne $ori2){   #RP mapped to the same unexpected orientation
 	      $t->{flag}=($ori2 eq '+')?1:8;
 	    }
-	    elsif($mpos>$t->{pos} && $t->{ori} eq '+' || $t->{pos}>$mpos && $t->{ori} eq '+'){  #larger coordinate read is not on the negative strand
-	      $t->{flag}=2;
+	    elsif($t->{ori} eq '+'){
+	      if($flag & 0x0040){  #read 1
+		$t->{flag}=($t->{pos}<$mpos)?2:4;
+	      }
+	      else{  #read 2
+		$t->{flag}=($t->{pos}>$mpos)?2:4;
+	      }
 	    }
 	    else{
-	      $t->{flag}=4;
+	      if($flag & 0x0040){  #read 1
+		$t->{flag}=($t->{pos}>$mpos)?2:4;
+	      }
+	      else{  #read 2
+		$t->{flag}=($t->{pos}<$mpos)?2:4;
+	      }
 	    }
+#	    else{
+#	      $t->{flag}=2;
+#	    }
 	  }
 	  else{
 	    if($t->{ori} eq $ori2){   #RP mapped to the same unexpected orientation

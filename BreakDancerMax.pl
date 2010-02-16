@@ -5,17 +5,18 @@
 use strict;
 use warnings;
 use Getopt::Std;
-use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
+use lib '/gscuser/kchen/1000genomes/analysis/scripts/release-0.0.1r81';
 use Poisson;
 use AlnParser;
 use Statistics::Descriptive;
 use Math::CDF;
 use IO::File;
 
-my $version="BreakDancerMax-0.0.1r76";
+my $version="BreakDancerMax-0.0.1r81";
 my %opts = (i=>200, c=>3, m=>1000000, q=>35, s=>7, r=>2, b=>100, p=>0.001);
 my %opts1;
-getopts('o:s:c:m:q:r:b:ep:tfd:g:la', \%opts1);
+getopts('o:s:c:m:q:r:b:ep:tfd:g:lC', \%opts1);
+#         -C        change system default from Illumina to SOLiD
 die("
 Usage:   BreakDancerMax.pl <analysis_config.lst>
 Options:
@@ -63,7 +64,7 @@ else{
 	  );
 }
 
-my $AP=new AlnParser(platform=>$opts{a});
+my $AP=new AlnParser(platform=>$opts{C});
 my $LZERO=-99;
 my $ZERO=exp($LZERO);
 my %exes;
@@ -104,7 +105,7 @@ while(<CONFIG>){
   $readgroup_library{$readgroup}=$lib;
 
   my ($platform)=($_=~/platform\:(\S+)\b/i);
-  $readgroup_platform{$readgroup}=$platform || 'illumina';  #default to illumina
+  $readgroup_platform{$readgroup}=$platform || (($opts{C})?'solid':'illumina');  #default to illumina
 
   my ($exe)=($_=~/exe\w*\:(.+)\b/i);
   if(defined $opts{d}){
@@ -141,14 +142,23 @@ close(CONFIG);
 $d=50 if($d<50);
 
 open(BED,">$opts{g}") if (defined $opts{g});
-
-&EstimatePriorParameters() if($opts{e});
-
 my @maps=keys %fmaps;
 my @format;
+for(my $i=0;$i<=$#maps;$i++){
+  my $exe=$exes{$maps[$i]};
+  if($exe=~/maq/){
+    push @format,'maq';
+  }
+  else{
+    push @format,'sam';
+  }
+}
+&EstimatePriorParameters() if($opts{e});
+
 my $reference_len=1;
 my %nreads;
 my %cmds;
+my $defined_all_readgroups=1;
 for(my $i=0;$i<=$#maps;$i++){
   my $fh;
   my $ref_len;
@@ -158,17 +168,13 @@ for(my $i=0;$i<=$#maps;$i++){
   if($exe=~/samtools/){
     $exe=join(" ", $exe, $maps[$i], $opts{o} || '');
     open($fh,"$exe |") || die "unable to open $maps[$i]\n";
-    push @format,'sam';
   }
   elsif($exe=~/maq/){
     open($fh,"$exe $maps[$i] |") || die "unable to open $maps[$i]\n";
-    push @format,'maq';
   }
   else{
     open($fh,"$exe $maps[$i] |") || die "unable to open $maps[$i]\n";
-    push @format,'sam';
   }
-
 
   my $p_pos=0;
   my $p_chr='';
@@ -179,7 +185,14 @@ for(my $i=0;$i<=$#maps;$i++){
     $ref_len+=$t->{pos}-$p_pos if($t->{chr} eq $p_chr);
     $p_pos=$t->{pos};
     $p_chr=$t->{chr};
-    my $lib=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[$i]};  #when multiple libraries are in a BAM file
+    my $lib;
+    if(defined $t->{readgroup}){
+      $lib=$readgroup_library{$t->{readgroup}};
+    }
+    else{
+      $defined_all_readgroups=0;
+      $lib=$fmaps{$maps[$i]};  #when multiple libraries are in a BAM file
+    }
     next unless(defined $lib);
 
     $nreads{$lib}++;
@@ -210,10 +223,11 @@ for(my $i=0;$i<=$#maps;$i++){
   die "Unable to decode $maps[$i]. Please check that you have the correct paths and the bam files are indexed." if(!defined $ref_len);
   $reference_len=$ref_len if($reference_len<$ref_len);
 }
-my $merge=((keys %cmds)>1)?0:1;
+my $merge=((keys %cmds)==1 && $defined_all_readgroups)?1:0;
 
 my $total_phy_cov=0;
 my $total_seq_cov=0;
+my @recflags=sort{$a<=>$b} keys %x_readcounts;
 foreach my $lib(keys %nreads){
   my $sequence_coverage=$nreads{$lib}*$readlens{$lib}/$reference_len;
   $total_seq_cov+=$sequence_coverage;
@@ -226,7 +240,8 @@ foreach my $lib(keys %nreads){
   $d=($d<$tmp)?$d:$tmp;
 
   printf STDOUT "#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", $libmaps{$lib},$mean_insertsize{$lib},$std_insertsize{$lib},$uppercutoff{$lib},$lowercutoff{$lib},$readlens{$lib},$lib,$reference_len, $sequence_coverage,$physical_coverage;
-  foreach my $t(sort keys %SVtype){
+  #foreach my $t(sort keys %SVtype){
+  foreach my $t(@recflags){
     printf STDOUT "\t%s\:%d",$t,$x_readcounts{$t}{$lib} || 0;
   }
   print STDOUT "\n";
@@ -247,31 +262,19 @@ my $reg_idx=0;
 my $normal_switch=0;
 my $nnormal_reads=0;
 
-if($merge && (@maps>1) &&
-   (($format[0] eq 'sam' && !defined $opts{o}) ||
-    ($format[0] eq 'maq'))
-   ){
+if($merge && (@maps>1) && $format[0] eq 'sam' && !defined $opts{o}){
   # open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
   # samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
   # maq mapmerge
 
-  my $merge_command_line;
-  if($format[0] eq 'sam'){
-    $merge_command_line = sprintf("samtools merge - %s | samtools view - ", join(" ", @maps));
-  }
-  elsif($format[0] eq 'maq'){
-    $merge_command_line = sprintf("maq merge - %s | maq mapview - ", join(" ", @maps));
-  }
-  else{}
+  my $merge_command_line=sprintf("samtools merge - %s | samtools view - ", join(" ", @maps));
   my $merge_fh = IO::File->new($merge_command_line . "|");
-
 
   while(<$merge_fh>){
     my $t = $AP->in($_, $format[0],\%readgroup_platform);
     next unless(defined $t);
     my $library=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[0]};  #use statistics from the first library
     next unless(!defined $opts{o} || $t->{chr} eq $opts{o});  #analyze only 1 chromosome
-
     &Analysis($library, $t) if(defined $library);
   }
   $merge_fh->close();
@@ -602,7 +605,9 @@ sub buildConnection{
 		  $t[1]=~s/chr//;
 		  my $aln_end=$t[2]+$t[7]-1;
 		  my $color=($t[3] eq '+')?'255,0,0':'0,0,255';
-		  printf BED "chr%s\t%d\t%d\t%s\t1\t%s\t%d\t%d\t%s\n",$t[1],$t[2],$aln_end,$t[0],$t[3],$t[2],$aln_end,$color;
+		  #printf BED "chr%s\t%d\t%d\t%s\t1\t%s\t%d\t%d\t%s\n",$t[1],$t[2],$aln_end,$t[0],$t[3],$t[2],$aln_end,$color;
+		  printf BED "chr%s\t%d\t%d\t%s\t1\t%s\t%d\t%d\t%d\t%s\n",$t[1],$t[2],$aln_end,$t[0],$t[3],$t[4],$t[2],$aln_end,$color;
+#join(" ", $t->{readname},$t->{chr},$t->{pos},$t->{ori},$t->{dist},$t->{flag},$t->{qual},$t->{readlen},$lib);
 		}
 	      }
 	    }
@@ -679,7 +684,7 @@ sub EstimatePriorParameters{
     my $lowercutoff=$mean-$std*$opts{c};
     $es_readlens{$lib}=$readlen_stat{$lib}->mean();
     $es_means{$lib}=$mean;
-    $es_stds{lib}=$std;
+    $es_stds{$lib}=$std;
     $es_uppercutoff{$lib}=$uppercutoff;
     $es_lowercutoff{$lib}=$lowercutoff;
 
