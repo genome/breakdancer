@@ -12,7 +12,7 @@ use Statistics::Descriptive;
 use Math::CDF;
 use IO::File;
 
-my $version="BreakDancerMax-0.0.1r70";
+my $version="BreakDancerMax-0.0.1r71";
 my %opts = (i=>200, c=>3, m=>1000000, l=>35, q=>35, s=>7, r=>2, b=>100, p=>0.001);
 my %opts1;
 getopts('o:s:c:m:q:r:b:ep:tfd:g:', \%opts1);
@@ -83,7 +83,7 @@ while(<CONFIG>){
   my ($mqual)=($_=~/map\w*qual\w*\:(\d+)\b/i);
   my ($lib)=($_=~/lib\w*\:(\S+)\b/i);
   ($lib)=($_=~/samp\w*\:(\S+)\b/i) if(!defined $lib);
-  die "Please include a library name for each row in the configure file.\n" if(!defined $lib);
+  $lib='NA' if(!defined $lib);
   my ($exe)=($_=~/exe\w*\:(.+)\b/i);
   my ($readgroup)=($_=~/group\:(\S+)\b/i);
   $readgroup=$lib if(!defined $readgroup);
@@ -219,35 +219,86 @@ my $reg_idx=0;
 my $normal_switch=0;
 my $nnormal_reads=0;
 
-#
-# open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
-# samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
-#
+if(defined $opts{o} && $format[0] eq 'sam'){  #take advantage of samtools random access for chomosomal-based detection
+  my @FHs;
+  my %Idxs;
+  for(my $i=0;$i<=$#maps;$i++){
+    my $fh;
+    my $exe=$exes{$maps[$i]};
+    $exe=join(" ", $exe, $maps[$i], $opts{o});
+    open($fh,"$exe |") || die "unable to open $maps[$i]\n";
+    push @FHs,$fh;
+    $Idxs{$i}=1;
+  }
 
-my $merge_fh;
-if($#maps>0){
-  my $merge_command_line;
-  if($format[0] eq 'sam'){
-    $merge_command_line = sprintf("samtools merge - %s | samtools view - %s ", join(" ", @maps), $opts{o} || '');
+  my @buffer;
+  my @cIdxs=keys %Idxs;
+  while(keys %Idxs){
+    for(my $i=0;$i<=$#cIdxs;$i++){
+      my $idx=$cIdxs[$i];
+      my $fh=$FHs[$idx];
+      if(eof($fh)){
+	delete($Idxs{$idx});
+	next;
+      }
+      my $t;
+      do{
+	$_=<$fh>;
+	chomp;
+	$buffer[$idx]=$_;
+	$t=$AP->in($_,$format[$i]);
+      } until($t->{chr} eq $opts{o} || eof($fh));  #analyze only 1 chromosome
+    }
+
+    my ($minchr,$minpos)=(chr(255),1e10);
+    my $minidx;
+    my $min_t;
+    my $library;
+    foreach my $i(keys %Idxs){
+      my $t=$AP->in($buffer[$i],$format[$i]);
+      next if($t->{chr} gt $minchr || $t->{chr} eq $minchr && $t->{pos} > $minpos);
+      $minchr=$t->{chr};
+      $minpos=$t->{pos};
+      $minidx=$i;
+      $min_t=$t;
+      $library=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[$i]};
+    }
+
+    if(defined $minidx){
+      &Analysis($library, $min_t) if(defined $library);
+      @cIdxs=($minidx);
+    }
   }
-  elsif($format[0] eq 'maq'){
-    $merge_command_line = sprintf("maq merge - %s | maq mapview - ", join(" ", @maps));
-  }
-  else{}
-  $merge_fh = IO::File->new($merge_command_line . "|");
 }
 else{
-  my $command_line="$exes{$maps[0]} $maps[0]";
-  $merge_fh = IO::File->new($command_line . "|");;
-}
+  # open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
+  # samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
 
-while(<$merge_fh>){
-  my $t = $AP->in($_, 'sam');
-  my $library= $readgroup_library{$t->{readgroup}};
-  next unless(!defined $opts{o} || $t->{chr} eq $opts{o});  #analyze only 1 chromosome
-  &Analysis($library, $t) if(defined $library);
+  my $merge_fh;
+  if($#maps>0){
+    my $merge_command_line;
+    if($format[0] eq 'sam'){
+      $merge_command_line = sprintf("samtools merge - %s | samtools view - ", join(" ", @maps));
+    }
+    elsif($format[0] eq 'maq'){
+      $merge_command_line = sprintf("maq merge - %s | maq mapview - ", join(" ", @maps));
+    }
+    else{}
+    $merge_fh = IO::File->new($merge_command_line . "|");
+  }
+  else{
+    my $command_line="$exes{$maps[0]} $maps[0]";
+    $merge_fh = IO::File->new($command_line . "|");;
+  }
+
+  while(<$merge_fh>){
+    my $t = $AP->in($_, 'sam');
+    my $library=$readgroup_library{$t->{readgroup}};
+    next unless(!defined $opts{o} || $t->{chr} eq $opts{o});  #analyze only 1 chromosome
+    &Analysis($library, $t) if(defined $library);
+  }
+  $merge_fh->close();
 }
-$merge_fh->close();
 
 $final_buff=1;
 &buildConnection();

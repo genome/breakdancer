@@ -6,22 +6,23 @@ use warnings;
 use Getopt::Std;
 use Statistics::Descriptive;
 use GD::Graph::histogram;
-use lib '.';
+use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
 use AlnParser;
 
 my %opts = (q=>35, n=>10000, v=>1, c=>4, s=>50);
-getopts('q:n:c:p:hmf:', \%opts);
+getopts('q:n:c:p:hmf:g', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
-         -q INT    minimum mapping quality [$opts{q}]
+         -q INT    Minimum mapping quality [$opts{q}]
          -m        Using mapping quality instead of alternative mapping quality
-         -s        minimal mean insert size [$opts{s}]
-         -c FLOAT  cutoff in unit of standard deviation [$opts{c}]
-         -n INT    number of observation required to estimate mean and s.d. insert size [$opts{n}]
-         -v FLOAT  cutoff on coefficients of variation [$opts{v}]
-         -f STRING a two column tab-delimited text file (RG, LIB) specify the RG=>LIB mapping, useful when BAM header is incomplete
-         -h        Output histogram image for each BAM library
+         -s        Minimal mean insert size [$opts{s}]
+         -c FLOAT  Cutoff in unit of standard deviation [$opts{c}]
+         -n INT    Number of observation required to estimate mean and s.d. insert size [$opts{n}]
+         -v FLOAT  Cutoff on coefficients of variation [$opts{v}]
+         -f STRING A two column tab-delimited text file (RG, LIB) specify the RG=>LIB mapping, useful when BAM header is incomplete
+         -g        Output mapping flag distribution
+         -h        Plot insert size histogram for each BAM library
 \n
 ") unless (@ARGV);
 
@@ -44,6 +45,7 @@ foreach my $fbam(@ARGV){
   my %insert_stat;
   my %readlen_stat;
   my %libpos;
+  my %flagHgram;
   my $recordcounter=0;
   my $expected_max;
   if(defined $opts{f}){
@@ -91,6 +93,8 @@ foreach my $fbam(@ARGV){
       next if ($t->{qual}<=$opts{q});  #skip low quality mapped reads
       $recordcounter++;
       $libpos{$lib}++;
+      $flagHgram{$lib}{$t->{flag}}++;
+      $flagHgram{$lib}{all}++;
       my $nreads=(defined $insert_stat{$lib})?$insert_stat{$lib}->count():1;
       if($nreads/$libpos{$lib}<1e-4){  #single-end lane
 	delete $libs{$lib};
@@ -165,10 +169,20 @@ foreach my $fbam(@ARGV){
 
     printf "readgroup\:%s\tmap\:%s\treadlen\:%.2f\tlib\:%s\tnum:%d",$rg,$fbam,$readlen,$lib,$num;
     printf "\tlower\:%.2f\tupper\:%.2f",$lower,$upper if(defined $upper && defined $lower);
-    printf "\tmean\:%.2f\tstd\:%.2f\texe:samtools view\n",$mean,$std;
+    printf "\tmean\:%.2f\tstd\:%.2f\texe:/gsc/bin/samtools view",$mean,$std;
+
+    if($opts{g}){
+      printf "\tflag:";
+      foreach my $f(sort keys %{$flagHgram{$lib}}){
+	next if($f eq 'all');
+	printf "%d(%.2f%%)",$f,($flagHgram{$lib}{$f} || 0)*100/$flagHgram{$lib}{all};
+      }
+      printf "%d",$flagHgram{$lib}{all};
+    }
+    print "\n";
   }
 
-  if($opts{h}){  #plot insert size histogram for each library
+  if($opts{h}){  # plot insert size histogram for each library
     foreach my $lib(keys %insert_stat){
       my $graph = new GD::Graph::histogram(1000,600);
       my $library="$fbam.$lib";
