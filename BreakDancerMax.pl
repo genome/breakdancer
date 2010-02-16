@@ -12,10 +12,10 @@ use Statistics::Descriptive;
 use Math::CDF;
 use IO::File;
 
-my $version="BreakDancerMax-0.0.1r73";
+my $version="BreakDancerMax-0.0.1r76";
 my %opts = (i=>200, c=>3, m=>1000000, q=>35, s=>7, r=>2, b=>100, p=>0.001);
 my %opts1;
-getopts('o:s:c:m:q:r:b:ep:tfd:g:l', \%opts1);
+getopts('o:s:c:m:q:r:b:ep:tfd:g:la', \%opts1);
 die("
 Usage:   BreakDancerMax.pl <analysis_config.lst>
 Options:
@@ -63,7 +63,7 @@ else{
 	  );
 }
 
-my $AP=new AlnParser();
+my $AP=new AlnParser(platform=>$opts{a});
 my $LZERO=-99;
 my $ZERO=exp($LZERO);
 my %exes;
@@ -78,6 +78,7 @@ my %mapQual;
 my $max_readlen=0;
 my %x_readcounts;   #reads spanning longer than expect distance
 my %readgroup_library;
+my %readgroup_platform;
 my %ReadsOut;
 my $d=1e10;
 open(CONFIG,"<$ARGV[0]") || die "unable to open $ARGV[0]\n";
@@ -97,11 +98,15 @@ while(<CONFIG>){
   my ($lib)=($_=~/lib\w*\:(\S+)\b/i);
   ($lib)=($_=~/samp\w*\:(\S+)\b/i) if(!defined $lib);
   $lib='NA' if(!defined $lib);
-  my ($exe)=($_=~/exe\w*\:(.+)\b/i);
+
   my ($readgroup)=($_=~/group\:(\S+)\b/i);
   $readgroup=$lib if(!defined $readgroup);
-
   $readgroup_library{$readgroup}=$lib;
+
+  my ($platform)=($_=~/platform\:(\S+)\b/i);
+  $readgroup_platform{$readgroup}=$platform || 'illumina';  #default to illumina
+
+  my ($exe)=($_=~/exe\w*\:(.+)\b/i);
   if(defined $opts{d}){
     open($ReadsOut{$lib.'1'},">$opts{d}.$lib.1.fastq") || die "unable to open $lib.1.fastq, check write permission\n";
     open($ReadsOut{$lib.'2'},">$opts{d}.$lib.2.fastq") || die "unable to open $lib.2.fastq, check write permission\n";
@@ -124,7 +129,7 @@ while(<CONFIG>){
   $readlens{$lib}=$readlen;
 
   if(!defined $exes{$fmap}){
-    $exes{$fmap}=$exe;
+    $exes{$fmap}=$exe || 'cat';
   }
   else{
     die "Please use identical exe commands to open the same map file.\n" if($exes{$fmap} ne $exe);
@@ -143,33 +148,34 @@ my @maps=keys %fmaps;
 my @format;
 my $reference_len=1;
 my %nreads;
+my %cmds;
 for(my $i=0;$i<=$#maps;$i++){
   my $fh;
   my $ref_len;
   my $exe=$exes{$maps[$i]};
+  $cmds{$exe}++;
 
-  if($exe){
-    if($exe=~/samtools/){
-      $exe=join(" ", $exe, $maps[$i], $opts{o} || '');
-      open($fh,"$exe |") || die "unable to open $maps[$i]\n";
-      push @format,'sam';
-    }
-    else{
-      open($fh,"$exe $maps[$i] |") || die "unable to open $maps[$i]\n";
-      push @format,'maq';
-    }
+  if($exe=~/samtools/){
+    $exe=join(" ", $exe, $maps[$i], $opts{o} || '');
+    open($fh,"$exe |") || die "unable to open $maps[$i]\n";
+    push @format,'sam';
   }
-  else{
-    open($fh,"<$maps[$i]") || die "unable to open $maps[$i]\n";
+  elsif($exe=~/maq/){
+    open($fh,"$exe $maps[$i] |") || die "unable to open $maps[$i]\n";
     push @format,'maq';
   }
+  else{
+    open($fh,"$exe $maps[$i] |") || die "unable to open $maps[$i]\n";
+    push @format,'sam';
+  }
+
 
   my $p_pos=0;
   my $p_chr='';
   while(<$fh>){
     chomp;
-    my $t=$AP->in($_,$format[$i]);
-    next if(defined $opts{o} && $t->{chr} ne $opts{o});  #analyze only one chromosome
+    my $t=$AP->in($_,$format[$i],\%readgroup_platform);
+    next if(!defined $t || defined $opts{o} && $t->{chr} ne $opts{o});  #analyze only one chromosome
     $ref_len+=$t->{pos}-$p_pos if($t->{chr} eq $p_chr);
     $p_pos=$t->{pos};
     $p_chr=$t->{chr};
@@ -201,8 +207,10 @@ for(my $i=0;$i<=$#maps;$i++){
     $x_readcounts{$t->{flag}}{$lib}++;
   }
   close($fh);
+  die "Unable to decode $maps[$i]. Please check that you have the correct paths and the bam files are indexed." if(!defined $ref_len);
   $reference_len=$ref_len if($reference_len<$ref_len);
 }
+my $merge=((keys %cmds)>1)?0:1;
 
 my $total_phy_cov=0;
 my $total_seq_cov=0;
@@ -239,18 +247,48 @@ my $reg_idx=0;
 my $normal_switch=0;
 my $nnormal_reads=0;
 
-if(defined $opts{o} && $format[0] eq 'sam' || $format[0] eq 'maq'){  #take advantage of samtools random access for chomosomal-based detection
+if($merge && (@maps>1) &&
+   (($format[0] eq 'sam' && !defined $opts{o}) ||
+    ($format[0] eq 'maq'))
+   ){
+  # open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
+  # samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
+  # maq mapmerge
+
+  my $merge_command_line;
+  if($format[0] eq 'sam'){
+    $merge_command_line = sprintf("samtools merge - %s | samtools view - ", join(" ", @maps));
+  }
+  elsif($format[0] eq 'maq'){
+    $merge_command_line = sprintf("maq merge - %s | maq mapview - ", join(" ", @maps));
+  }
+  else{}
+  my $merge_fh = IO::File->new($merge_command_line . "|");
+
+
+  while(<$merge_fh>){
+    my $t = $AP->in($_, $format[0],\%readgroup_platform);
+    next unless(defined $t);
+    my $library=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[0]};  #use statistics from the first library
+    next unless(!defined $opts{o} || $t->{chr} eq $opts{o});  #analyze only 1 chromosome
+
+    &Analysis($library, $t) if(defined $library);
+  }
+  $merge_fh->close();
+}
+else{  #customized merge & sort
   my @FHs;
   my %Idxs;
   for(my $i=0;$i<=$#maps;$i++){
     my $fh;
     my $exe=$exes{$maps[$i]};
-    if(defined $exe){
-      $exe=join(" ", $exe, $maps[$i], $opts{o}||'');
+
+    if($exe=~/samtools/){
+      $exe=join(" ", $exe, $maps[$i], $opts{o} || '');
       open($fh,"$exe |") || die "unable to open $maps[$i]\n";
     }
     else{
-      open($fh,"<$maps[$i]") || die "unable to open $maps[$i]\n";
+      open($fh,"$exe $maps[$i] |") || die "unable to open $maps[$i]\n";
     }
     push @FHs,$fh;
     $Idxs{$i}=1;
@@ -271,8 +309,8 @@ if(defined $opts{o} && $format[0] eq 'sam' || $format[0] eq 'maq'){  #take advan
 	$_=<$fh>;
 	chomp;
 	$buffer[$idx]=$_;
-	$t=$AP->in($_,$format[$i]);
-      } until(defined $opts{o} && $t->{chr} eq $opts{o} || !defined $opts{o} || eof($fh));  #analyze only 1 chromosome
+	$t=$AP->in($_,$format[$i],\%readgroup_platform);
+      } until(defined $t && (defined $opts{o} && $t->{chr} eq $opts{o} || !defined $opts{o} || eof($fh)));  #analyze only 1 chromosome
     }
 
     my ($minchr,$minpos)=(chr(255),1e10);
@@ -280,8 +318,8 @@ if(defined $opts{o} && $format[0] eq 'sam' || $format[0] eq 'maq'){  #take advan
     my $min_t;
     my $library;
     foreach my $i(keys %Idxs){
-      my $t=$AP->in($buffer[$i],$format[$i]);
-      next if($t->{chr} gt $minchr || $t->{chr} eq $minchr && $t->{pos} > $minpos);
+      my $t=$AP->in($buffer[$i],$format[$i],\%readgroup_platform);
+      next if(!defined $t || $t->{chr} gt $minchr || $t->{chr} eq $minchr && $t->{pos} > $minpos);
       $minchr=$t->{chr};
       $minpos=$t->{pos};
       $minidx=$i;
@@ -293,36 +331,6 @@ if(defined $opts{o} && $format[0] eq 'sam' || $format[0] eq 'maq'){  #take advan
       @cIdxs=($minidx);
     }
   }
-}
-else{
-  # open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
-  # samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
-
-  my $merge_fh;
-  if($#maps>0){
-    my $merge_command_line;
-    if($format[0] eq 'sam'){
-      $merge_command_line = sprintf("samtools merge - %s | samtools view - ", join(" ", @maps));
-    }
-    elsif($format[0] eq 'maq'){
-      $merge_command_line = sprintf("maq merge - %s | maq mapview - ", join(" ", @maps));
-    }
-    else{}
-    $merge_fh = IO::File->new($merge_command_line . "|");
-  }
-  else{
-    my $command_line="$exes{$maps[0]} $maps[0]";
-    $merge_fh = IO::File->new($command_line . "|");
-  }
-
-  while(<$merge_fh>){
-    my $t = $AP->in($_, $format[0]);
-    my $library=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[0]};  #use statistics from the first library
-    next unless(!defined $opts{o} || $t->{chr} eq $opts{o});  #analyze only 1 chromosome
-
-    &Analysis($library, $t) if(defined $library);
-  }
-  $merge_fh->close();
 }
 
 $final_buff=1;
@@ -650,7 +658,8 @@ sub EstimatePriorParameters{
 
     while(<$fh>){
       chomp;
-      my $t=$AP->in($_,$format[$i]);
+      my $t=$AP->in($_,$format[$i],\%readgroup_platform);
+      next unless(defined $t);
       my $lib=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[$i]};  #when multiple libraries are in a BAM file
       next unless(defined $lib);
       next if(defined $opts{o} && $t->{chr} ne $opts{o});  #analysis 1 chromosome

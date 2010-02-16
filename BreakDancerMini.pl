@@ -1,7 +1,7 @@
 #!/gsc/bin/perl
 # This is the BreakDancer script that focuses on small indel detection
 # Indels as short as 1 std and as long as (maximum insert size - mean insert size) can be detected
-#   Copyright (C) 2009 Washington University in St. Louis
+# Copyright (C) 2009 Washington University in St. Louis
 
 use strict;
 use warnings;
@@ -11,18 +11,19 @@ use Math::CDF;
 use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
 use AlnParser;
 
-my $version="BreakDancerMini-0.0.1r56";
+my $version="BreakDancerMini-0.0.1r57";
 my %opts = (i=>200, m=>100000, q=>9, s=>20, r=>2, b=>100, p=>0.001, v=>0, e=>0, a=>0.0001);
 my %opts1;
-getopts('o:s:p:m:q:r:b:v:e:tfl:', \%opts1);
+getopts('o:s:p:m:q:r:b:v:e:tfl:g:', \%opts1);
 die("
 Usage:   BreakDancerMini.pl <analysis_config.lst>
 Options:
          -o STRING Operate on a single chromosome [all chromosome]
          -p INT    Cutoff in the Kolmogorov-Smirnov(KS) P value [$opts{p}]
          -a STRING A priori probability of in an SV [$opts{a}]
-         -l STRING use only the specified library
-         -f        use Fisher's method to combine P values from multiple library
+         -l STRING Use only the specified library
+         -g STRING Output Lib Q values in position-sorted regions in the file [chr start stop]
+         -f        Use Fisher's method to combine P values from multiple library
          -m INT    Maximum SV size [$opts{m}]
          -q INT    Minimum alternative mapping quality [$opts{q}]
          -w INT    SV flanking window size [mean + std insert size - mean read length]
@@ -45,6 +46,7 @@ my %SVtype=(
 	    '3'=>'INS',  #insertion
 	   );
 
+my $RG=&ReadRegions($opts{g}) if(defined $opts{g});
 my $AP=new AlnParser();
 my %exes;
 my %format;
@@ -241,14 +243,13 @@ while(keys %Idxs){
       delete($Idxs{$idx});
       next;
     }
-
     do{
       $_=<$fh>;
       chomp;
       $t=$AP->in($_,$format[$i]);
       $buffer[$idx]=$t;
       $lib=($t->{readgroup})?$readgroup_library{$t->{readgroup}}:$fmaps{$maps[$i]};
-    } until(((!defined $opts{o} || $t->{chr} eq $opts{o}) && (!defined $opts{l} || !defined $lib || $opts{l} eq $lib)) || eof($fh));  #analyze only 1 chromosome
+    } until(((!defined $opts{o} || $t->{chr} eq $opts{o}) && (!defined $opts{l} || !defined $lib || $opts{l} eq $lib)) || eof($fh));  #analyze specific regions
   }
 
   my ($minchr,$minpos)=(chr(255),1e10);
@@ -286,7 +287,9 @@ sub Segmentation{
 
       my $logpvalue=0;
       my $ntotalreads=0;
-      my @blibs=keys %{$libpmf{$ori}};
+      my @blibs=sort keys %{$libpmf{$ori}};
+      my @lps;
+
       foreach my $blib(@blibs){
 	my $Prob=0;
 	if($nreads_lib{$ori}{$blib}>5){  #require at least 5 reads
@@ -302,16 +305,54 @@ sub Segmentation{
 	  $Prob=&KS_TestB($maxFnDiff,$nreads_lib{$ori}{$blib});
 	}
 	$ntotalreads+=$nreads_lib{$ori}{$blib};
-	$logpvalue+=(1-$Prob<$ZERO)?$LZERO:log(1-$Prob);
+	my $lp=(1-$Prob<$ZERO)?$LZERO:log(1-$Prob);
+	$logpvalue+=$lp;
+	push @lps,$lp;
+      }
+
+      if($opts{g} && defined $$RG{$t->{chr}}){
+	my @gpos=@{$$RG{$t->{chr}}};
+	if(@gpos>0){
+	  my ($rs,$re,$indelsize)=split " ",$gpos[0];
+	  if($bufferend>=$rs-500){
+	    if($bufferend<=$re+500){
+	      #print "$bufferend:$ori:$rs\-$re:$indelsize";
+	      my $offset;
+	      if($bufferend<=$rs){
+		$offset=$bufferend-$rs;
+	      }
+	      elsif($bufferend<$re){
+		$offset=0;
+	      }
+	      else{
+		$offset=$bufferend-$re;
+	      }
+	      printf "%d\-%d\:%d%s\t%d",$rs,$re,$indelsize,$ori,$offset;
+	      for(my $tmpid=0;$tmpid<=$#lps;$tmpid++){
+		my $lp=$lps[$tmpid];
+		my $blib=$blibs[$tmpid];
+		my $qvalue=-10*($lp/log(10));
+		$qvalue=($qvalue>99)?99:int($qvalue+0.5);
+		print "\t$blib\=$qvalue";
+	      }
+	      print "\n";
+	    }
+	    else{
+	      shift @gpos;
+	      $$RG{$t->{chr}}=\@gpos;
+	    }
+	  }
+	}
       }
 
       if($opts{f}){
 	#Fisher's Method
-	my $fisherP=1-Math::CDF::pchisq(-2*$logpvalue,2*($#blibs+1));
+	my $fprob=Math::CDF::pchisq(-2*$logpvalue,2*($#blibs+1));
+	my $fisherP=(defined $fprob)?(1-$fprob):1.0;
 	$logpvalue=($fisherP>$ZERO)?log($fisherP):$LZERO;
-
       }
-      print "$bufferend\ttumor:$logpvalue\n" if($opts{v}>2);
+      print "$bufferend:$logpvalue\n" if($opts{v}>2);
+
       my $Qvalue=-10*($logpvalue/log(10));
       $Qvalue=($Qvalue>99)?99:int($Qvalue+0.5);
 
@@ -405,7 +446,6 @@ sub Segmentation{
       $reg_seq{$blib}=\@tmp_reg_seq;
     }
   }
-
 
   #Add reads
   $nreads_lib{$t->{ori}}{$lib}++;
@@ -698,4 +738,17 @@ sub FishersMethod{
     $pvalue=1-Math::CDF::pchisq($s,2*$k);
   }
   return $pvalue;
+}
+
+sub ReadRegions{
+  my ($f)=@_;
+  my %Rgs;
+  open(FIN,"<$f") || die "unable to open $f\n";
+  while(<FIN>){
+    chomp;
+    my ($chr,@c)=split;
+    push @{$Rgs{$chr}},join(" ",@c);
+  }
+  close(FIN);
+  return \%Rgs;
 }

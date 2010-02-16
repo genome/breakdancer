@@ -54,6 +54,8 @@ The upper and the lower key:value pairs, when explicitly specified, take precede
 
 The -c option by default equals to 3. Therefore, the upper and the lower separation threshold would be: mean + 3 std and mean - 3 std respectively. It is useful to explicitly specify the upper and the lower separation thresholds when the insert size distribution is not symmetric to the mean. 
 
+The -o option enables per-chromosome/reference analysis and is much faster when the input files are in the bam format.  Please index the bam file using "samtools index" to utilize this option. You need to specify the exact reference names as they are in the bam files.
+
 When -e is on, BreakDancerMax tries to estimate the mean and the standard deviation insert size from the data instead of relying on user's spec in the configuration file. Current implementation of this estimation process is slow. So it is recommended that users can specify the accurate thresholds in the configuration file.
 
 The -l option tell BreakDancerMax that the data is produced from Illumina long insert circularized library

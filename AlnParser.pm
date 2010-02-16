@@ -9,16 +9,19 @@ package AlnParser;
 sub new{
   my ($class, %arg) = @_;
   my $self={
+	    'platform'=>($arg{platform})?'solid':'illumina'
 	   };
   bless($self, $class || ref($class));
   return $self;
 }
 
 sub in{
-  my ($self,$line,$format,$alt)=@_;
+  my ($self,$line,$format,$RGplatform,$alt)=@_;
   my $t;
+  my $platform=$self->{platform};  #default
   if($format eq 'maq'){
     my @s=split /\t+/,$line;
+    return $t if(@s<15);
     ($t->{readname},$t->{chr},$t->{pos},$t->{ori},$t->{dist},$t->{flag},$t->{qual},$t->{readlen},$t->{seq},$t->{basequal})=@s[0..5,8,13,14,15];
     if(defined $alt){
       $t->{qual}=$s[6];
@@ -27,13 +30,16 @@ sub in{
   elsif($format eq 'sam'){
     my @s=split /\t+/,$line;
     my ($flag,$mchr,$mpos);
+    return $t if(@s<10);
     ($t->{readname},$flag,$t->{chr},$t->{pos},$t->{qual},$mchr,$mpos,$t->{dist},$t->{seq},$t->{basequal})=@s[0..4,6..10];
     $t->{readlen}=length($t->{seq});
     $t->{ori}=($flag&0x0010 || $flag=~/r/)?'-':'+';  #reverse orientation?
     $t->{flag}=0;  #fragment reads
-    ($t->{readgroup})=($line=~/(RG\S+)/);
-    $t->{readgroup}=~s/.*\://g if(defined $t->{readgroup});
-    #$t->{readgroup}='NA' if(!defined $t->{readgroup});
+    if($line=~/RG\:Z\:(\S+)/){
+      ($t->{readgroup})=$1;
+      $platform=($$RGplatform{$t->{readgroup}})?$$RGplatform{$t->{readgroup}}:'illumina';
+    }
+
     if(! defined $alt){  #default to alternative mapping quality
       if($line=~/Aq\:i\:(\d+)/){  #if there is an alternative mapping quality flag
 	$t->{qual}=$1;
@@ -48,7 +54,10 @@ sub in{
       $t->{flag}=$1;
     }
     else{
-      if($flag & 0x0001 || $flag=~/p/){  #paired reads
+      if($flag & 0x0400 || $flag=~/d/){  #duplicates
+	$t->{flag}=0;  #treat duplicates as fragments, ignored
+      }
+      elsif($flag & 0x0001 || $flag=~/p/){  #paired reads
 	my $ori2=($flag & 0x0020 || $flag=~/R/)?'-':'+';
 	if($flag & 0x0004 || $flag=~/u/){  #read itself unmapped
 	  $t->{flag}=192;
@@ -60,33 +69,40 @@ sub in{
 	  $t->{flag}=32;
 	}
 	elsif($flag & 0x0002 || $flag=~/P/){  #read properly mapped
-	  if($flag & 0x0040){  #first read
-	    if($flag & 0x0020){  #mate reversed
-	      $t->{flag}=18;
-	    }
-	    else{  #mate forward
-	      $t->{flag}=20;
-	    }
-	  }
-	  else{  #second read
-	    if($flag & 0x0010){  #itself reversed
-	      $t->{flag}=18;
-	    }
-	    else{
-	      $t->{flag}=20;
-	    }
-	  }
-
-	}
-	else{
-	  if($t->{ori} eq $ori2){   #RP mapped to the same unexpected orientation
-	    $t->{flag}=($ori2 eq '+')?1:8;
-	  }
-	  elsif($mpos>$t->{pos} && $t->{ori} eq '-' || $t->{pos}>$mpos && $t->{ori} eq '+'){  #larger coordinate read is not on the negative strand
-	    $t->{flag}=4;
+	  if($platform=~/solid/i){
+	    $t->{flag}=18;
 	  }
 	  else{
-	    $t->{flag}=2;
+	    if($t->{pos}<$mpos){
+	      $t->{flag}=($t->{ori} eq '+')?18:20;
+	    }
+	    else{
+	      $t->{flag}=($t->{ori} eq '+')?20:18;
+	    }
+	  }
+	}
+	else{
+	  if($platform =~/solid/i){
+	    if($t->{ori} ne $ori2){   #RP mapped to the same unexpected orientation
+	      $t->{flag}=($ori2 eq '+')?1:8;
+	    }
+	    elsif($mpos>$t->{pos} && $t->{ori} eq '+' || $t->{pos}>$mpos && $t->{ori} eq '+'){  #larger coordinate read is not on the negative strand
+	      $t->{flag}=2;
+	    }
+	    else{
+	      $t->{flag}=4;
+	    }
+	  }
+	  else{
+	    if($t->{ori} eq $ori2){   #RP mapped to the same unexpected orientation
+	      $t->{flag}=($ori2 eq '+')?1:8;
+	    }
+	    elsif($mpos>$t->{pos} && $t->{ori} eq '-' || $t->{pos}>$mpos && $t->{ori} eq '+'){  #larger coordinate read is not on the negative strand  #RF
+	      $t->{flag}=4;
+	    }
+	    else{
+	      $t->{flag}=2;
+	    }
 	  }
 	}
       }

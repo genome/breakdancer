@@ -10,7 +10,7 @@ use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
 use AlnParser;
 
 my %opts = (q=>35, n=>10000, v=>1, c=>4, s=>50);
-getopts('q:n:c:p:hmf:g', \%opts);
+getopts('q:n:c:p:hmf:ga', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
@@ -26,7 +26,7 @@ Options:
 \n
 ") unless (@ARGV);
 
-my $AP=new AlnParser();
+my $AP=new AlnParser(platform=>$opts{a});
 
 my %cRGlib; my %clibs;
 if($opts{f}){
@@ -41,6 +41,7 @@ if($opts{f}){
 
 foreach my $fbam(@ARGV){
   my %RGlib;
+  my %RGplatform;
   my %libs;
   my %insert_stat;
   my %readlen_stat;
@@ -58,12 +59,14 @@ foreach my $fbam(@ARGV){
     if(/^\@RG/){  #getting RG=>LIB mapping from the bam header
       my ($id)=($_=~/ID\:(\S+)/);
       my ($lib)=($_=~/LB\:(\S+)/);
+      my ($platform)=($_=~/PL\:(\S+)/);
       my ($sample)=($_=~/SM\:(\S+)/);
       my ($insertsize)=($_=~/PI\:(\d+)/);
       #if(defined $insertsize && $insertsize>0){
 	#$lib=$sample . '_'. $lib;
 	$libs{$lib}=1;
 	$RGlib{$id}=$lib;
+        $RGplatform{$id}=$platform;
       #}
     }
     else{
@@ -77,6 +80,7 @@ foreach my $fbam(@ARGV){
 	else{
 	  $libs{'NA'}=1;
 	  $RGlib{'NA'}='NA';
+	  $RGplatform{'NA'}='illumina';
 	}
       }
       if(!defined $expected_max || $expected_max<=0){
@@ -84,7 +88,7 @@ foreach my $fbam(@ARGV){
       }
       last if($recordcounter>$expected_max);
 
-      my $t=$AP->in($_,'sam',$opts{m});
+      my $t=$AP->in($_,'sam',\%RGplatform,$opts{m});
 
       my $lib=($t->{readgroup})?$RGlib{$t->{readgroup}}:'NA';  #when multiple libraries are in a BAM file
       next unless(defined $lib && $libs{$lib});
@@ -93,8 +97,8 @@ foreach my $fbam(@ARGV){
       next if ($t->{qual}<=$opts{q});  #skip low quality mapped reads
       $recordcounter++;
       $libpos{$lib}++;
-      $flagHgram{$lib}{$t->{flag}}++;
-      $flagHgram{$lib}{all}++;
+      $flagHgram{$t->{readgroup}}{$t->{flag}}++;
+      $flagHgram{$t->{readgroup}}{all}++;
       my $nreads=(defined $insert_stat{$lib})?$insert_stat{$lib}->count():1;
       if($nreads/$libpos{$lib}<1e-4){  #single-end lane
 	delete $libs{$lib};
@@ -157,6 +161,7 @@ foreach my $fbam(@ARGV){
 
   foreach my $rg(keys %RGlib){
     my $lib=$RGlib{$rg};
+    my $platform=$RGplatform{$rg} || 'illumina';  #default illumina
     next unless($insert_stat{$lib});
     my $readlen=$readlen_stat{$lib}->mean();
     my $mean=$insert_stat{$lib}->mean();
@@ -167,17 +172,17 @@ foreach my $fbam(@ARGV){
     my $lower=$mean-$opts{c}*$stdms{$lib} if(defined $opts{c});
     $lower=0 if(defined $lower && $lower<0);
 
-    printf "readgroup\:%s\tmap\:%s\treadlen\:%.2f\tlib\:%s\tnum:%d",$rg,$fbam,$readlen,$lib,$num;
+    printf "readgroup\:%s\tplatform:%s\tmap\:%s\treadlen\:%.2f\tlib\:%s\tnum:%d",$rg,$platform,$fbam,$readlen,$lib,$num;
     printf "\tlower\:%.2f\tupper\:%.2f",$lower,$upper if(defined $upper && defined $lower);
     printf "\tmean\:%.2f\tstd\:%.2f\texe:/gsc/bin/samtools view",$mean,$std;
 
     if($opts{g}){
       printf "\tflag:";
-      foreach my $f(sort keys %{$flagHgram{$lib}}){
+      foreach my $f(sort keys %{$flagHgram{$rg}}){
 	next if($f eq 'all');
-	printf "%d(%.2f%%)",$f,($flagHgram{$lib}{$f} || 0)*100/$flagHgram{$lib}{all};
+	printf "%d(%.2f%%)",$f,($flagHgram{$rg}{$f} || 0)*100/$flagHgram{$rg}{all};
       }
-      printf "%d",$flagHgram{$lib}{all};
+      printf "%d",$flagHgram{$rg}{all};
     }
     print "\n";
   }
