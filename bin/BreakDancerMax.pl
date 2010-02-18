@@ -5,7 +5,11 @@
 use strict;
 use warnings;
 use Getopt::Std;
-use lib '/gscuser/kchen/1000genomes/analysis/scripts/release-0.0.1r81';
+
+# load Breakdancer Specific libraries from the distribution dir
+use FindBin qw($Bin);
+use lib "$FindBin::Bin/../lib";
+
 use Poisson;
 use AlnParser;
 use Statistics::Descriptive;

@@ -6,7 +6,11 @@ use warnings;
 use Getopt::Std;
 use Statistics::Descriptive;
 use GD::Graph::histogram;
-use lib '/gscuser/kchen/1000genomes/analysis/scripts/release-0.0.1r81';
+
+# load Breakdancer Specific libraries from the distribution dir
+use FindBin qw($Bin);
+use lib "$FindBin::Bin/../lib";
+
 use AlnParser;
 
 my %opts = (q=>35, n=>10000, v=>1, c=>4, s=>50);

@@ -8,7 +8,11 @@ use warnings;
 use Getopt::Std;
 use Statistics::Descriptive;
 use Math::CDF;
-use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
+
+# load Breakdancer Specific libraries from the distribution dir
+use FindBin qw($Bin);
+use lib "$FindBin::Bin/../lib";
+
 use AlnParser;
 
 my $version="BreakDancerMini-0.0.1r57";
