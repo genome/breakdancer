@@ -13,8 +13,8 @@ use lib "$FindBin::Bin/../lib";
 
 use AlnParser;
 
-my %opts = (q=>35, n=>10000, v=>1, c=>4, s=>50);
-getopts('q:n:c:p:hmf:gC', \%opts);
+my %opts = (q=>35, n=>10000, v=>1, c=>4, b=>50, s=>50);
+getopts('q:n:c:b:p:hmf:gC', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
@@ -26,8 +26,9 @@ Options:
          -n INT    Number of observation required to estimate mean and s.d. insert size [$opts{n}]
          -v FLOAT  Cutoff on coefficients of variation [$opts{v}]
          -f STRING A two column tab-delimited text file (RG, LIB) specify the RG=>LIB mapping, useful when BAM header is incomplete
+	 -b INT	   Number of bins in the histogram [$opts{b}] 
          -g        Output mapping flag distribution
-         -h        Plot insert size histogram for each BAM library
+         -h        Plot insert size histogram for each BAM library		 
 \n
 ") unless (@ARGV);
 
@@ -200,7 +201,7 @@ foreach my $fbam(@ARGV){
       my $graph = new GD::Graph::histogram(1000,600);
       my $library="$fbam.$lib";
       $graph->set(
-		  x_label         => 'X Label',
+		  x_label         => 'Insert Size (bp)',
 		  y_label         => 'Count',
 		  title           => $library,
 		  x_labels_vertical => 1,
@@ -208,7 +209,7 @@ foreach my $fbam(@ARGV){
 		  shadow_depth    => 1,
 		  shadowclr       => 'dred',
 		  transparent     => 0,
-		  histogram_bins   => $insert_stat{$lib}->max(),
+		  histogram_bins   => $opts{b},
 		 ) or warn $graph->error;
       my @data=$insert_stat{$lib}->get_data();
       my $gd = $graph->plot(\@data) or die $graph->error;
@@ -224,7 +225,7 @@ foreach my $fbam(@ARGV){
       foreach my $x(@data){
 	print OUT "$x\n";
       }
-      close(OUT);
+      close(OUT);      
     }
   }
 }
