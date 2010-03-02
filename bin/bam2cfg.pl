@@ -14,7 +14,7 @@ use lib "$FindBin::Bin/../lib";
 use AlnParser;
 
 my %opts = (q=>35, n=>10000, v=>1, c=>4, b=>50, s=>50);
-getopts('q:n:c:b:p:hmf:tgC', \%opts);
+getopts('q:n:c:b:p:hmf:gC', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
@@ -27,7 +27,6 @@ Options:
          -v FLOAT  Cutoff on coefficients of variation [$opts{v}]
          -f STRING A two column tab-delimited text file (RG, LIB) specify the RG=>LIB mapping, useful when BAM header is incomplete
 	 -b INT	   Number of bins in the histogram [$opts{b}] 
-         -t        To display the normality test result		 
          -g        Output mapping flag distribution
          -h        Plot insert size histogram for each BAM library
 \n
@@ -186,7 +185,7 @@ foreach my $fbam(@ARGV){
     printf "\tlower\:%.2f\tupper\:%.2f",$lower,$upper if(defined $upper && defined $lower);
     printf "\tmean\:%.2f\tstd\:%.2f",$mean,$std;
 
-    if($opts{t}){
+
     # compute the normality
     my @data=$insert_stat{$lib}->get_data();
     my $n_data = @data;
@@ -212,7 +211,7 @@ foreach my $fbam(@ARGV){
     elsif($p_value == 0) { 
       printf "\tSWnormality\:minus infinity";
     }
-    }
+
 
 
     if($opts{g}){
