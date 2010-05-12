@@ -1,7 +1,26 @@
 #ifndef ALNPARSER_H
 #define ALNPARSER_H
+#endif
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <stdio.h>
+#include <cstdlib>
+#include <list>
+#include <iomanip>
+#include <cmath>
+#include <math.h>
+#include <time.h>
 #include "sam.h"
 #include "bam.h"
+#include "BreakDancerMax.h"
+#include <map>
+
+using namespace std;
+
+char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<char *, string> &readgroup_platform);
 
 /*struct t_buf {
 	string readname;
@@ -22,7 +41,7 @@ struct readgroup_platform_buf {
 	string platform;	
 };*/
 
-typedef struct {
+/*typedef struct {
 	bam1_core_t core;
 	int l_aux, data_len, m_data;
 	uint8_t *data;
@@ -34,4 +53,4 @@ typedef struct {
 //	int pos; -> bam2_t.core.pos
 } bam2_t;
 
-#define bam_init2() ((bam2_t*)calloc(1, sizeof(bam2_t)))
+#define bam_init2() ((bam2_t*)calloc(1, sizeof(bam2_t)))*/
