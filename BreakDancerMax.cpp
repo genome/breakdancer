@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-//#include <string>
+#include <string>
 #include <vector>
 #include <stdio.h>
 #include <cstdlib>
@@ -9,7 +9,6 @@
 #include <cmath>
 #include <math.h>
 #include <time.h>
-#include <cstring>
 #include <map>
 #include "BreakDancerMax.h"
 #include "AlnParser.h"
@@ -19,9 +18,9 @@
 using namespace std;
 
 // open the bam file
-int main(int argc, char *argv)
+int main(int argc, char *argv[])
 {
-	string version = "BreakDancerMax-0.0.1r81";
+	string version ("BreakDancerMax-0.0.1r81");
 	int c;
 	string bam_file;
 	
@@ -78,16 +77,16 @@ int main(int argc, char *argv)
 		fprintf(stderr, "	-t INT	only detect transchromosomal rearrangement [%d]\n", transchr_rearrange);		 
 		fprintf(stderr, "	-f INT	use Fisher's method to combine P values from multiple library [%d]\n", fisher);		
 		fprintf(stderr, "	-d STRING	prefix of fastq files that SV supporting reads will be saved by library\n");		 
-		fprintf(stderr, "	-g INT	dump SVs and supporting reads in BED format for GBrowse[%d]\n", dump_BED);
+		fprintf(stderr, "	-g STRING	dump SVs and supporting reads in BED format for GBrowse\n");
 		fprintf(stderr, "	-l INT	analyze Illumina long insert (mate-pair) library [%d]\n", Illumina_long_insert);		 
 		fprintf(stderr, "	-C INT	change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
-		fprintf(stderr, "Version: %s\n", version);
+		//fprintf(stderr, "Version: %s\n", version);
 		fprintf(stderr, "\n");
 		return 1;
 	}
 	
 	// define the readgroup_platform map
-	map<int, string> readgroup_platform;
+	std::map<char *, std::string> readgroup_platform;
     //readgroup_platform[*] = "*";
 	
 	/************************************************* read bam file *****************************************************/
@@ -100,14 +99,18 @@ int main(int argc, char *argv)
 	// open file handlers
 	if ((in = samopen(argv[optind], in_mode, fn_list)) == 0) {
 		fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-		goto file_end;
+		free(fn_list); free(fn_ref); free(fn_rg);
+		samclose(in);
+		return 0;
 	}
 	if (in->header == 0) {
 		fprintf(stderr, "[main_samview] fail to read the header.\n");
-		goto file_end;
+		free(fn_list); free(fn_ref); free(fn_rg);
+		samclose(in);
+		return 0;
 	}
 	// convert/print the entire file
-	bam2_t *b = bam_init2();
+	bam1_t *b = bam_init1();
 	int r;
 	while ((r = samread(in, b)) >= 0) { // read one alignment from `in'
 		//************************** note: in this loop, do everything (algorithm) inside ************************** //
@@ -119,14 +122,16 @@ int main(int argc, char *argv)
 		// Of course, those code the same to all the four options can still remain in the main function.
 		
 		// pass b to AlnParser and let it handle the rest.
-		AlnParser(b, format, readgroup_platform, alt);
+		char *readgroup;
+		string format;
+		string alt;
+		char ori = AlnParser(b, format, alt, readgroup, readgroup_platform);
 		
 		// process data in b		 
 	}
 	if (r < -1) fprintf(stderr, "[main_samview] truncated file.\n");
 	bam_destroy1(b);
 		
-file_end:
 	free(fn_list); free(fn_ref); free(fn_rg);
 	samclose(in);
 	
@@ -137,14 +142,15 @@ file_end:
 // second, for the rest of the code, we should use the following correspondence, since the data structure changed. Left column: perl. Right column: cpp
 /*
 t.readname 		:		bam1_qname(b)  (length: b.core.l_qname)
-t.flag			:		b.core.flag
-t.chr			:		b.core.tid (this transit from char to int)
-t.pos			:		b.core.pos
-t.qual			:		b.core.qual
-mchr			:		b.core.mtid (this transit from char to int)
-mpos			:		b.core.mpos
-t.dist			:		? don't know yet.
+t.flag			:		b->core.flag
+t.chr			:		b->core.tid (this transit from char to int)
+t.pos			:		b->core.pos
+t.qual			:		b->core.qual
+mchr			:		b->core.mtid (this transit from char to int)
+mpos			:		b->core.mpos
+t.dist			:		b->core.isize
 t.seq			:		bam1_seq(b)		(length: b.core.l_qseq)
 t.basequal		:		bam1_qual(b)	(length: b.core.l_qseq)
-t.ori			:		b.ori	(in samtools, can be derived by bam1_strand(b), bam1_mstrand(b))
+t.ori			:		ori as a return in AlnParser	(in samtools, can be derived by bam1_strand(b), bam1_mstrand(b))
+t.readgroup		:		readgroup as a pointer in AlnParser input
 */
