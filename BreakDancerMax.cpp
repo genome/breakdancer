@@ -85,7 +85,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 	
-
+	string options;
+	sprintf(options,"-o %s -s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -p %f -t %d -f %d -d %s -g %s -l %d -C %d",chr, min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, prefix_fastq, dum_BED, Illumina_long_insert, Illumina_to_SOLiD);
 	// define the map SVtype
 	std::map<string, std::string> SVtype;
 	if(Illumina_long_insert == 1){
@@ -104,17 +105,17 @@ int main(int argc, char *argv[])
 		SVtype["32"] = "CTX";
 	}
 	
-	//?AP
+	// AP; no AP
 	int LZERO = -99;
 	float ZERO = exp(LZERO);
 	map<string,string> exes;
 	map<string,string> fmaps;
 	map<string,string> libmaps;
 	map<string,float> mean_insertsize;//global
-	map<string,float> std_insertsize;
-	map<string,float> uppercutoff;
-	map<string,float> lowercutoff;
-	map<string,float> readlens;
+	map<string,float> std_insertsize;//global
+	map<string,float> uppercutoff;//global
+	map<string,float> lowercutoff;//global
+	map<string,float> readlens;//global
 	map<string,int> mapQual;// global
 	int max_readlen = 0;
 	map<Keys, int> x_readcounts;
@@ -134,13 +135,15 @@ int main(int argc, char *argv[])
 			getline(myfile,line);
 			// analyze the line
 			string fmap = get_from_line(line,"map",1);
-			float mean = float(get_from_line(line,"mean",0));
-			float std = float(get_from_line(line,"std",0));
-			float readlen = float(get_from_line(line,"readlen",0));
-			float upper = float(get_from_line(line,"upp",0));
-			float lower = float(get_from_line(line,"low",0));
-			int mqual = int(get_from_line_two(line,"map","qual",0,0));// -1 if none
+			string mean_ = get_from_line(line,"mean",0);
+			string std_ = get_from_line(line,"std",0);
+			string readlen_ = get_from_line(line,"readlen",0);
+			string upper_ = get_from_line(line,"upp",0);
+			string lower_ = get_from_line(line,"low",0);
+			string mqual_ = get_from_line_two(line,"map","qual",0));
 			string lib = get_from_line(line,"lib",0);
+			float mean,std,readlen,upper,lower;
+			int mqual;
 			if(lib.compare("NA")==0)//may be wrong here to check if lib has been defined or not
 				lib = get_from_line(line,"samp",0);
 			
@@ -167,16 +170,22 @@ int main(int argc, char *argv[])
 			}// need to figure out map ReadsOut standard			
 			
 			libmaps[lib] = fmap;
-			if(mqual != -1)
+			if(mqual_.compare("NA"))
+				mqual = atoi(mqual_);
 				mapQual[lib] = mqual;
+			}
 			fmaps[fmap] = lib;
 			
-			if(mean != -1 && std != -1 && upper == -1 && lower == -1){
-				upper = mean + std*cut_sd;
-				lower = mean - std*cut_sd;
-				lower = lower > 0 ? lower:0;
+			if(mean.compare("NA") && std.compare("NA") && upper.compare("NA") && lower.compare("NA")){
+				mean = atof(mean_);
+				std = atof(stdt_);
+				upper = atof(mean_) + atof(std_)*float(cut_sd);
+				lower = atof(mean_) - atof(std_)*float(cut_sd);
+				lower = atof(lower) > 0 ? atof(lower):0;
 			}
 			
+			if(readlen_.compare("NA"))
+				readlen = atof(readlen_);
 			max_readlen = max_readlen < readlen ? readlen:max_readlen;
 			
 			mean_insertsize[lib] = mean;
@@ -216,8 +225,8 @@ int main(int argc, char *argv[])
  	}
  	        
  	if(learn_par == 1)    
- 	    EstimatePriorParameters();//need to work on the i/o of this function
- 	        
+	 	EstimatePriorParameters(fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, chr);
+	 	
  	int reference_len = 1;
  	map<string, int> nreads;
  	int defined_all_readgroups = 1;
@@ -264,7 +273,7 @@ int main(int argc, char *argv[])
 			char *readgroup;
 			string format;
 			string alt;
-			char ori = AlnParser(b, format, alt, readgroup, readgroup_platform);
+			char ori = AlnParser(b, format, alt, readgroup, readgroupreadG_platform);
 			// skip one chrmosome at the moment
 			if(b->core.tid == p_chr)
 				ref_len += b->core.pos - p_pos;
@@ -589,7 +598,8 @@ void Analysis (string lib, bam1_t *b){
 	lastc = b->core.pos;
 }
 
-void buildConnection(){
+// this function is good. May miss the i/o
+void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_name, map<int,vector<vector<string>>> &regs){
   // build connections
   // find paired regions that are supported by paired reads
   //warn("-- link regions\n");
@@ -599,9 +609,7 @@ void buildConnection(){
 		vector<int> p = *ii_read.second;
 		if(p.size() != 2) // skip singleton read (non read pairs)
 			continue;
-		nt_int keys_int_int(p[0], p[1]);
-		Keys_int_int keys_int_int_(p[1], p[0]);
-		if(link.find(p[0]) < link.end() && link.find(p[0]).find(p[1]) < link[p[0]].end()){
+		if(link.find(p[0]) < link.end() && link[p[0]].find(p[1]) < link[p[0]].end()){
 			++link[p[0]][p[1]];
 			++link[p[1]][p[0]];
 		}
@@ -610,18 +618,18 @@ void buildConnection(){
 			link[p[1]][p[0]] = 1;
 		}
 	}
-	map<int, map<int, int>> clink(link);// need to check initial of a map
+	map<int, map<int, int>> clink(link);
 	// segregate graph, find nodes that have connections
 	map<int,int> free_nodes;
 	map<int, map<int, int>>::iterator ii_clink;
 	for(ii_clink = clink.begin(); ii_clink < clink.end(); ii_clink++){
-		s0 = *ii_clink.first;
+		int s0 = *ii_clink.first;
 		if(clink.find(s0) == clink.end())
 			continue;
 		// construct a subgraph
 		vector<int> tails;
 		tails.push_back(s0);
-		while(tails.size() > 0){// need to figure out how to see tails is vacant since it's a class
+		while(tails.size() > 0){
 			vector<int> newtails;
 			vector<int>::iterator it_tails;
 			for(it_tails = tails.begin(); it_tails < tails.end(); it_tails ++){
@@ -635,7 +643,7 @@ void buildConnection(){
 				}
 				for(vector<int> ii_s1s = s1s.begin(); ii_s1s < s1s.end(); ii_s1s++){
 					s1 = *s1s;
-					vector<string> free_reads;// may not be true
+					vector<string> free_reads;
 					map<int,map<int,int>> nodepair;
 					int nlinks = clink[tail][s1];
 					if(nlinks<min_read_pair) // require sufficient number of pairs
@@ -675,7 +683,7 @@ void buildConnection(){
 						int node = *ii_snodes;
 						map<char,int> orient_count;
 						vector<string> nonsupportives;
-						for(vector<vecotr<string>> ii_regs = regs[node].begin(); ii_regs < regs[node].end(); ii_regs++){
+						for(vector<vecotr<string>> ii_regs = regs[read_pairnode].begin(); ii_regs < regs[node].end(); ii_regs++){
 							vector<string> y = *ii_regs;
 							if(y[0].size() == 0)
 								continue;
@@ -686,9 +694,27 @@ void buildConnection(){
 								nonsupportives.push_back(yrea);
 							}
 							else{
-								type[y[5]]++;// where did I initialize this
-								type_library_readcount[y[5]][y[8]]++;//where I initialize this?
-								type_library_meanspan[y[5]][y[8]]+=abs(atoi(y[4]));
+								// see if initialized 'type' or not
+								if(type.find(y[5]) != type.end())
+									type[y[5]]++;
+								else
+									type[y[5]] = 1;
+								// see if initialized 'type_library_readcount' or not
+								if(type_library_readcount.find(y[5]) != type.end() && type_library_readcount[y[5]].find(y[8]) != type[y[5]].end())
+									type_library_readcount[y[5]][y[8]]++;
+								else{
+									map<string, int> tmp_type_library_readcount;
+									tmp_type_library_readcount[y[8]] = 1;
+									type_library_readcount[y[5]] = tmp_type_library_readcount;
+								}
+								// see if initialized 'type_library_meanspan' or not
+								if(type_library_meanspan.find(y[5]) != type_library_meanspan.end() && type_library_meanspan[y[5]].find(y[8]) != type_library_meanspan[y[5]].end())
+									type_library_meanspan[y[5]][y[8]]+=abs(atoi(y[4]));
+								else{
+									map<string,int> tmp_type_library_meanspan;
+									tmp_type_library_meanspan[y[8]] = 1;
+									type_library_meanspan[y[5]] = tmp_type_library_meanspan;
+								}
 								nread_pairs++;
 								free_reads.push_back(y[0]);
 								support_reads.push_back(y);
@@ -711,8 +737,8 @@ void buildConnection(){
 						}
 					}
 					
-					float score;//don't know if float
-					int bestIndelSize;//don't know if int
+					//float score;//don't know if float; no usage actually
+					//int bestIndelSize;//don't know if int; no usage actually
 					if(nread_pairs >= min_read_pair){
 						float maxscore = 0;
 						string flag = "0";
@@ -752,7 +778,7 @@ void buildConnection(){
 								int chr = reg_name[node][0];
 								int start = reg_name[node][1];
 								int end = reg_name[node][2];
-								int nrp = reg_name[node][3];//need to look up if int
+								int nrp = reg_name[node][3];
 								map<char,int> ori_readcount = type_orient_counts.front();
 								type_orient_counts.erase(type_orient_counts.begin());
 								if(sv_chr1 != 0 && sv_chr2 != 0){
@@ -811,8 +837,10 @@ void buildConnection(){
 							}
 							
 							if(!dump_BED.empty()){	// print out SV and supporting reads in BED format
+								ofstream fh_BED;
+								fh_BED.open(BED);
 								string trackname = itoa(sv_chr1).append(itoa(sv_pos1)).append(SVT).append(itoa(diffspans[flag]));
-								sprintf(BED, "track name=%s	description=\"BreakDancer %d %d %s %d\"	useScore=0\n", trackname, sv_chr1, sv_pos1, SVT, diffspans[flag]);// don't know what BED stand for, string or a file handle
+								fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer " << sv_chr1 << " " << sv_pos1 << " " << SVT << " " << diffspans[flag] << "\"\tuseScore=0\n"; //"track name=%s	description=\"BreakDancer %d %d %s %d\"	useScore=0\n", trackname, sv_chr1, sv_pos1, SVT, diffspans[flag]);// fh_BED is a file handle of BED
 								for(vector<vector<string>> ii_support_reads = support_read.begin(); ii_support_read < support_read.end(); ii_support_read ++){
 									vector<string> y = *ii_support_reads;
 									if(y.size() < 8 || y[5].compare(flag) != 0)
@@ -821,8 +849,9 @@ void buildConnection(){
 										y[1] = "";
 									int aln_end = atoi(y[2]) + atoi(y[7]) - 1;
 									string color = y[3].compare("+")?"255,0,0":"0,0,255";
-									sprintf(BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y[0],y[3],y[4],y[2],aln_end,color);
+									fh_BED << "chr" << y[1] << "\t" << y[2] << "\t" << aln_end << "\t1\t" << y[0] << "\t" << y[3] << "\t" << y[4] << "\t" << y[2] << "\t" << aln_end << "\t" << color;//sprintf(fh_BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y[0],y[3],y[4],y[2],aln_end,color);
 								}
+								fh_BED.close();
 							}
 						}
 						// free reads
@@ -856,43 +885,61 @@ void buildConnection(){
 	}
 }
 
-void EstimatePriorParameters(){
+// this function is good
+void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr){
 	map<string,float> es_means;
 	map<string,float> es_stds;
 	map<string,float> es_readlens;
 	map<string,float> es_uppercutoff;
 	map<string,float> es_lowercutoff;
-	map<string,int> insert_stat;
+	map<string,vector<int>> insert_stat;
 	map<string,vector<int>> readlen_stat;
+	
+	bam1_t *b = bam_init1();
 	for(map<string,string> ii=fmaps.begin(); ii!=fmaps.end(); ++ii){
-		// fh;
-		string exe = exes[*ii.first];
-		// open the bam file
+		// read the bam file by a chromosome
+		string bam_name = *ii.first;
+		bam_index_t *idx;
+		samfile_t *in;
+		int tid, beg, end, n_off;
+		string chr_str;
+		sprintf(chr_str, "%d", chr);
+		bamFile fp = ReadBamChr_prep(chr_str, bam_name, idx, &tid, &beg, &end, in);
+		pair64_t *off = get_chunk_coordinates(idx, tid, beg, end, &n_off);
+		uint64_t curr_off;
+		int i, ret, n_seeks;
+		n_seeks = 0; i = -1; curr_off = 0;
+		 
+		while(ReadBamChr(b, fp, tid, beg, end, idx, &curr_off, &i, &n_seeks, off, n_off){
+			char *readgroup;
+			string format = "sam";
+			string alt = "";
+			char ori = AlnParser(b, format, alt, readgroup, readgroupreadG_platform)
 		
-		while(<fh>){
 			// analyze the bam file line by line
 			string lib = readgroup.empty()?*ii.second():readgroup_library[readgroup];// when multiple libraries are in a BAM file
 			if(lib.empty())
 				continue;
 			if(!chr.empty() && b->core.tid != chr)// analyze 1 chromosome
 				continue;
-			if(readlen_stat.find(lib) == readlen_stat.end())
-				//readlen_stat[lib] = ; // Statistics::Descriptive::Sparse->new()
-				readlen_stat[lib].push_back(b->core.isize);
+			//if(readlen_stat.find(lib) == readlen_stat.end())	// don't need to issue a new stat
+				//readlen_stat[lib] = ; // Statistics::Descriptive::Sparse->new() // don't need to issue a new stat
+			readlen_stat[lib].push_back(b->core.isize);
 			if(b->core.qual <= min_map_qual)	// skip low quality mapped reads
 				continue;
 			if(b->core.flag != 18 && b->core.flag != 20 || b->core.isize <= 0)
 				continue;
-			if(insert_stat.find(lib) == insert_stat.end())
-				insert_stat[lib].push_back(b->core.isize);
+			//if(insert_stat.find(lib) == insert_stat.end())	// don't need to issue a new stat
+			insert_stat[lib].push_back(b->core.isize);
 		}
-		close(<fh>)
+		samclose(in);		
 	}
+	bam_destroy1(b);
 	for(map<string,vector<int>> ii_readlen_stat = readlen_stat.begin(); ii_readlen_stat < readlen_stat.end(); ii_readlen_stat ++){
 		//double res = accumulate(insert_stat[lib].begin(), insert_stat[lib].end(), 0);
 		//double mean = res/insert_stat[lib].size();
 		float mean_insert = mean(insert_stat[lib]);
-		float std_insert = standard_deviation(insert_stat[lib]);
+		float std_insert = standard_deviation(insert_stat[lib],mean_insert);
 		float uppercutoff = mean_insert + std_insert*cut_sd;
 		float lowercutoff = mean_insert - std_insert*cut_sd;
 		es_readlens[lib] = mean(readlen_stat[lib]);
@@ -906,7 +953,28 @@ void EstimatePriorParameters(){
 	uppercutoff = es_uppercutoff;
 	lowercutoff = es_lowercutoff;
 	readlens = es_readlens;
+	return;
 }
+
+// compute the mean of a vector of int
+float mean(vector<int> &stat){
+	int all = 0;
+	vector<int> ii_stat;
+	for(ii_stat = stat.begin(); ii_stat < stat.end(); ii_stat++){
+		all += *ii_stat;
+	}
+	return (float)all/(float)(stat.size());
+}
+
+// compute the standard deviation of a vector of int knowing the mean
+float standard_deviation(vector<int> &stat, float mean){
+	int all = 0;
+	vector<int> ii_stat;
+	for(ii_stat = stat.begin(); ii_stat < stat.end(); ii_stat ++){
+		all += (*ii_stat)*(*ii_stat);
+	}
+	return sqrt((float)all/(float)(stat.size()) - mean*mean);
+}	
 
 void ComputeProbScore{
 	// rnode, rlibrary_readcount, type
@@ -929,7 +997,7 @@ void ComputeProbScore{
 }
 
 // this function is good
-int PutativeRegion(vector<int> rnode, map<int,vector<int>> reg_name){
+int PutativeRegion(vector<int> rnode, map<int,vector<int>> &reg_name){
 	int total_region_size = 0;
 	for(vector<int> ii_node = rnode.begin(); ii_node < rnode.end(); ii_node++){
 		int node = *ii_node;
@@ -940,9 +1008,128 @@ int PutativeRegion(vector<int> rnode, map<int,vector<int>> reg_name){
 	return total_region_size;
 }
 
+// prepare: read bam file by a chromosome
+bamFile ReadBamChr_prep(string chr_str, string bam_name, bam_index_t *idx, int tid, int beg, int end, samfile_t *in){
+	if ((in = samopen((*ii).first, in_mode, fn_list)) == 0) {
+		fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+		continue;
+	}
+	if (in->header == 0) {
+		fprintf(stderr, "[main_samview] fail to read the header.\n");
+		continue;
+	}
+	idx = bam_index_load(bam_name);// index
+	bam_parse_region(in->header, chr, &tid, &beg, &end);// parse
 	
-									
-								
+	// return the file handle for handle
+	bamFile fp = in->x.bam;
+	return fp;
+}
+
+// read bam file by a chromosome by one line; fp will track where we are
+int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, bam_index_t *idx, uint64_t curr_off, int i, int n_seeks, pair64_t *off, int n_off){
+
+	bam1_t *b = bam_init1();
+	
+	if (off == 0) return 0;
+		
+	if (curr_off == 0 || curr_off >= off[i].v) { // then jump to the next chunk
+		if (i == n_off - 1) return 0; // no more chunks
+		if (i >= 0) assert(curr_off == off[i].v); // otherwise bug
+		if (i < 0 || off[i].v != off[i+1].u) { // not adjacent chunks; then seek
+			bam_seek(fp, off[i+1].u, SEEK_SET);
+			curr_off = bam_tell(fp);
+			++n_seeks;
+		}
+		++i;
+	}
+	if ((ret = bam_read1(fp, b)) > 0) {
+		curr_off = bam_tell(fp);
+		if (b->core.tid != tid || b->core.pos >= end) return 0; // no need to proceed
+		else if (is_overlap(beg, end, b)) return 1;
+	} 
+	else 
+		return 0;
+}
+	
+// this function is good
+string get_from_line(string line,string search,int flag){
+	size_t pos = line.find(search);
+	if(pos != string::npos){
+		if(flag == 1){
+			pos = pos + search.length();
+			if(line.substr(pos,1).compare(":") == 0){
+				size_t pos_end = line.find("\t",pos);
+				if(pos_end == string::npos)
+					pos_end = line.find("\0",pos);
+				size_t n = pos_end - pos - 1;
+				return line.substr(pos+1,n);
+			}
+			else{
+				return "NA";
+			}
+		}
+		else{
+			pos = pos + search.length();
+			size_t pos_begin = line.find(":", pos);
+			if(pos_begin != string::npos){
+				size_t pos_end = line.find("\t",pos_begin);
+				if(pos_end == string::npos)
+					pos_end = line.find("\0", pos_begin);
+				size_t n = pos_end - pos_begin - 1;
+				return line.substr(pos+1,n);
+			}
+			else
+				return "NA";
+		}
+	}
+	else
+		return "NA";
+	return "NA";
+}					
+	
+// this function is good
+string get_from_line_two(string line,string search1,string search2,int flag2){
+	size_t pos = line.find(search1);
+	size_t pos2;
+	if(pos != string::npos){
+		pos = pos + search1.length();
+		pos2 = line.find(search2,pos);
+		if(pos2 != string::npos){
+			if(flag2 == 1){
+				pos2 = pos2 + search2.length();
+				if(line.substr(pos2,1).compare(":") == 0){
+					size_t pos_end = line.find("\t",pos2);
+					if(pos_end == string::npos)
+						pos_end = line.find("\0",pos2);
+					size_t n = pos_end - pos2 - 1;
+					return line.substr(pos2+1, n);
+				}				
+				else
+					return "NA";
+				}
+			else{
+				pos2 = pos2 + search2.length();
+				size_t pos_begin = line.find(":", pos2);
+				if(pos2 != string::npos){
+					size_t pos_end = line.find("\t",pos2);
+					if(pos_end == string::npos)
+						pos_end = line.find("\0",pos2);
+					size_t n = pos_end - pos_begin - 1;
+					return line.substr(pos_begin, n);
+				}
+				else
+					return "NA";
+			}
+		}
+		else
+			return "NA";
+	}
+	else
+		return "NA";
+	return "NA";
+}
+					
 
 							
 // first of all, we need to use cpp since it has better alternative (map) for the hash in perl
