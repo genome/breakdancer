@@ -13,6 +13,8 @@
 #include "sam.h"
 #include "bam.h"
 
+void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<int,vector<int>> &reg_name, map<string,vector<int>> &read, map<int, vector<vector<string>>> &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq);
+
 void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_name, map<int,vector<vector<string>>> &regs);
 
 int PutativeRegion(vector<int> rnode, map<int,vector<int>> &reg_name);
