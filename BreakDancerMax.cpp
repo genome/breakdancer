@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 	int c;
 	string bam_file;
 	
-	string chr; // chromosome
+	int chr = -1; // chromosome
 	int min_len = 7;
 	int cut_sd = 3;
 	int max_sd = 1000000;
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "\n");
 		fprintf(stderr, "BreakDancerMax.pl <analysis_config.lst>\n\n");
 		fprintf(stderr, "Options: \n");
-		fprintf(stderr, "	-o STRING	operate on a single chromosome [all chromosome]\n");
+		fprintf(stderr, "	-o INT	operate on a single chromosome [all chromosome]\n");
 		fprintf(stderr, "	-s INT	minimum length of a region [%d]\n", min_len);		 
 		fprintf(stderr, "	-c INT	cutoff in unit of standard deviation [%d]\n", cut_sd);		
 		fprintf(stderr, "	-m INT	maximum SV size [%d]\n", max_sd);		 
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 	}
 	
 	string options;
-	sprintf(options,"-o %s -s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -p %f -t %d -f %d -d %s -g %s -l %d -C %d",chr, min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, prefix_fastq, dum_BED, Illumina_long_insert, Illumina_to_SOLiD);
+	sprintf(options,"-o %d -s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -p %f -t %d -f %d -d %s -g %s -l %d -C %d",chr, min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, prefix_fastq, dum_BED, Illumina_long_insert, Illumina_to_SOLiD);
 	// define the map SVtype
 	std::map<string, std::string> SVtype;
 	if(Illumina_long_insert == 1){
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 	map<string,float> readlens;//global
 	map<string,int> mapQual;// global
 	int max_readlen = 0;
-	map<Keys, int> x_readcounts;
+	map<uint32_t, map<string,int>> x_readcounts;
 	map<string,string> readgroup_library;
 	// define the readgroup_platform map
 	std::map<char *, std::string> readgroup_platform;	
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 			string lib = get_from_line(line,"lib",0);
 			float mean,std,readlen,upper,lower;
 			int mqual;
-			if(lib.compare("NA")==0)//may be wrong here to check if lib has been defined or not
+			if(lib.compare("NA")==0)
 				lib = get_from_line(line,"samp",0);
 			
 			string readgroup = get_from_line(line,"group",1);
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 				ofstream ReadsOut[lib.append("2")](prefix_fastq.append(lib).append(".2.fastq"));
 				if(!ReadsOut[lib.append("2")].is_open())
 					cout << "unable to open " << lib << ".2.fastq, check write permission\n";					
-			}// need to figure out map ReadsOut standard			
+			}		
 			
 			libmaps[lib] = fmap;
 			if(mqual_.compare("NA"))
@@ -194,7 +194,12 @@ int main(int argc, char *argv[])
 			lowercutoff[lib] = lower;
 			readlens[lib] = readlen;
 			
-			//skip exes[fmap]
+			if(exes.find(fmap) == exes.end())
+				exes[fmap] = exe.compare("NA")?"cat":exe;
+			else if(exes[fmap].compare(exe) != 0){
+				cout << "Please use identical exe commands to open the same map file.\n";
+				return;
+			}
 			
 			int tmp = mean - readlen*2;	// this determines the mean of the max of the SV flanking region
 			d = d<tmp ? d:tmp;
@@ -210,7 +215,7 @@ int main(int argc, char *argv[])
 	vector<string> format; 
 	vector<string>::iterator it_format;
 
-	map<> cmds; 	//need to initialize
+	map<string,int> cmds; 	
  	
 	// go through the iteration of fmaps
 	map<string,string>::iterator ii;
@@ -232,21 +237,23 @@ int main(int argc, char *argv[])
  	int defined_all_readgroups = 1;
  	    
 	samfile_t *in = 0;
-	char in_mode[5], *fn_list = 0, *fn_ref = 0, *fn_rg = 0;
+	char in_mode[5] = "", *fn_list = 0, *fn_ref = 0, *fn_rg = 0;
 	strcpy(in_mode, "r");
+	int i = 0;
+	bam1_t *b = bam_init1();
+	string format_ = "sam";
+	string alt = "";	
  	for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii)
  	{
  		int ref_len = 0;
+ 		string exe = exes[maps[i]];
+ 		i ++;
  		cmds[exe] ++;
  		
  		int p_pos = 0;
- 		char p_chr;
+ 		int p_chr;
  		
- 	   	/****************** read bam file *****************/
-		// suppose we already know bam file to open and parse (for all the chromosomes)
-		// generate the fn_list if necessary (not using because we don't have reference now)
-		// if (fn_list == 0 && fn_ref) fn_list = samfaipath(fn_ref);
-		// open file handlers
+		/*// convert the entire bam file
 		if ((in = samopen((*ii).first, in_mode, fn_list)) == 0) {
 			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
 			continue;
@@ -255,26 +262,28 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "[main_samview] fail to read the header.\n");
 			continue;
 		}
-		// convert/print the entire file
 		bam1_t *b = bam_init1();
 		int r;
-		while ((r = samread(in, b)) >= 0) { // read one alignment from `in'
-   		//************** note: in this loop, do everything (algorithm) inside ******** //
-		// Different from perl, in C/CPP, we are not going to read all the lines of bam file, store data, and then process
-		// Instead, we'd better read one line, process this line, and another
-		// That's why we have to put this samread code in the main function, also, some of the BreakDancer Algorithm would be better if written to another function
-		// so that when repeat calling (at least four options: 1. SAM all chr; 2. SAM one chr; 3. MAQ all chr; 4. MAQ one chr), the code would not be repeated,
-		// but only one function will be called. 
-		// Of course, those code the same to all the four options can still remain in the main function.
+		while ((r = samread(in, b)) >= 0) { */
 		
-		// pass b to AlnParser and let it handle the rest.
-		
-		//// have to deal with a certain chromosome here;
+		// read the bam file by a chromosome
+		string bam_name = *ii.first;
+		bam_index_t *idx;
+		samfile_t *in;
+		int tid, beg, end, n_off;
+		string chr_str;
+		sprintf(chr_str, "%d", chr);
+		bamFile fp = ReadBamChr_prep(chr_str, bam_name, idx, &tid, &beg, &end, in);
+		pair64_t *off = get_chunk_coordinates(idx, tid, beg, end, &n_off);
+		uint64_t curr_off;
+		int i, ret, n_seeks;
+		n_seeks = 0; i = -1; curr_off = 0;
+		 
+		while(ReadBamChr(b, fp, tid, beg, end, idx, &curr_off, &i, &n_seeks, off, n_off){
 			char *readgroup;
-			string format;
-			string alt;
-			char ori = AlnParser(b, format, alt, readgroup, readgroupreadG_platform);
-			// skip one chrmosome at the moment
+
+			char ori = AlnParser(b, format_, alt, readgroup, readgroup_platform)
+		
 			if(b->core.tid == p_chr)
 				ref_len += b->core.pos - p_pos;
 			p_pos = b->core.pos;
@@ -289,7 +298,10 @@ int main(int argc, char *argv[])
 			if(lib.length() == 0)
 				continue;
 				
-			nreads[lib] ++;	// need to initialize
+			if(nreads.find(lib) == nreads.end())
+				nreads[lib] = 1;
+			else
+				nreads[lib] ++;	
 			if(mapQual[lib] != 0 && b->core.qual <= mapQual[lib])
 				continue;
 			else if(b->core.qual <= min_map_qual)
@@ -319,18 +331,17 @@ int main(int argc, char *argv[])
 			if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
 				continue;
 			
-			// here we need a two keys map
-			Keys keys(b->core.flag, lib);
-			x_readcounts[keys] ++;	// need to work on the initialization here
-				
-			// process data in b		 
+			if(x_readcounts.find(b->core.flag) < x_readcounts.end() && x_readcounts[b->core.flag].find(lib) < x_readcounts[b->core.flag].end())
+				x_readcounts[b->core.flag][lib] ++;	
+			else
+				x_readcounts[b->core.flag][lib] = 1;					 
 		}
+		
 		if (r < -1) fprintf(stderr, "[main_samview] truncated file.\n");
 		if(ref_len == 0)
 			fprintf(stderr, "Unable to decode %s. Please check that you have the correct paths and the bam files are indexed.", *ii);
 		if(reference_len < ref_len)
 			reference_len = ref_len;
-		bam_destroy1(b);
 		samclose(in);		
 	}
 	
@@ -350,27 +361,35 @@ int main(int argc, char *argv[])
 		float physical_coverage = float(nreads[lib]*mean_insertsize[lib])/float(2*reference_len);
 		total_phy_cov += physical_coverage;
 		
+		int nread_lengthDiscrepant = -1;
+		
 		if(x_readcounts[2][lib])
-			int nread_lengthDiscrepant = x_readcounts[2][lib];
-		if(x_readcounts[3][lib])
-			nread_lengthDiscrepant += x_readcounts[3][lib]
-		float tmp = (__if_exists(nread_lengthDiscrepant) && nread_lengthDiscrepant > 0)?reference_len/nread_lengthDiscrepant:50;// still need to test if exists
+			nread_lengthDiscrepant = x_readcounts[2][lib];
+		if(x_readcounts[3][lib]){
+			if(nread_lengthDiscrepant == -1)
+				nread_lengthDiscrepant = 0;
+			nread_lengthDiscrepant += x_readcounts[3][lib];
+		}
+		float tmp = (nread_lengthDiscrepant > 0)?(float)reference_len/(float)nread_lengthDiscrepant:50;
 		d = d<tmp?d:tmp;
 		
 		printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps[$lib],mean_insertsize[lib],std_insertsize[lib],uppercutoff[lib],lowercutoff[lib],readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
 		
-		map<Keys,int>::iterator x_readcounts_ii;
+		map<uint32_t,map<string,int>>::iterator x_readcounts_ii;
 		for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){
-			uint32_t t = *x_readcounts_ii.first.key1;// get the first key out, which is a member of recflags
-			printf("\t%s:%d",t,*x_readcounts_ii.second());// don't know why || 0, need to ask
+			uint32_t t = *x_readcounts_ii.first;// get the first key out, which is a member of recflags
+			if(*x_readcounts_ii.second.find(lib) == *x_readcounts_ii.second.end())
+				printf("\t%d:0",t);
+			else
+				printf("\t%d:%d",t,*x_readcounts_ii.second[lib]);
 		}
 		printf("\n");
 	}
 	printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\tAllele_frequency\tVersion\tRun_Param\n");
 	
-	string begins;// global
+	int begins;// global (chr)
 	int beginc = -1;// global
-	string lasts;// global (chr, should be int in samtools)
+	int lasts;// global (chr, should be int in samtools)
 	int lastc = -1; // global
 	map<int, vector<vector<string>>> regs;//global in analysis
 	map<string, vector<int>> read;// global in analysis
@@ -380,42 +399,56 @@ int main(int argc, char *argv[])
 	
 	int idx_buff = 0;// global
 	int final_buff = 0;
-	int reg_idx = 0;// global
+	int reg_idx = 0;// global  ################# node index here ###################
 	int normal_switch = 0; // global
 	int nnormal_reads = 0; // global
 	
-	if(merge && fmaps.size()>1 && !(format[0].compare("sam")) && chr.empty() ){
- /* open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
+	// first, need to merge the bam files into one big string seperated by blank, and return the number
+	int bam_number = fmaps.size() + 1;
+	string *big_bam = new string[bam_number];
+	int i_tmp = 1;
+	big_bam[0] = tmp_out_bam;// need to get it for the temporary big merged bam
+	for(map<string, string> ii_fmaps = fmaps.begin(); ii_fmaps < fmaps.end(); ii_fmaps++){
+		big_bam[i_tmp] = *ii_fmaps.first;
+		i_tmp ++;
+	}
+	
+	//################# node index here ###################
+	if(merge && fmaps.size()>1 && !(format[0].compare("sam")) && chr == -1 ){
+ 	/* open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
    samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
    maq mapmerge		*/
-   		string merge_command_line; // may not need to write the string, but need samtools functions of merge bam files
+   		//string merge_command_line; // may not need to write the string, but need samtools functions of merge bam files
    		// merge_fh; //file handle of the merge bam file
    		
-   			if ((in = samopen(?(merged bam name), in_mode, fn_list)) == 0) {
-				fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-				continue;
-			}
-			if (in->header == 0) {
-				fprintf(stderr, "[main_samview] fail to read the header.\n");
-				continue;
-			}
-			// convert/print the entire file
-			int r;
-			while ((r = samread(in, b)) >= 0) { // read one alignment from `in'
-				char *readgroup;
-				string format;
-				string alt;
-				char ori = AlnParser(b, format, alt, readgroup, readgroup_platform);
-				string library = readgroup.empty()?readgroup_library[readgroup]:(*fmaps.begin().second);// sorted automatically, don't know if in perl it's the same
-			  	if(chr.empty() || chr.compare(b->core.tid)!=0)
-			  		continue;
-			  	if(!library.empty())
-			  		Analysis(library, b);
-			}
-			bam_destroy1(b);
-			samclose(in);		
+   		// merge the whole bam files to one big bam (function bam_merge in bam_sort.c)
+
+   		bam_merge(bam_number,big_bam);
+   		
+		if ((in = samopen(big_bam[0], in_mode, fn_list)) == 0) {
+			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+			continue;
+		}
+		if (in->header == 0) {
+			fprintf(stderr, "[main_samview] fail to read the header.\n");
+			continue;
+		}
+		// convert/print the entire file
+		int r;
+		while ((r = samread(in, b)) >= 0) { // read one alignment from `in'
+			char *readgroup;
+			char ori = AlnParser(b, format_, alt, readgroup, readgroup_platform);
+			string library = readgroup.empty()?readgroup_library[readgroup]:(*fmaps.begin().second);// sorted automatically, don't know if in perl it's the same, shouldn't matter the order
+		  	//if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
+		  		//continue;
+		  	if(!library.empty())
+		  		Analysis(library, b);
+		}
+		bam_destroy1(b);
+		samclose(in);		
 	}
-	else{
+	//############### find the designated chromosome and put all of them together for all bam files #############
+	else{//#customized merge & sort
 		// define FHs
 		map<> Idxs;
 		map<int, string> buffer; // have to define it here because the two for loop are put together here
@@ -465,12 +498,16 @@ int main(int argc, char *argv[])
 			
 		}
 	}
+	bam_destroy1(b);
+	delete []big_bam;
+	big_bam = NULL;
 	free(fn_list); free(fn_ref); free(fn_rg);
 	
  	return 0;
 }
 
-void Analysis (string lib, bam1_t *b){
+// this function is good except the name replacement and readlen for 'else'
+void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<int,vector<int>> &reg_name, map<string,vector<int>> &read, map<int, vector<vector<string>>> &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq){
 
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
@@ -531,10 +568,10 @@ void Analysis (string lib, bam1_t *b){
 			reg_name[k].push_back(nnormal_reads);
 			
 			vector<vector<string>> p;
-			for(it_reg_seq = reg_seq.begin(); it_reg_seq < reg_seq.end(); it_reg_seq ++){
+			for(vector<vector<string>> it_reg_seq = reg_seq.begin(); it_reg_seq < reg_seq.end(); it_reg_seq ++){
 				p.push_back(*it_reg_seq);
 				///string s = get_item_from_string(*it_reg_seq,0); // extract the ith item from the string
-				string s = *it_reg_seq[0];
+				string s = (*it_reg_seq)[0];
 				read[s].push_back(k);
 			}
 			
@@ -546,9 +583,9 @@ void Analysis (string lib, bam1_t *b){
 			}
 		}
 		else{
-			for(it_reg_seq = reg_seq.begin(); it_reg_seq < reg_seq.end(); it_reg_seq ++){
+			for(vecotr<vector<string>> it_reg_seq = reg_seq.begin(); it_reg_seq < reg_seq.end(); it_reg_seq ++){
 				///string s = get_item_from_string(*it_reg_seq,0);
-				string s= *it_reg_seq[0];
+				string s= (*it_reg_seq)[0];
 				read.erase(read.find(s));
 			}
 		}
@@ -571,7 +608,7 @@ void Analysis (string lib, bam1_t *b){
 		tmp_reg_seq.push_back(itoa(b->core.isize));
 		tmp_reg_seq.push_back(itoa(b->core.flag));
 		tmp_reg_seq.push_back(b->core.qual);
-		tmp_reg_seq.push_back(/*readlen*/);
+		tmp_reg_seq.push_back(bam1_seq(b).length());//readlen, need to see if this is correct
 		tmp_reg_seq.push_back(lib);
 		tmp_reg_seq.push_back(bam1_seq(b));
 		tmp_reg_seq.push_back(bam1_qual(b));
@@ -1019,7 +1056,7 @@ bamFile ReadBamChr_prep(string chr_str, string bam_name, bam_index_t *idx, int t
 		continue;
 	}
 	idx = bam_index_load(bam_name);// index
-	bam_parse_region(in->header, chr, &tid, &beg, &end);// parse
+	bam_parse_region(in->header, chr_str, &tid, &beg, &end);// parse
 	
 	// return the file handle for handle
 	bamFile fp = in->x.bam;
