@@ -12,6 +12,8 @@
 #include <map>
 #include "sam.h"
 #include "bam.h"
+#include "ksort.h"
+
 
 void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<int,vector<int>> &reg_name, map<string,vector<int>> &read, map<int, vector<vector<string>>> &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq);
 
@@ -27,8 +29,12 @@ float standard_deviation(vector<int> &stat, float mean);
 
 int PutativeRegion(vector<int> rnode, map<int,vector<int>> &reg_name);
 
-bamFile ReadBamChr_prep(string chr_str, string bam_name, bam_index_t *idx, int tid, int beg, int end, samfile_t *in);
+bamFile ReadBamChr_prep(string chr_str, string bam_name, int &tid, int &beg, int &end, samfile_t *in, pair64_t *off, int &n_off);
 
-int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, bam_index_t *idx, uint64_t curr_off, int i, int n_seeks, pair64_t *off, int n_off);
+int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t &curr_off, int &i, int &n_seeks, pair64_t *off, int n_off);
+
+int MergeBams_prep(string *fn, int n, bamFile *fp, heap1_t *heap);
+
+int MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_str, int *tid, int *beg, int *end, samfile_t **in, pair64_t **off, int *n_off);
 
 string get_from_line(string line,string search,int flag);
