@@ -14,12 +14,16 @@
 #include "bam.h"
 #include "ksort.h"
 
+typedef struct {
+     uint64_t u, v;
+}pair64_t;
 
-void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<int,vector<int>> &reg_name, map<string,vector<int>> &read, map<int, vector<vector<string>>> &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq);
 
-void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_name, map<int,vector<vector<string>>> &regs);
+void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, vector<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq);
 
-int PutativeRegion(vector<int> rnode, map<int,vector<int>> &reg_name);
+void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs);
+
+int PutativeRegion(vector<int> rnode, map<int,vector<int> > &reg_name);
 
 void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr);
 
@@ -27,7 +31,7 @@ float mean(vector<int> &stat);
 
 float standard_deviation(vector<int> &stat, float mean);
 
-int PutativeRegion(vector<int> rnode, map<int,vector<int>> &reg_name);
+int PutativeRegion(vector<int> rnode, map<int,vector<int> > &reg_name);
 
 bamFile ReadBamChr_prep(string chr_str, string bam_name, int &tid, int &beg, int &end, samfile_t *in, pair64_t *off, int &n_off);
 
