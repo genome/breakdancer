@@ -273,13 +273,13 @@ int main(int argc, char *argv[])
 		int tid, beg, end, n_off;
 		string chr_str;
 		sprintf(chr_str, "%d", chr);
-		bamFile fp = ReadBamChr_prep(chr_str, bam_name, idx, &tid, &beg, &end, in);
-		pair64_t *off = get_chunk_coordinates(idx, tid, beg, end, &n_off);
+		pair64_t n_off;
+		bamFile fp = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, off, &n_off);
 		uint64_t curr_off;
 		int i, ret, n_seeks;
 		n_seeks = 0; i = -1; curr_off = 0;
 		 
-		while(ReadBamChr(b, fp, tid, beg, end, idx, &curr_off, &i, &n_seeks, off, n_off){
+		while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
 			char *readgroup;
 
 			char ori = AlnParser(b, format_, alt, readgroup, readgroup_platform)
@@ -344,7 +344,7 @@ int main(int argc, char *argv[])
 			reference_len = ref_len;
 		samclose(in);		
 	}
-	
+	bam_destroy1(b);
 	int merge = (cmds.size()==1 && defined_all_readgroups)?1:0;
 	
 	float total_phy_cov = 0;
@@ -404,101 +404,119 @@ int main(int argc, char *argv[])
 	int nnormal_reads = 0; // global
 	
 	// first, need to merge the bam files into one big string seperated by blank, and return the number
-	int bam_number = fmaps.size() + 1;
+	int n = fmaps.size();
 	string *big_bam = new string[bam_number];
-	int i_tmp = 1;
-	big_bam[0] = tmp_out_bam;// need to get it for the temporary big merged bam
-	for(map<string, string> ii_fmaps = fmaps.begin(); ii_fmaps < fmaps.end(); ii_fmaps++){
-		big_bam[i_tmp] = *ii_fmaps.first;
-		i_tmp ++;
-	}
+	int i_tmp = 0;
+	for(map<string, string> ii_fmaps = fmaps.begin(); ii_fmaps < fmaps.end(); ii_fmaps++)
+		big_bam[i_tmp++] = *ii_fmaps.first;
 	
+ 	bamFile *fp;
+	heap1_t *heap;
+	fp = (bamFile*)calloc(n,sizeof(bamFile));
+	heap = (heap1_t*)calloc(n,sizeof(heap1_t));
 	//################# node index here ###################
 	if(merge && fmaps.size()>1 && !(format[0].compare("sam")) && chr == -1 ){
  	/* open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
    samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
    maq mapmerge		*/
-   		//string merge_command_line; // may not need to write the string, but need samtools functions of merge bam files
-   		// merge_fh; //file handle of the merge bam file
    		
-   		// merge the whole bam files to one big bam (function bam_merge in bam_sort.c)
-
-   		bam_merge(bam_number,big_bam);
+   		// dig into merge samtools code and utilize what we needed
+   		if(MergeBams_prep(big_bam, n, fp, heap)){
    		
-		if ((in = samopen(big_bam[0], in_mode, fn_list)) == 0) {
-			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-			continue;
+	   		while(heap->pos != HEAP_EMPTY){
+   				bam1_t *b = heap->b;
+   			
+   				char *readgroup;
+				char ori = AlnParser(b, format_, alt, readgroup, readgroup_platform);
+				string library = readgroup.empty()?readgroup_library[readgroup]:(*fmaps.begin().second);
+			  	//if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
+			  		//continue;
+			  	if(!library.empty())
+			  		Analysis(library, b);
+		  		
+   				if((j = bam_read1(fp[heap->i], b)) >= 0){
+   					heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
+   					heap -> idx = idx++;
+   				}
+   				else if(j == -1){
+   					heap->pos = HEAP_EMPTY;
+   					free(heap->b->data);
+   					free(heap->b);
+   					heap->b = 0;
+   				}
+   				else
+   					cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
+   				ks_heapadjust(heap, 0, n, heap);
+   			}
 		}
-		if (in->header == 0) {
-			fprintf(stderr, "[main_samview] fail to read the header.\n");
-			continue;
-		}
-		// convert/print the entire file
-		int r;
-		while ((r = samread(in, b)) >= 0) { // read one alignment from `in'
-			char *readgroup;
-			char ori = AlnParser(b, format_, alt, readgroup, readgroup_platform);
-			string library = readgroup.empty()?readgroup_library[readgroup]:(*fmaps.begin().second);// sorted automatically, don't know if in perl it's the same, shouldn't matter the order
-		  	//if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
-		  		//continue;
-		  	if(!library.empty())
-		  		Analysis(library, b);
-		}
-		bam_destroy1(b);
-		samclose(in);		
 	}
 	//############### find the designated chromosome and put all of them together for all bam files #############
 	else{//#customized merge & sort
-		// define FHs
-		map<> Idxs;
-		map<int, string> buffer; // have to define it here because the two for loop are put together here
-		int i = 0;
-		for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii){
-			// work on each bam file one by one, rather than the whole
-			if ((in = samopen(?(merged bam name), in_mode, fn_list)) == 0) {
-				fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-				continue;
-			}
-			if (in->header == 0) {
-				fprintf(stderr, "[main_samview] fail to read the header.\n");
-				continue;
-			}
-			Idxs[i] = 1;
-			i++;
+	// totally different from the perl version; use customized samtools instead
+		samfile_t **in;
+		*in = new samfile_t[n];
 		
-			int r;
-			while ((r = samread(in, b)) >= 0) { // read one alignment from `in'
-				char *readgroup;
-				string format;
-				string alt;
-				char ori = AlnParser(b, format, alt, readgroup, readgroup_platform);
-				
-				// need to get the line out, through samtools, don't know how now
-				
-				// really don't know the logic here. Why loop twice
-				if(/*defined b*/ && !chr.empty() && !((b->core.chr).compare(chr)) || /*defined chr*/ || /*eof(fh*/){
-					buffer[
-				
-				if(b->core.chr > minchr || b->core.chr == minchr && b->core.pos > minpos){// need to work on defined b
-					continue;
-				}
-			
-			// don't know why BreakDancer read each line of the bam file for nothing. # analyze only 1 chromosome
-			int minchr = 255;// need to see this is the correspondence of char and int
-			int minpos = 1e10;
-			int minidx;
-			int min_t;
-			string library;
-			
-			// convert/print the entire file
-			
-			minchr = b->core.chr;
-			minpos = b->core.pos;
-			minidx = 
-			
+		int *tid, *beg, *end, *n_off;
+		tid = new int[n];
+		beg = new int[n];
+		end = new int[n];
+		n_off = new int[n];
+		
+		string chr_str;
+		sprintf(chr_str, "%d", chr);
+		
+		pair64_t **off;
+		*off = new pair64_t[n];
+		
+		uint64_t *curr_off;
+		curr_off = new uint64_t[n];
+		int *i, *n_seeks;
+		i = new int[n];
+		n_seeks = new int[n];
+		for(int k = 0; k < n; k++){
+			n_seeks[k] = 0;
+			i[k] = -1;
+			curr_off[k] = 0;
 		}
+		
+		if(MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_str, int *tid, int *beg, int *end, samfile_t **in, pair64_t **off, int *n_off)){
+			while(heap->pos != HEAP_EMPTY){
+   				bam1_t *b = heap->b;
+   			
+   				char *readgroup;
+				char ori = AlnParser(b, format_, alt, readgroup, readgroup_platform);
+				string library = readgroup.empty()?readgroup_library[readgroup]:(*fmaps.begin().second);
+		  		//if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
+		  			//continue;
+		  		if(!library.empty())
+		  			Analysis(library, b);
+		  		
+   				if(ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], curr_off[heap->i], i[heap->i], n_seeks[heap->i], off[heap->i], n_off[heap->i])>0){
+   					heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
+   					heap -> idx = idx++;
+   				}
+   				else if(j == -1){
+   					heap->pos = HEAP_EMPTY;
+   					free(heap->b->data);
+   					free(heap->b);
+   					heap->b = 0;
+   				}
+   				else
+   					cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
+   				ks_heapadjust(heap, 0, n, heap);
+   			}
+		}
+		
+		delete []tid, []beg, []end, []n_off, []curr_off, []i, []n_seeks;
+		for(k = 0; k < n; k++)
+			samclose(in[k]);
 	}
-	bam_destroy1(b);
+	
+	for(k = 0; k!=n; k++)
+   	bam_close(fp[k]);
+   	free(fp);
+   	free(heap);
+	
 	delete []big_bam;
 	big_bam = NULL;
 	free(fn_list); free(fn_ref); free(fn_rg);
@@ -506,7 +524,7 @@ int main(int argc, char *argv[])
  	return 0;
 }
 
-// this function is good except the name replacement and readlen for 'else'
+// this function is good
 void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<int,vector<int>> &reg_name, map<string,vector<int>> &read, map<int, vector<vector<string>>> &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq){
 
   //main analysis code
@@ -595,7 +613,16 @@ void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<in
 		normal_switch = 0;
 		nnormal_reads = 0;
 	}
-	bam1_qname(b) = substitue_string(); //need to figure out exactly what s/\/[12]$// is; // need to figure out the length is needed or not
+	// deal with the name string
+	string qname_tmp = bam1_qname(b);
+	size_t found1 = qname_tmp.rfind("/1");
+	size_t found2 = qname_tmp.rfind("/2");
+	if(found1 != string::npos || found2 != string::npos){
+		size_t found = (found1 == string::npos) ? found2 : found1;
+		qname_tmp.replace(found,2,"");
+	}
+	bam1_qname(b) = qname_tmp; 
+	
 	if(! prefix_fastq.empty() && ! bam1_seq(b).empty() && ! bam1_qual(b).empty()){
 		//string tmp_str1;
 		//sprintf(tmp_str1, "%s %d %d %c %d %d %s %d %s %s %s", bam1_qname(b), b->core.chr, b->core.pos, ori/*problem*/, b->core.isize, b->core.flag, b->core.qual, /* readlen */, lib, bam1_seq(b), bam1_qual(b));
@@ -608,7 +635,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<in
 		tmp_reg_seq.push_back(itoa(b->core.isize));
 		tmp_reg_seq.push_back(itoa(b->core.flag));
 		tmp_reg_seq.push_back(b->core.qual);
-		tmp_reg_seq.push_back(bam1_seq(b).length());//readlen, need to see if this is correct
+		tmp_reg_seq.push_back(itoa(b->core.l_qseq));
 		tmp_reg_seq.push_back(lib);
 		tmp_reg_seq.push_back(bam1_seq(b));
 		tmp_reg_seq.push_back(bam1_qual(b));
@@ -625,7 +652,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<in
 		tmp_reg_seq.push_back(itoa(b->core.isize));
 		tmp_reg_seq.push_back(itoa(b->core.flag));
 		tmp_reg_seq.push_back(b->core.qual);
-		tmp_reg_seq.push_back(/*readlen*/);
+		tmp_reg_seq.push_back(itoa(b->core.l_qseq));
 		tmp_reg_seq.push_back(lib);
 		reg_seq.push_back(tmp_reg_seq);		
 	}
@@ -941,13 +968,12 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
 		int tid, beg, end, n_off;
 		string chr_str;
 		sprintf(chr_str, "%d", chr);
-		bamFile fp = ReadBamChr_prep(chr_str, bam_name, idx, &tid, &beg, &end, in);
-		pair64_t *off = get_chunk_coordinates(idx, tid, beg, end, &n_off);
+		pair64_t *off;
+		bamFile fp = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, off, &n_off);
 		uint64_t curr_off;
 		int i, ret, n_seeks;
 		n_seeks = 0; i = -1; curr_off = 0;
-		 
-		while(ReadBamChr(b, fp, tid, beg, end, idx, &curr_off, &i, &n_seeks, off, n_off){
+		while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
 			char *readgroup;
 			string format = "sam";
 			string alt = "";
@@ -1046,8 +1072,10 @@ int PutativeRegion(vector<int> rnode, map<int,vector<int>> &reg_name){
 }
 
 // prepare: read bam file by a chromosome
-bamFile ReadBamChr_prep(string chr_str, string bam_name, bam_index_t *idx, int tid, int beg, int end, samfile_t *in){
-	if ((in = samopen((*ii).first, in_mode, fn_list)) == 0) {
+bamFile ReadBamChr_prep(string chr_str, string bam_name, int &tid, int &beg, int &end, samfile_t *in, pair64_t *off, int &n_off){
+	char *in_mode, *fn_list = 0;
+	strcpy(in_mode, "r");
+	if ((in = samopen(bam_name, in_mode, fn_list)) == 0) {
 		fprintf(stderr, "[main_samview] fail to open file for reading.\n");
 		continue;
 	}
@@ -1055,19 +1083,19 @@ bamFile ReadBamChr_prep(string chr_str, string bam_name, bam_index_t *idx, int t
 		fprintf(stderr, "[main_samview] fail to read the header.\n");
 		continue;
 	}
+	bam_index_t *idx;
 	idx = bam_index_load(bam_name);// index
 	bam_parse_region(in->header, chr_str, &tid, &beg, &end);// parse
 	
 	// return the file handle for handle
 	bamFile fp = in->x.bam;
+	off = get_chunk_coordinates(idx, tid, beg, end, &n_off);
 	return fp;
 }
 
 // read bam file by a chromosome by one line; fp will track where we are
-int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, bam_index_t *idx, uint64_t curr_off, int i, int n_seeks, pair64_t *off, int n_off){
+int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t &curr_off, int &i, int &n_seeks, pair64_t *off, int n_off){
 
-	bam1_t *b = bam_init1();
-	
 	if (off == 0) return 0;
 		
 	if (curr_off == 0 || curr_off >= off[i].v) { // then jump to the next chunk
@@ -1087,7 +1115,66 @@ int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, bam_index_t *id
 	} 
 	else 
 		return 0;
+	return 1;
 }
+
+// read bam files all together, and merge them
+int MergeBams_prep(string *fn, int n, bamFile *fp, heap1_t *heap){
+	for(i = 0; i!=n; ++i){
+		heap1_t *h;
+		fp[i] = bam_open(fn[i], "r");
+		if(fp[i] == 0){
+			int j;
+			cout << "[bam_merge_core] fail to open file " << fn[i] << "\n";
+			for(int j = 0; j < i; ++j)
+				bam_close(fp[j]);
+			free(fp);
+			free(heap);
+			return 0;
+		}
+		h = heap + i;
+		h->i = i;
+		h->b = (bam1_*)calloc(1,sizeof(bam1_t));
+		if(bam_read1(fp[i],h->b) >= 0){
+			h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
+			h->idx = idx++;
+		}
+		else h->pos = HEAP_EMPTY;
+	}
+	
+	ks_heapmake(heap, n, heap);
+	return 1;
+}
+	
+// read bam files all together by one particular chromosome, and merge them
+int MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_str, int *tid, int *beg, int *end, samfile_t **in, pair64_t **off, int *n_off){
+	for(i = 0; i!=n; ++i){
+		heap1_t *h;
+		fp[i] = ReadBamChr_prep(chr_str, fn[i], tid[i], beg[i], end[i], in[i], off[i], n_off[i]);
+		if(fp[i] == 0){
+			int j;
+			cout << "[bam_merge_core] fail to open file " << fn[i] << "\n";
+			for(int j = 0; j < i; ++j)
+				bam_close(fp[j]);
+			free(fp);
+			free(heap);
+			return 0;
+		}
+		h = heap + i;
+		h->i = i;
+		h->b = (bam1_*)calloc(1,sizeof(bam1_t));
+		if(bam_read1(fp[i],h->b) >= 0){
+			h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
+			h->idx = idx++;
+		}
+		else h->pos = HEAP_EMPTY;
+	}
+	
+	ks_heapmake(heap, n, heap);
+	return 1;
+}
+	
+	
 	
 // this function is good
 string get_from_line(string line,string search,int flag){
@@ -1184,5 +1271,5 @@ t.seq			:		bam1_seq(b)		(length: b.core.l_qseq)
 t.basequal		:		bam1_qual(b)	(length: b.core.l_qseq)
 t.ori			:		ori as a return in AlnParser	(in samtools, can be derived by bam1_strand(b), bam1_mstrand(b))
 t.readgroup		:		readgroup as a pointer in AlnParser input
-t.readlen		:		?
+t.readlen		:		b->core.l_qseq
 */
