@@ -1,19 +1,4 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <stdio.h>
-#include <cstdlib>
-#include <list>
-#include <iomanip>
-#include <cmath>
-#include <math.h>
-#include <time.h>
-#include <map>
 #include "BreakDancerMax.h"
-#include "AlnParser.h"
-#include "sam.h"
-#include "bam.h"
 
 using namespace std;
 
@@ -35,13 +20,13 @@ int main(int argc, char *argv[])
 	float prior_prob = 0.001;
 	int transchr_rearrange = 0;//bool
 	int fisher = 0;//bool
-	string prefix_fastq;
-	string dump_BED;
+	string prefix_fastq = "";
+	string dump_BED = "";
 	int Illumina_long_insert = 0;// bool
 	int Illumina_to_SOLiD = 0;// bool
 	while((c = getopt(argc, argv, "o:s:c:m:q:r:b:ep:tfd:g:lC")) >= 0){
 		switch(c) {
-			case 'o': chr = strdup(optarg); break;
+			case 'o': chr = atoi(optarg); break;
 			case 's': min_len = atoi(optarg); break;
 			case 'c': cut_sd = atoi(optarg); break;
 			case 'm': max_sd = atoi(optarg); break;
@@ -118,7 +103,7 @@ int main(int argc, char *argv[])
 	map<string,float> readlens;//global
 	map<string,int> mapQual;// global
 	int max_readlen = 0;
-	map<uint32_t, map<string,int>> x_readcounts;
+	map<uint32_t, map<string,int> > x_readcounts;
 	map<string,string> readgroup_library;
 	// define the readgroup_platform map
 	std::map<char *, std::string> readgroup_platform;	
@@ -140,7 +125,7 @@ int main(int argc, char *argv[])
 			string readlen_ = get_from_line(line,"readlen",0);
 			string upper_ = get_from_line(line,"upp",0);
 			string lower_ = get_from_line(line,"low",0);
-			string mqual_ = get_from_line_two(line,"map","qual",0));
+			string mqual_ = get_from_line_two(line,"map","qual",0);
 			string lib = get_from_line(line,"lib",0);
 			float mean,std,readlen,upper,lower;
 			int mqual;
@@ -170,7 +155,7 @@ int main(int argc, char *argv[])
 			}		
 			
 			libmaps[lib] = fmap;
-			if(mqual_.compare("NA"))
+			if(mqual_.compare("NA")){
 				mqual = atoi(mqual_);
 				mapQual[lib] = mqual;
 			}
@@ -205,12 +190,13 @@ int main(int argc, char *argv[])
 			d = d<tmp ? d:tmp;
 		}
 	}
+
 	CONFIG.close();
 		
 	if(d < 50)
 		d = 50;
 	
-	if(dump_BED != "")
+	if(dump_BED.empty())
 		ofstream BED(dump_BED);
 	vector<string> format; 
 	vector<string>::iterator it_format;
@@ -282,7 +268,7 @@ int main(int argc, char *argv[])
 		while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
 			char *readgroup;
 
-			char ori = AlnParser(b, format_, alt, readgroup, readgroup_platform)
+			char ori = AlnParser(b, format_, alt, readgroup, readgroup_platform);
 		
 			if(b->core.tid == p_chr)
 				ref_len += b->core.pos - p_pos;
@@ -312,19 +298,19 @@ int main(int argc, char *argv[])
 				continue;
 				
 			if(Illumina_long_insert){
-				if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20))
+				if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
 					b->core.flag = 4;
-				if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4))
+				if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
 					b->core.flag = 20;
-				if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20))
+				if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20)
 					b->core.flag = 3;
 			}
 			else{
-				if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18))
+				if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18)
 					b->core.flag = 2;
-				if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2))
+				if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2)
 					b->core.flag = 18;
-				if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18))
+				if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18)
 					b->core.flag = 3;
 			}
 			
@@ -375,7 +361,7 @@ int main(int argc, char *argv[])
 		
 		printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps[$lib],mean_insertsize[lib],std_insertsize[lib],uppercutoff[lib],lowercutoff[lib],readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
 		
-		map<uint32_t,map<string,int>>::iterator x_readcounts_ii;
+		map<uint32_t,map<string,int> >::iterator x_readcounts_ii;
 		for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){
 			uint32_t t = *x_readcounts_ii.first;// get the first key out, which is a member of recflags
 			if(*x_readcounts_ii.second.find(lib) == *x_readcounts_ii.second.end())
@@ -391,11 +377,11 @@ int main(int argc, char *argv[])
 	int beginc = -1;// global
 	int lasts;// global (chr, should be int in samtools)
 	int lastc = -1; // global
-	map<int, vector<vector<string>>> regs;//global in analysis
-	map<string, vector<int>> read;// global in analysis
-	map<int,vector<int>> reg_name;// global in analysis
-	vector<vector<string>> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
-	vector<vector<string>>::iterator it_reg_seq; // global
+	map<int, vector<vector<string> > > regs;//global in analysis
+	map<string, vector<int> > read;// global in analysis
+	map<int,vector<int> > reg_name;// global in analysis
+	vector<vector<string> > reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
+	vector<vector<string> >::iterator it_reg_seq; // global
 	
 	int idx_buff = 0;// global
 	int final_buff = 0;
@@ -432,7 +418,7 @@ int main(int argc, char *argv[])
 			  	//if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
 			  		//continue;
 			  	if(!library.empty())
-			  		Analysis(library, b);
+			  		Analysis (lib, b, reg_seq, reg_name, read, regs, begins, beginc, lasts, lastc, idx_buff, buffer_size, nnormal_reads, min_len, normal_switch, reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher);
 		  		
    				if((j = bam_read1(fp[heap->i], b)) >= 0){
    					heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
@@ -489,7 +475,7 @@ int main(int argc, char *argv[])
 		  		//if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
 		  			//continue;
 		  		if(!library.empty())
-		  			Analysis(library, b);
+		  			Analysis (lib, b, reg_seq, reg_name, read, regs, begins, beginc, lasts, lastc, idx_buff, buffer_size, nnormal_reads, min_len, normal_switch, reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher);
 		  		
    				if(ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], curr_off[heap->i], i[heap->i], n_seeks[heap->i], off[heap->i], n_off[heap->i])>0){
    					heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
@@ -525,12 +511,12 @@ int main(int argc, char *argv[])
 }
 
 // this function is good
-void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<int,vector<int>> &reg_name, map<string,vector<int>> &read, map<int, vector<vector<string>>> &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq){
+void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, vector<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher){
 
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
   
-	if(mapQual[lib] >= 0}{
+	if(mapQual[lib] >= 0){
 		if(b->core.qual <= mapQual[lib])
 			return;
 	}
@@ -544,25 +530,25 @@ void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<in
 		return;
 	// for long insert
 	if(Illumina_long_insert){
-		if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20))
+		if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
 			b->core.flag = 4;
-		if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4))
+		if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
 			b->core.flag = 20;
-		if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20))
+		if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20)
 			b->core.flag = 3;
 		}
 	else{
-		if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18))
+		if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18)
 			b->core.flag = 2;
-		if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2))
+		if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2)
 			b->core.flag = 18;
-		if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18))
+		if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18)
 			b->core.flag = 3;
 		if(b->core.flag == 20)
 			b->core.flag = 4; // if it is RF orientation, then regardless of distance
 	}
 	if(b->core.flag == 8)
-		b->core.flag = 1
+		b->core.flag = 1;
 
 	if(b->core.flag < 32 && abs(b->core.isize)>max_sd) // skip read pairs mapped too distantly on the same chromosome
 		return;
@@ -596,7 +582,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<in
 			regs[k] = p;
 			idx_buff++;
 			if(idx_buff > buffer_size){
-				buildConnection();
+				buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher);
 				idx_buff = 0;
 			}
 		}
@@ -663,12 +649,12 @@ void Analysis (string lib, bam1_t *b, vector<vector<string>> &reg_seq, vector<in
 }
 
 // this function is good. May miss the i/o
-void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_name, map<int,vector<vector<string>>> &regs){
+void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher){
   // build connections
   // find paired regions that are supported by paired reads
   //warn("-- link regions\n");
-	map<int, map<int, int>> link;
-	map<string,vector<int>>::iterator ii_read;
+	map<int, map<int, int> > link;
+	map<string,vector<int> >::iterator ii_read;
 	for(ii_read = read.begin(); ii_read < read.end(); ii_read++){
 		vector<int> p = *ii_read.second;
 		if(p.size() != 2) // skip singleton read (non read pairs)
@@ -682,10 +668,10 @@ void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_na
 			link[p[1]][p[0]] = 1;
 		}
 	}
-	map<int, map<int, int>> clink(link);
+	map<int, map<int, int> > clink(link);
 	// segregate graph, find nodes that have connections
 	map<int,int> free_nodes;
-	map<int, map<int, int>>::iterator ii_clink;
+	map<int, map<int, int> >::iterator ii_clink;
 	for(ii_clink = clink.begin(); ii_clink < clink.end(); ii_clink++){
 		int s0 = *ii_clink.first;
 		if(clink.find(s0) == clink.end())
@@ -708,7 +694,7 @@ void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_na
 				for(vector<int> ii_s1s = s1s.begin(); ii_s1s < s1s.end(); ii_s1s++){
 					s1 = *s1s;
 					vector<string> free_reads;
-					map<int,map<int,int>> nodepair;
+					map<int,map<int,int> > nodepair;
 					int nlinks = clink[tail][s1];
 					if(nlinks<min_read_pair) // require sufficient number of pairs
 						continue;
@@ -724,7 +710,7 @@ void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_na
 					
 					// analysis a nodepair
 					vector<int> snodes;
-					for(map<int,map<int,int>>::iterator ii_nodepair = nodepair.begin(); ii_nodepair < nodepair.end(); ii_nodepair ++){
+					for(map<int,map<int,int> >::iterator ii_nodepair = nodepair.begin(); ii_nodepair < nodepair.end(); ii_nodepair ++){
 						snodes.push_back(*ii_nodepair);
 					}
 					int node1 = snodes[0];
@@ -738,10 +724,10 @@ void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_na
 					
 					int nread_pairs = 0;
 					map<string,vector<string>> read_pair;
-					map<string,int> type;//first one is flags
-					map<string,map<string,int>> type_library_readcount;
-					vector<map<char,int>> type_orient_counts;
-					map<string,map<string,int>> type_library_meanspan;	//diff span distance;
+					map<uint32_t,int> type;//first one is flags
+					map<uint32_t,map<string,int> > type_library_readcount;
+					vector<map<char,int> > type_orient_counts;
+					map<uint32_t,map<string,int> > type_library_meanspan;	//diff span distance;
 					vector<vector<string>> support_reads;
 					for(vector<int> ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
 						int node = *ii_snodes;
@@ -805,12 +791,12 @@ void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_na
 					//int bestIndelSize;//don't know if int; no usage actually
 					if(nread_pairs >= min_read_pair){
 						float maxscore = 0;
-						string flag = "0";
+						uint32_t flag = 0;
 						map<string, int> diffspans;
 						map<string, string> sptypes;
 						for(map<string,int> ii_type = type.begin(); ii_type < type.end(); ii_type ++){
-							string fl = *ii_type.first;
-							float ptype = *ii_type.second()/nread_pairs;
+							uint32_t fl = *ii_type.first;
+							float ptype = float(*ii_type.second())/float(nread_pairs);
 							if(maxscore<ptype){
 								maxscore = ptype;
 								flag = fl;
@@ -875,8 +861,8 @@ void buildConnection(map<string,vector<int>> &read, map<int,vector<int>> &reg_na
 								}
 							}
 							
-							float LogPvalue = ComputeProbScore();//need to work on the function;
-							float PhredQ_tmp = -10*LogPvalue/log(10));
+							float LogPvalue = ComputeProbScore(snode, type_library_readcount[flag], flag, x_readcounts, reference_len, fisher);//need to work on the function;
+							float PhredQ_tmp = -10*LogPvalue/log(10);
 							int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
 							
 							float AF = float(type[flag])/float(type[flag]+normal_rp);
@@ -956,8 +942,8 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
 	map<string,float> es_readlens;
 	map<string,float> es_uppercutoff;
 	map<string,float> es_lowercutoff;
-	map<string,vector<int>> insert_stat;
-	map<string,vector<int>> readlen_stat;
+	map<string,vector<int> > insert_stat;
+	map<string,vector<int> > readlen_stat;
 	
 	bam1_t *b = bam_init1();
 	for(map<string,string> ii=fmaps.begin(); ii!=fmaps.end(); ++ii){
@@ -998,7 +984,7 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
 		samclose(in);		
 	}
 	bam_destroy1(b);
-	for(map<string,vector<int>> ii_readlen_stat = readlen_stat.begin(); ii_readlen_stat < readlen_stat.end(); ii_readlen_stat ++){
+	for(map<string,vector<int> > ii_readlen_stat = readlen_stat.begin(); ii_readlen_stat < readlen_stat.end(); ii_readlen_stat ++){
 		//double res = accumulate(insert_stat[lib].begin(), insert_stat[lib].end(), 0);
 		//double mean = res/insert_stat[lib].size();
 		float mean_insert = mean(insert_stat[lib]);
@@ -1039,16 +1025,16 @@ float standard_deviation(vector<int> &stat, float mean){
 	return sqrt((float)all/(float)(stat.size()) - mean*mean);
 }	
 
-void ComputeProbScore{
+float ComputeProbScore(vector<int> rnode, map<string,int> rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher) {
 	// rnode, rlibrary_readcount, type
 	int total_region_size = PutativeRegion(rnode);
 	
 	float lambda;
 	float logpvalue = 0;
-	for(map<int,map<string,int>> ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount < rlibrary_readcount.end(); ii_rlibrary_readcount ++){
-		lambda = total_region_size* x_readcounts[type][lib]/reference_len;
-		// p = new Poisson();
-		logpvalue += // p->LogPoinssontailProb(*ii_rlibrary_readcount,lambda)
+	for(map<int,map<string,int> > ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount < rlibrary_readcount.end(); ii_rlibrary_readcount ++){
+		string lib = *ii_rlibrary_readcount.first;
+		lambda = float(total_region_size* x_readcounts[type][lib])/float(reference_len);
+		logpvalue += LogPoissonTailProb(float((rlibrary_readcount[lib]).size()),lambda);
 	}
 	
 	if(fisher && logpvalue < 0){
@@ -1060,7 +1046,7 @@ void ComputeProbScore{
 }
 
 // this function is good
-int PutativeRegion(vector<int> rnode, map<int,vector<int>> &reg_name){
+int PutativeRegion(vector<int> rnode, map<int,vector<int> > &reg_name){
 	int total_region_size = 0;
 	for(vector<int> ii_node = rnode.begin(); ii_node < rnode.end(); ii_node++){
 		int node = *ii_node;
