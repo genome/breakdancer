@@ -13,17 +13,28 @@
 #include "sam.h"
 #include "bam.h"
 #include "ksort.h"
+#include "AlnParser.h"
+#include "Poisson.h"
+
+using namespace std;
 
 typedef struct {
      uint64_t u, v;
 }pair64_t;
 
+typedef struct {
+	int i;
+	uint64_t pos, idx;
+	bam1_t *b;
+} heap1_t;
 
-void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, vector<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq);
+void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, vector<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int &begins, int &beginc, int &lasts, int &lastc, int &idx_buff, int buffer_size, int &nnormal_reads, int min_len, int &normal_switch, int &reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, int prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher);
 
 void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs);
 
 int PutativeRegion(vector<int> rnode, map<int,vector<int> > &reg_name);
+
+float ComputeProbScore(vector<int> rnode, map<string,int> rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher);
 
 void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr);
 
