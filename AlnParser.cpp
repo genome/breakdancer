@@ -1,26 +1,10 @@
-#include <iostream>
-#include <fstream>
-#include <string>
-#include <vector>
-#include <stdio.h>
-#include <cstdlib>
-#include <list>
-#include <iomanip>
-#include <cmath>
-#include <math.h>
-#include <time.h>
-#include <sstream>
-#include <map>
-#include "BreakDancerMax.h"
 #include "AlnParser.h"
-#include "sam.h"
-#include "bam.h"
 
 using namespace std;
 extern string platform;
 //extern std::map<char *, std::string> readgroup_platform;
 
-char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<char *, string> &readgroup_platform){
+char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string, string> &readgroup_platform){
 	char ori;
 	string platform = platform;
 	// strcmp = 0 -> two strings are the same
