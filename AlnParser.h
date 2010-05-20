@@ -13,14 +13,14 @@
 #include <cmath>
 #include <math.h>
 #include <time.h>
+#include <sstream>
 #include "sam.h"
 #include "bam.h"
-#include "BreakDancerMax.h"
 #include <map>
 
 using namespace std;
 
-char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<char *, string> &readgroup_platform);
+char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string, string> &readgroup_platform);
 
 /*struct t_buf {
 	string readname;
