@@ -1,6 +1,6 @@
 #include "Poisson.h"
 
-#define PI 3.1415927;
+float PI = 3.1415927;
 float LZERO = -1e10;
 float LSMALL = LZERO/2;
 float SMALL = exp(LSMALL);
@@ -17,8 +17,8 @@ float LogPoissonTailProb(float n, float lambda){
 }
 
 float LogPoissonPDF(float k, float lambda){
-	float logk_factorial = (k==0) ? 0 : (k*log(k)-k+0.5*log(2*PI*k));
-	float log_lambda = almbda<=0 ? LSMALL:log(lambda);
+	float logk_factorial = k==0 ? 0 : k * (log (k) ) - k + 0.5 * (log (2*PI*k) ) ;
+	float log_lambda = lambda<=0 ? LSMALL:log(lambda);
 	float logp = k*log_lambda - lambda - logk_factorial;
 	return logp;
 }
