@@ -4,8 +4,8 @@ using namespace std;
 extern string platform;
 //extern std::map<char *, std::string> readgroup_platform;
 
-char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string, string> &readgroup_platform){
-	char ori;
+string AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string, string> &readgroup_platform){
+	string ori;
 	string platform = platform;
 	// strcmp = 0 -> two strings are the same
 /*	if(! compare(format, "maq")){
@@ -33,7 +33,7 @@ char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string
 		ss_mtid << b->core.mtid;
 		ss_mtid >> str_mtid;
 		
-		ori = (flag&0x0010 || str_flag.find("r") != string::npos)?'-':'+';
+		ori = (flag&0x0010 || str_flag.find("r") != string::npos)?"-":"+";
 		b->core.flag = 0;
 		
 		if(uint8_t *tmp = bam_aux_get(b, "RG")){
@@ -58,8 +58,8 @@ char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string
 			if(flag & 0x0400 || str_flag.find("d")!=string::npos)
 				b->core.flag = 0;
 			else if(flag & 0x0001 || str_flag.find("p")){
-				char ori2;
-				ori2 = (flag & 0x0020 || str_flag.find("R"))?'-':'+';
+				string ori2;
+				ori2 = (flag & 0x0020 || str_flag.find("R"))?"-":"+";
 				if(flag & 0x0004 || str_flag.find("u"))
 					b->core.flag = 192;
 				else if(flag & 0x0008 || str_flag.find("U"))
@@ -71,16 +71,16 @@ char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string
 						b->core.flag = 18;
 					else{
 						if(b->core.pos < b->core.mpos)
-							b->core.flag = (ori != '+')?20:18;
+							b->core.flag = (ori.compare("+") != 0)?20:18;
 						else
-							b->core.flag = (ori != '+')?18:20;
+							b->core.flag = (ori.compare("+") != 0)?18:20;
 					}
 				}
 				else{
 					if(platform.find("solid")!=string::npos) {// insensitive case 
 						if(ori != ori2)
-							b->core.flag = (ori2 != '+')?8:1;
-						else if(ori == '+'){
+							b->core.flag = (ori2.compare("+") != 0)?8:1;
+						else if(ori.compare("+") == 0){
 							if(flag & 0x0040)
 								b->core.flag = (b->core.pos < b->core.mpos)?2:4;
 							else
@@ -97,8 +97,8 @@ char AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string
 					}
 					else{
 						if(ori != ori2)
-							b->core.flag = (ori2 != '+')?8:1;
-						else if(b->core.mpos > b->core.pos && (ori == '-') || b->core.pos > b->core.mpos && (ori == '+'))
+							b->core.flag = (ori2.compare("+") != 0)?8:1;
+						else if(b->core.mpos > b->core.pos && (ori.compare("-") == 0) || b->core.pos > b->core.mpos && (ori.compare("+") == 0))
 							b->core.flag = 4;
 						else
 							b->core.flag = 2;
