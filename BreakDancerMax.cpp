@@ -6,6 +6,11 @@ using namespace std;
 
 string version ("BreakDancerMax-0.0.1r81");
 string options;
+
+
+
+
+
 // open the bam file
 int main(int argc, char *argv[])
 {
@@ -546,7 +551,7 @@ int main(int argc, char *argv[])
 }
 
 // this function is good
-void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, map<string,string> ReadsOut, map<string,float> mean_insertsize, map<string, string> SVtype, map<string, int> mapQual, map<string, float> uppercutoff, map<string, float> lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int max_readlen, string ori){
+void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string, float> &uppercutoff, map<string, float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int max_readlen, string ori){
 
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
@@ -688,7 +693,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 }
 
 // this function is good. May miss the i/o
-void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, int min_read_pair, string dump_BED, int max_readlen, string prefix_fastq, map<string,string> ReadsOut, map<string,string> SVtype, map<string,float> mean_insertsize){
+void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, int min_read_pair, string dump_BED, int max_readlen, string prefix_fastq, map<string,string> &ReadsOut, map<string,string> &SVtype, map<string,float> &mean_insertsize){
   // build connections
   // find paired regions that are supported by paired reads
   //warn("-- link regions\n");
@@ -1001,7 +1006,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 }
 
 // this function is good
-void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr, int cut_sd, int min_map_qual, map<string, string> readgroup_platform){
+void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform){
 	map<string,float> es_means;
 	map<string,float> es_stds;
 	map<string,float> es_readlens;
