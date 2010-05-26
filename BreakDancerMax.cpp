@@ -5,7 +5,7 @@
 using namespace std;
 
 string version ("BreakDancerMax-0.0.1r81");
-string options;
+string options ("");
 
 
 
@@ -15,23 +15,23 @@ string options;
 int main(int argc, char *argv[])
 {
 	int c;
-	string bam_file;
-	
-	int chr = -1; // chromosome
+	int chr = 0; // chromosome
 	int min_len = 7;
 	int cut_sd = 3;
 	int max_sd = 1000000;
 	int min_map_qual = 35;
 	int min_read_pair = 2;
-	int buffer_size = 100;
+	int buffer_size = /*100*/1;//temporarily for debug
 	int learn_par = 0;//bool
 	float prior_prob = 0.001;
 	int transchr_rearrange = 0;//bool
 	int fisher = 0;//bool
-	string prefix_fastq = "";
-	string dump_BED = "";
 	int Illumina_long_insert = 0;// bool
 	int Illumina_to_SOLiD = 0;// bool
+	string bam_file;
+	string prefix_fastq;
+	string dump_BED;
+
 	while((c = getopt(argc, argv, "o:s:c:m:q:r:b:ep:tfd:g:lC")) >= 0){
 		switch(c) {
 			case 'o': chr = atoi(optarg); break;
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	}
 	if(optind == argc){
 		fprintf(stderr, "\n");
-		fprintf(stderr, "BreakDancerMax.pl <analysis_config.lst>\n\n");
+		fprintf(stderr, "breakdancermax <analysis.config>\n\n");
 		fprintf(stderr, "Options: \n");
 		fprintf(stderr, "	-o INT	operate on a single chromosome [all chromosome]\n");
 		fprintf(stderr, "	-s INT	minimum length of a region [%d]\n", min_len);		 
@@ -77,15 +77,21 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "\n");
 		return 1;
 	}
-
-	char prefix_fastq_[prefix_fastq.length()];
-	strcpy(prefix_fastq_, prefix_fastq.c_str());
-	char dump_BED_[dump_BED.length()];
+	/*char dump_BED_[dump_BED.size()+1];
 	strcpy(dump_BED_, dump_BED.c_str());
-	char *options_;
-	sprintf(options_,"-o %d -s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -p %f -t %d -f %d -d %s -g %s -l %d -C %d",chr, min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, prefix_fastq_, dump_BED_, Illumina_long_insert, Illumina_to_SOLiD);
-	options = char2str(options_);
-	//options << "-o " << chr << " -s " << min_len << " -c " << cut_sd << " -m " << max_sd << "-q " << min_map_qual << " -r " << min_read_pair << " -b " << buffer_size << " -e " << learn_par << " -p " << prior_prob << " -t " << transchr_rearrange << " -f " << fisher << " -d " << prefix_fastq << " -g " << dump_BED << " -l " << Illumina_long_insert << " -C " << Illumina_to_SOLiD;
+
+	char prefix_fastq_[prefix_fastq.size()+1];
+	strcpy(prefix_fastq_, prefix_fastq.c_str());*/
+	
+	string platform = Illumina_to_SOLiD?"solid":"illumina";
+	char options_[500];
+	
+	sprintf(options_,"-o %d -s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -p %f -t %d -f %d -l %d -C %d",chr, min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, Illumina_long_insert, Illumina_to_SOLiD);
+	
+	options = options_;
+	options += " -d " + prefix_fastq;
+	options += " -g " + dump_BED;
+	
 	// define the map SVtype
 	map<string, string> SVtype;
 	if(Illumina_long_insert == 1){
@@ -103,6 +109,8 @@ int main(int argc, char *argv[])
 		SVtype["8"] = "INV";
 		SVtype["32"] = "CTX";
 	}
+
+
 	
 	// AP; no AP
 	map<string,string> exes;
@@ -123,14 +131,19 @@ int main(int argc, char *argv[])
 	int d = 1e10;// global
 	
 	// configure file
-	ifstream CONFIG(argv[optind], ifstream::in);
-	char *line_; // each line of the config file
+	ifstream CONFIG;
+	//CONFIG.open(argv[optind]);
+	CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configure2.cfg");
+	char line_[256]; // each line of the config file
 	if(CONFIG.is_open())
 	{
 		while(CONFIG.good())
 		{
-			CONFIG.getline(line_, d);
-			string line = char2str(line_);
+			CONFIG.getline(line_, 256);
+			//string line = char2str(line_);
+			string line(line_);
+			if(line.length()==0)
+				break;
 			// analyze the line
 			string fmap = get_from_line(line,"map",1);
 			string mean_ = get_from_line(line,"mean",0);
@@ -187,7 +200,7 @@ int main(int argc, char *argv[])
 			}
 			fmaps[fmap] = lib;
 			
-			if(mean_.compare("NA") && std_.compare("NA") && upper_.compare("NA") && lower_.compare("NA")){
+			if(mean_.compare("NA") && std_.compare("NA") && (!upper_.compare("NA") || !lower_.compare("NA"))){
 				mean = atof(mean_.c_str());
 				std = atof(std_.c_str());
 				upper = mean + std*float(cut_sd);
@@ -207,7 +220,7 @@ int main(int argc, char *argv[])
 			readlens[lib] = readlen;
 			
 			if(exes.find(fmap) == exes.end())
-				exes[fmap] = exe.compare("NA")?"cat":exe;
+				exes[fmap] = exe.compare("NA")?exe:"cat";
 			else if(exes[fmap].compare(exe) != 0){
 				cout << "Please use identical exe commands to open the same map file.\n";
 				return 1;
@@ -244,7 +257,7 @@ int main(int argc, char *argv[])
  	}
  	        
  	if(learn_par == 1)    
-	 	EstimatePriorParameters(fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, chr, cut_sd, min_map_qual, readgroup_platform);
+	 	EstimatePriorParameters(fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, chr, cut_sd, min_map_qual, readgroup_platform, platform);
 	 	
  	int reference_len = 1;
  	map<string, int> nreads;
@@ -253,103 +266,171 @@ int main(int argc, char *argv[])
 	samfile_t *in = 0;
 	char in_mode[5] = "", *fn_list = 0, *fn_ref = 0, *fn_rg = 0;
 	strcpy(in_mode, "r");
+	strcat(in_mode, "b");
 	int i = 0;
 	bam1_t *b = bam_init1();
 	string format_ = "sam";
 	string alt = "";
 	vector<string> maps;	
+
  	for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii)
  	{
-		maps[i] = (*ii).first;
+		maps.push_back((*ii).first);
  		int ref_len = 0;
  		string exe = exes[maps[i]];
  		i ++;
  		cmds[exe] ++;
  		
  		int p_pos = 0;
- 		int p_chr;
+ 		char *p_chr = "0";
  		
-		/*// convert the entire bam file
-		if ((in = samopen((*ii).first, in_mode, fn_list)) == 0) {
-			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-			continue;
-		}
-		if (in->header == 0) {
-			fprintf(stderr, "[main_samview] fail to read the header.\n");
-			continue;
-		}
-		bam1_t *b = bam_init1();
-		int r;
-		while ((r = samread(in, b)) >= 0) { */
-		
-		// read the bam file by a chromosome
 		string bam_name = (*ii).first;
-		bam_index_t *idx;
-		samfile_t *in;
-		int tid, beg, end, n_off;
-		string chr_str = itos(chr);
-		pair64_t *off;
-		bamFile fp = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, off, &n_off);
-		uint64_t curr_off;
-		int i, ret, n_seeks;
-		n_seeks = 0; i = -1; curr_off = 0;
-		 
-		while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
-			char *readgroup;
-
-			string ori = AlnParser(b, format_, alt, readgroup, readgroup_platform);
+		if(chr == 0){
+			// no chromosome defined
+			// convert the entire bam file
+			samfile_t *in;
+			char tmp_bam_name[bam_name.size()+1];
+			strcpy(tmp_bam_name, bam_name.c_str());
+			//bam_name.copy(tmp_bam_name, bam_name.length(), 0);
+			if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
+				fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+				continue;
+			}
+			if (in->header == 0) {
+				fprintf(stderr, "[main_samview] fail to read the header.\n");
+				continue;
+			}
+			int r;
+			while ((r = samread(in, b)) >= 0) { 
+				char *mtid;
+				mtid = in->header->target_name[b->core.mtid];
+				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+				string ori = aln_return[1];
+				string readgroup = aln_return[0];
 		
-			if(b->core.tid == p_chr)
-				ref_len += b->core.pos - p_pos;
-			p_pos = b->core.pos;
-			p_chr = b->core.tid;
-			string lib;
-			if(strlen(readgroup) != 0)
-				lib = readgroup_library[readgroup];
-			else{
-				defined_all_readgroups = 0;
-				lib = fmaps[(*ii).first];
-			}
-			if(lib.length() == 0)
-				continue;
+				if(strcmp(in->header->target_name[b->core.tid],p_chr) == 0)
+					ref_len += b->core.pos - p_pos;
+				p_pos = b->core.pos;
+				p_chr = in->header->target_name[b->core.tid];
+				string lib;
+				if(!(readgroup.empty()))
+					lib = readgroup_library[readgroup];
+				else{
+					defined_all_readgroups = 0;
+					lib = fmaps[(*ii).first];
+				}
+				if(lib.length() == 0)
+					continue;
 				
-			if(nreads.find(lib) == nreads.end())
-				nreads[lib] = 1;
-			else
-				nreads[lib] ++;	
-			if(mapQual[lib] != 0 && b->core.qual <= mapQual[lib])
-				continue;
-			else if(b->core.qual <= min_map_qual)
-				continue;
-			if(b->core.flag == 0)
-				continue;
-			if(transchr_rearrange && b->core.flag < 32 || b->core.flag >= 64)
-				continue;
+				if(nreads.find(lib) == nreads.end())
+					nreads[lib] = 1;
+				else
+					nreads[lib] ++;	
+				if(mapQual[lib] != 0 && b->core.qual <= mapQual[lib])
+					continue;
+				else if(b->core.qual <= min_map_qual)
+					continue;
+				if(b->core.flag == 0)
+					continue;
+				if(transchr_rearrange && b->core.flag < 32 || b->core.flag >= 64)
+					continue;
 				
-			if(Illumina_long_insert){
-				if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
-					b->core.flag = 4;
-				if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
-					b->core.flag = 20;
-				if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20)
-					b->core.flag = 3;
-			}
-			else{
-				if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18)
-					b->core.flag = 2;
-				if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2)
-					b->core.flag = 18;
-				if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18)
-					b->core.flag = 3;
-			}
+				if(Illumina_long_insert){
+					if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
+						b->core.flag = 4;
+					if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
+						b->core.flag = 20;
+					if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20)
+						b->core.flag = 3;
+				}
+				else{
+					if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18)
+						b->core.flag = 2;
+					if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2)
+						b->core.flag = 18;
+					if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18)
+						b->core.flag = 3;
+				}
+				
+				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
+					continue;
 			
-			if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
-				continue;
+				if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
+					x_readcounts[b->core.flag][lib] ++;	
+				else
+					x_readcounts[b->core.flag][lib] = 1;			
+			}
+		}
+		else if(chr <= 23 && chr >= 1){
+			// chromosome defined
+			bam_index_t *idx;		
+			int tid, beg, end, n_off;		
+			string chr_str = itos(chr);
+			pair64_t *off;
+			bamFile fp = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, off, &n_off);
+			uint64_t curr_off;
+			int i, ret, n_seeks;
+			n_seeks = 0; i = -1; curr_off = 0;
+		 
+			while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
+				char *mtid;
+				mtid = in->header->target_name[b->core.tid];
+				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+				string ori = aln_return[1];
+				string readgroup = aln_return[0];
+		
+				if(strcmp(in->header->target_name[b->core.tid], p_chr) == 0)
+					ref_len += b->core.pos - p_pos;
+				p_pos = b->core.pos;
+				p_chr = in->header->target_name[b->core.tid];
+				string lib;
+				if(!(readgroup.empty()))
+					lib = readgroup_library[readgroup];
+				else{
+					defined_all_readgroups = 0;
+					lib = fmaps[(*ii).first];
+				}
+				if(lib.length() == 0)
+					continue;
+				
+				if(nreads.find(lib) == nreads.end())
+					nreads[lib] = 1;
+				else
+					nreads[lib] ++;	
+				if(mapQual[lib] != 0 && b->core.qual <= mapQual[lib])
+					continue;
+				else if(b->core.qual <= min_map_qual)
+					continue;
+				if(b->core.flag == 0)
+					continue;
+				if(transchr_rearrange && b->core.flag < 32 || b->core.flag >= 64)
+					continue;
+				
+				if(Illumina_long_insert){
+					if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
+						b->core.flag = 4;
+					if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
+						b->core.flag = 20;
+					if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20)
+						b->core.flag = 3;
+				}
+				else{
+					if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18)
+						b->core.flag = 2;
+					if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2)
+						b->core.flag = 18;
+					if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18)
+						b->core.flag = 3;
+				}
 			
-			if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
-				x_readcounts[b->core.flag][lib] ++;	
-			else
-				x_readcounts[b->core.flag][lib] = 1;					 
+				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
+					continue;
+			
+				if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
+					x_readcounts[b->core.flag][lib] ++;	
+				else
+					x_readcounts[b->core.flag][lib] = 1;		
+			}
 		}
 		
 		//if (r < -1) fprintf(stderr, "[main_samview] truncated file.\n");
@@ -402,6 +483,8 @@ int main(int argc, char *argv[])
 		}
 		printf("\n");
 	}
+
+
 	printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\tAllele_frequency\tVersion\tRun_Param\n");
 	
 	int begins;// global (chr)
@@ -422,129 +505,183 @@ int main(int argc, char *argv[])
 	
 	// first, need to merge the bam files into one big string seperated by blank, and return the number
 	int n = fmaps.size();
-	string *big_bam = new string[n];
-	int i_tmp = 0;
-	for(map<string, string>::iterator ii_fmaps = fmaps.begin(); ii_fmaps != fmaps.end(); ii_fmaps++)
-		big_bam[i_tmp++] = (*ii_fmaps).first;
-	
- 	bamFile *fp;
-	heap1_t *heap;
-	fp = (bamFile*)calloc(n,sizeof(bamFile));
-	heap = (heap1_t*)calloc(n,sizeof(heap1_t));
-	uint64_t idx = 0;
-	//################# node index here ###################
-	if(merge && fmaps.size()>1 && !(format[0].compare("sam")) && chr == -1 ){
- 	/* open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu)
-   samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - 
-   maq mapmerge		*/
-   		
-   		// dig into merge samtools code and utilize what we needed
-   		if(MergeBams_prep(big_bam, n, fp, heap, &idx)){
-   		
-	   		while(heap->pos != HEAP_EMPTY){
-   				bam1_t *b = heap->b;
-   			
-   				char *readgroup;
-				string ori = AlnParser(b, format_, alt, readgroup, readgroup_platform);
-				string library = strlen(readgroup) == 0?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-			  	//if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
-			  		//continue;
-			  	if(!library.empty())
-			  		Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori);
-		  		
-				int j = bam_read1(fp[heap->i], b);
-   				if(j >= 0){
-   					heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
-   					heap -> idx = idx++;
-   				}
-   				else if(j == -1){
-   					heap->pos = HEAP_EMPTY;
-   					free(heap->b->data);
-   					free(heap->b);
-   					heap->b = 0;
-   				}
-   				else
-   					cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
-   				ks_heapadjust(heap, 0, n, heap);
-   			}
-		}
-	}
-	//############### find the designated chromosome and put all of them together for all bam files #############
-	else{//#customized merge & sort
-	// totally different from the perl version; use customized samtools instead
-		samfile_t **in;
-		*in = new samfile_t[n];
-		
-		int *tid, *beg, *end, *n_off;
-		tid = new int[n];
-		beg = new int[n];
-		end = new int[n];
-		n_off = new int[n];
 
-		string chr_str = itos(chr);
-		
-		pair64_t **off;
-		*off = new pair64_t[n];
-		
-		uint64_t *curr_off;
-		curr_off = new uint64_t[n];
-		int *i, *n_seeks;
-		i = new int[n];
-		n_seeks = new int[n];
-		for(int k = 0; k < n; k++){
-			n_seeks[k] = 0;
-			i[k] = -1;
-			curr_off[k] = 0;
+	//################# node index here ###################
+	if(n == 1){
+		samfile_t *in;
+		char tmp_bam_name[maps[0].size()+1];
+		strcpy(tmp_bam_name, maps[0].c_str());
+		/*char *fn_list = 0;
+		char in_mode[5] = "";
+		strcpy(in_mode, "r");
+		strcat(in_mode, "b");*/
+		if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
+			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+			return 0;
 		}
-		
-		int merge_tmp = MergeBamsChr_prep(big_bam, n, fp, heap, chr_str, tid, beg, end, in, off, n_off, &idx);
-		if(merge_tmp){
-			while(heap->pos != HEAP_EMPTY){
-   				bam1_t *b = heap->b;
-   			
-   				char *readgroup;
-				string ori = AlnParser(b, format_, alt, readgroup, readgroup_platform);
-				string library = (strlen(readgroup)==0)?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-		  		//if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
-		  			//continue;
-		  		if(!library.empty())
-		  			Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori);
-		  		
-				int j = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
-   				if(j > 0){
-   					heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
-   					heap -> idx = idx++;
-   				}
-   				else if(j == -1){
-   					heap->pos = HEAP_EMPTY;
-   					free(heap->b->data);
-   					free(heap->b);
-   					heap->b = 0;
-   				}
-   				else
-   					cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
-   				ks_heapadjust(heap, 0, n, heap);
-   			}
+		if (in->header == 0) {
+			fprintf(stderr, "[main_samview] fail to read the header.\n");
+			return 0;
 		}
-		
-		delete []tid;
-		delete []beg;
-		delete []end;
-		delete []n_off;
-		delete []curr_off;
-		delete []i;
-		delete []n_seeks;
-		for(int kk = 0; kk < n; kk++)
-			samclose(in[kk]);
+		int r;
+		bam1_t *b = bam_init1();
+		while ((r = samread(in, b)) >= 0) { 
+			char *mtid;
+			mtid = in->header->target_name[b->core.mtid];
+			vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+			string readgroup = aln_return[0];
+			string ori = aln_return[1];
+			string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+			if(!library.empty())
+				Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori);
+		}
+		samclose(in);
 	}
+	else{
+		string *big_bam = new string[n];
+		int i_tmp = 0;
+		for(map<string, string>::iterator ii_fmaps = fmaps.begin(); ii_fmaps != fmaps.end(); ii_fmaps++)
+			big_bam[i_tmp++] = (*ii_fmaps).first;
 	
-	for(int k = 0; k!=n; k++)
-   	bam_close(fp[k]);
-   	free(fp);
-   	free(heap);
+ 		bamFile *fp;
+		heap1_t *heap;
+		fp = (bamFile*)calloc(n,sizeof(bamFile));
+		heap = (heap1_t*)calloc(n,sizeof(heap1_t));
+		uint64_t idx = 0;
+
+		if(/*merge && fmaps.size()>1 && !(format[0].compare("sam")) &&*/ chr == 0 ){
+ 			// open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu) samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - maq mapmerge 
+   			// dig into merge samtools code and utilize what we needed
+
+			if(MergeBams_prep(big_bam, n, fp, heap, &idx)){
+				// for reading the first header
+   				char tmp_bam_name[big_bam[0].size()+1];
+				strcpy(tmp_bam_name, big_bam[0].c_str());
+				char *in_mode = "rb";
+				char *fn_list = 0;
+				samfile_t *in;
+                                if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
+                                    fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+				    return 0;
+                                }
+                                if (in->header == 0) {
+                                        fprintf(stderr, "[main_samview] fail to read the header.\n");
+                                    return 0;
+                                }
+
+                                while(heap->pos != HEAP_EMPTY){
+                                        bam1_t *b = heap->b;
+                                        char *mtid;
+                                        mtid = in->header->target_name[b->core.tid];
+                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+                                        string ori = aln_return[1];
+                                        string readgroup = aln_return[0];
+                                        string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+                                        //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
+                                                //continue;
+                                        if(!library.empty())
+                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori);
+                                        
+                                        int j = bam_read1(fp[heap->i], b);
+                                        if(j >= 0){
+                                                heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
+                                                heap -> idx = idx++;
+                                        }
+                                        else if(j == -1){
+                                                heap->pos = HEAP_EMPTY;
+                                                free(heap->b->data);
+                                                free(heap->b);
+                                                heap->b = 0;
+                                        }
+                                        else
+                                                cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
+                                        ks_heapadjust(heap, 0, n, heap);
+                                }
+                        }
+		}
 	
-	delete []big_bam;
-	big_bam = NULL;
+    		//############### find the designated chromosome and put all of them together for all bam files #############
+                else{//#customized merge & sort
+                        // totally different from the perl version; use customized samtools instead
+                        int *tid, *beg, *end, *n_off;
+                        tid = new int[n];
+                        beg = new int[n];
+                        end = new int[n];
+                        n_off = new int[n];
+
+                        samfile_t **in;
+                        in = new samfile_t *[n];
+
+
+                        string chr_str = itos(chr);
+                        
+                        pair64_t **off;
+                        *off = new pair64_t[n];
+                        
+                        uint64_t *curr_off;
+                        curr_off = new uint64_t[n];
+                        int *i, *n_seeks;
+                        i = new int[n];
+                        n_seeks = new int[n];
+                        for(int k = 0; k < n; k++){
+                                n_seeks[k] = 0;
+                                i[k] = -1;
+                                curr_off[k] = 0;
+                        }
+                        
+                        int merge_tmp = MergeBamsChr_prep(big_bam, n, fp, heap, chr_str, tid, beg, end, in, off, n_off, &idx);
+                        if(merge_tmp){
+                                while(heap->pos != HEAP_EMPTY){
+                                        bam1_t *b = heap->b;
+                                
+                                        char *mtid;
+                                        mtid = in[0]->header->target_name[b->core.tid];
+                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+                                        string ori = aln_return[1];
+                                        string readgroup = aln_return[0];
+                                        string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+                                        //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
+                                                //continue;
+                                        if(!library.empty())
+                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori);
+                                        
+                                        int j = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
+                                        if(j > 0){
+                                                heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
+                                                heap -> idx = idx++;
+                                        }
+                                        else if(j == -1){
+                                                heap->pos = HEAP_EMPTY;
+                                                free(heap->b->data);
+                                                free(heap->b);
+                                                heap->b = 0;
+                                        }
+                                        else
+                                                cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
+                                        ks_heapadjust(heap, 0, n, heap);
+                                }
+                        }
+                        
+                        delete []tid;
+                        delete []beg;
+                        delete []end;
+                        delete []n_off;
+                        delete []curr_off;
+                        delete []i;
+                        delete []n_seeks;
+                        for(int kk = 0; kk < n; kk++)
+                                samclose(in[kk]);
+            	}
+            	for(int k = 0; k!=n; k++)
+                	bam_close(fp[k]);
+            	free(fp);
+            	free(heap);
+            
+            	delete []big_bam;
+            	big_bam = NULL;
+
+	}
+
 	free(fn_list); free(fn_ref); free(fn_rg);
 	
  	return 0;
@@ -556,6 +693,11 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
   
+	if(b->core.pos == 14004329){
+		int kk = 0;
+		kk = kk + 1;
+	}
+
 	if(mapQual[lib] >= 0){
 		if(b->core.qual <= mapQual[lib])
 			return;
@@ -601,6 +743,10 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 	
 	int do_break = (int(b->core.tid) != *lasts || int(b->core.pos) - *lastc > d)?1:0;
 	
+	if(b->core.pos == 14004329){
+		int kk = 0;
+		kk = kk + 1;
+	}
 	if(do_break){ // breakpoint in the assembly
 		if(*lastc - *beginc > min_len){ // skip short/unreliable flnaking supporting regions
 			// register reliable region and supporting reads across gaps
@@ -627,10 +773,13 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 			}
 		}
 		else{
-			for(vector<vector<string> >::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
-				///string s = get_item_from_string(*it_reg_seq,0);
-				string s= (*it_reg_seq)[0];
-				read.erase(read.find(s));
+			if(reg_seq.size()>0){
+				for(vector<vector<string> >::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
+					///string s = get_item_from_string(*it_reg_seq,0);
+					string s= (*it_reg_seq)[0];
+					if(read.find(s) != read.end())
+						read.erase(read.find(s));
+				}
 			}
 		}
 		*begins = int(b->core.tid);
@@ -650,7 +799,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 	//bam1_qname(b) = qname_tmp; // this might be quite hard to implement in samtools; ///////////////////////
 	
 	string seq = get_string(bam1_seq(b), b->core.l_qseq);
-	string basequal = get_string(bam1_seq(b), b->core.l_qseq);
+	string basequal = get_string(bam1_qual(b), b->core.l_qseq);
 	if(! prefix_fastq.empty() && ! seq.empty() && ! basequal.empty()){
 		//string tmp_str1;
 		//sprintf(tmp_str1, "%s %d %d %c %d %d %s %d %s %s %s", bam1_qname(b), b->core.chr, b->core.pos, ori/*problem*/, b->core.isize, b->core.flag, b->core.qual, /* readlen */, lib, bam1_seq(b), bam1_qual(b));
@@ -1006,7 +1155,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 }
 
 // this function is good
-void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform){
+void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform, string platform){
 	map<string,float> es_means;
 	map<string,float> es_stds;
 	map<string,float> es_readlens;
@@ -1029,13 +1178,16 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
 		int i, ret, n_seeks;
 		n_seeks = 0; i = -1; curr_off = 0;
 		while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
-			char *readgroup;
 			string format = "sam";
 			string alt = "";
-			string ori = AlnParser(b, format, alt, readgroup, readgroup_platform);
+			char *mtid;
+			mtid = in->header->target_name[b->core.tid];
+			vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, mtid, platform);
+			string ori = aln_return[1];
+			string readgroup = aln_return[0];
 		
 			// analyze the bam file line by line
-			string lib = strlen(readgroup)==0?(*ii).second:readgroup_library[readgroup];// when multiple libraries are in a BAM file
+			string lib = readgroup.empty()?(*ii).second:readgroup_library[readgroup];// when multiple libraries are in a BAM file
 			if(lib.empty())
 				continue;
 			if(chr != -1 && b->core.tid != chr)// analyze 1 chromosome
@@ -1263,7 +1415,7 @@ string get_from_line(string line,string search,int flag){
 				if(pos_end == string::npos)
 					pos_end = line.find("\0", pos_begin);
 				size_t n = pos_end - pos_begin - 1;
-				return line.substr(pos+1,n);
+				return line.substr(pos_begin+1,n);
 			}
 			else
 				return "NA";
@@ -1343,12 +1495,12 @@ string itos(int i){
 }
 
 string get_string(uint8_t *pt, int32_t length){
-	string seq;
-	char seq_[length];
-	for(int i = 0; i < length; i++)
-		seq_[i] = *(pt+i);
-	seq.copy(seq_, length, 0);// the good way to turn char * to string
-	delete []seq_;
+	char seq_[length + 1];
+	for(int i = 0; i < length ; i++)
+		seq_[i] = bam_nt16_rev_table[bam1_seqi(pt, i)];
+		//seq_[i] = *(pt+i);
+	seq_[length] = '\0';
+	string seq(seq_);// the good way to turn char * to string
 	return seq;
 }
 
