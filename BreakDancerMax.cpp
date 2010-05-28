@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 	int max_sd = 1000000;
 	int min_map_qual = 35;
 	int min_read_pair = 2;
-	int buffer_size = /*100*/1;//temporarily for debug
+	int buffer_size = 100;//temporarily for debug
 	int learn_par = 0;//bool
 	float prior_prob = 0.001;
 	int transchr_rearrange = 0;//bool
@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
 	
 	// configure file
 	ifstream CONFIG;
-	//CONFIG.open(argv[optind]);
-	CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configure2.cfg");
+	CONFIG.open(argv[optind]);
+	//CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configureDebug.cfg");
 	char line_[256]; // each line of the config file
 	if(CONFIG.is_open())
 	{
@@ -302,18 +302,25 @@ int main(int argc, char *argv[])
 			}
 			int r;
 			while ((r = samread(in, b)) >= 0) { 
-				//char *mtid;
-				//mtid = in->header->target_name[b->core.mtid];
-	if(b->core.pos == 14038767){
-		int kk = 0;
-		kk = kk + 1;
-	}
-				int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+				/*if(b->core.pos > 46944115){
+					cout << b->core.tid << "\t" << in->header->target_name[b->core.tid] << "\t" << p_chr << endl;
+					return 1;
+				}*/
+				//cout << b->core.pos << "\t";
+				int same_tid = (b->core.tid == b->core.mtid)? 1:0;
 				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+				
 				string ori = aln_return[1];
 				string readgroup = aln_return[0];
 		
-				if(strcmp(in->header->target_name[b->core.tid],p_chr) == 0)
+
+				if(b->core.tid < 0){
+					//cout << b->core.tid << "\tError: no correspondence of the chromosome to the header file!" << endl;
+					continue;
+				}
+				string tmp_p_chr(in->header->target_name[b->core.tid]);
+				string p_chr_str(p_chr);
+				if(tmp_p_chr.compare(p_chr_str) == 0)
 					ref_len += b->core.pos - p_pos;
 				p_pos = b->core.pos;
 				p_chr = in->header->target_name[b->core.tid];
@@ -363,15 +370,13 @@ int main(int argc, char *argv[])
 				
 				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
 					continue;
-				//debug
-				if(b->core.flag==3){
-					int db_b_pos;
-					db_b_pos = b->core.pos;
-				}
+				
 				if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
 					x_readcounts[b->core.flag][lib] ++;	
 				else
-					x_readcounts[b->core.flag][lib] = 1;			
+					x_readcounts[b->core.flag][lib] = 1;	
+
+				//cout << b->core.pos << "\t" << b->core.flag << "\t" << lib << "\t" << x_readcounts[b->core.flag][lib] << endl;
 			}
 		}
 		else if(chr <= 23 && chr >= 1){
@@ -388,6 +393,8 @@ int main(int argc, char *argv[])
 			while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
 				//char *mtid;
 				//mtid = in->header->target_name[b->core.tid];
+				if(b->core.tid < 0)
+					continue;
 				int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
 				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
 				string ori = aln_return[1];
@@ -447,7 +454,6 @@ int main(int argc, char *argv[])
 					x_readcounts[b->core.flag][lib] = 1;		
 			}
 		}
-		
 		//if (r < -1) fprintf(stderr, "[main_samview] truncated file.\n");
 		if(ref_len == 0)
 			//fprintf(stderr, "Unable to decode %s. Please check that you have the correct paths and the bam files are indexed.", (*ii).second);
@@ -541,6 +547,8 @@ int main(int argc, char *argv[])
 		int r;
 		bam1_t *b = bam_init1();
 		while ((r = samread(in, b)) >= 0) { 
+			if(b->core.tid < 0)
+				continue;
 			//char *mtid;
 			//mtid = in->header->target_name[b->core.mtid];
 			int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
@@ -549,7 +557,7 @@ int main(int argc, char *argv[])
 			string ori = aln_return[1];
 			string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 			if(!library.empty())
-				Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori);
+				Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
 		}
 		samclose(in);
 	}
@@ -587,6 +595,8 @@ int main(int argc, char *argv[])
 
                                 while(heap->pos != HEAP_EMPTY){
                                         bam1_t *b = heap->b;
+					if(b->core.tid < 0)
+						continue;
                                         //char *mtid;
                                         //mtid = in->header->target_name[b->core.tid];
 					int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
@@ -597,7 +607,7 @@ int main(int argc, char *argv[])
                                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                                                 //continue;
                                         if(!library.empty())
-                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori);
+                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
                                         
                                         int j = bam_read1(fp[heap->i], b);
                                         if(j >= 0){
@@ -650,7 +660,8 @@ int main(int argc, char *argv[])
                         if(merge_tmp){
                                 while(heap->pos != HEAP_EMPTY){
                                         bam1_t *b = heap->b;
-                                
+                                	if(b->core.tid < 0)
+						continue;
                                         //char *mtid;
                                         //mtid = in[0]->header->target_name[b->core.tid];
 					int same_tid = strcmp(in[0]->header->target_name[b->core.tid],in[0]->header->target_name[b->core.mtid]) == 0 ? 1:0;
@@ -661,7 +672,7 @@ int main(int argc, char *argv[])
                                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                                                 //continue;
                                         if(!library.empty())
-                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori);
+                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in[0]);
                                         
                                         int j = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
                                         if(j > 0){
@@ -706,7 +717,7 @@ int main(int argc, char *argv[])
 }
 
 // this function is good
-void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string, float> &uppercutoff, map<string, float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int max_readlen, string ori){
+void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string, float> &uppercutoff, map<string, float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int max_readlen, string ori, samfile_t *in){
 
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
@@ -764,7 +775,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 		return;
 	
 	if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130){
-		if(*normal_switch && b->core.isize > 0)
+		if(*normal_switch == 1 && b->core.isize > 0)
 			(*nnormal_reads)++;
 		return;
 	}
@@ -800,7 +811,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 			regs[k] = p;
 			(*idx_buff)++;
 			if(*idx_buff > buffer_size){
-				buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize);
+				buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
 				*idx_buff = 0;
 			}
 		}
@@ -869,14 +880,14 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 		tmp_reg_seq.push_back(lib);
 		reg_seq.push_back(tmp_reg_seq);		
 	}
-	if(reg_seq.size() == 0)
+	if(reg_seq.size() == 1)
 		*normal_switch = 1;
 	*lasts = int(b->core.tid);
 	*lastc = int(b->core.pos);
 }
 
 // this function is good. May miss the i/o
-void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, int min_read_pair, string dump_BED, int max_readlen, string prefix_fastq, map<string,string> &ReadsOut, map<string,string> &SVtype, map<string,float> &mean_insertsize){
+void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, int min_read_pair, string dump_BED, int max_readlen, string prefix_fastq, map<string,string> &ReadsOut, map<string,string> &SVtype, map<string,float> &mean_insertsize, samfile_t *in){
   // build connections
   // find paired regions that are supported by paired reads
   //warn("-- link regions\n");
@@ -1072,7 +1083,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 						
 						if(type[flag] >= min_read_pair){
 							// print out result
-							int sv_chr1 = 0, sv_pos1 = 0, sv_chr2 = 0, sv_pos2 = 0;
+							int sv_chr1 = -1, sv_pos1 = 0, sv_chr2 = -1, sv_pos2 = 0;
 							string sv_ori1, sv_ori2;
 							int normal_rp; 
 							// find inner most positions
@@ -1084,7 +1095,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								int nrp = reg_name[node][3];
 								map<string,int> ori_readcount = type_orient_counts.front();
 								type_orient_counts.erase(type_orient_counts.begin());
-								if(sv_chr1 != 0 && sv_chr2 != 0){
+								if(sv_chr1 != -1 && sv_chr2 != -1){
 									sv_chr1 = sv_chr2;
 									sv_pos1 = sv_pos2;
 									sv_chr2 = chr;
@@ -1126,7 +1137,10 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							sv_pos1 += max_readlen - 5; // apply extra padding to the start coordinates
 							
 							string SVT = SVtype.find(flag)==SVtype.end()?"UN":SVtype[flag]; // UN stands for unknown
-							cout << sv_chr1 << sv_pos1 << sv_ori1 << sv_chr2 << sv_pos2 << sv_ori2 << SVT << diffspans[flag] << PhredQ << type[flag] << sptypes[flag] << AF << version << options;
+							// make the coordinates with base 1
+							sv_pos1 = sv_pos1 + 1;
+							sv_pos2 = sv_pos2 + 1;
+							cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
 							//printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
 							
 							if(!prefix_fastq.empty()){ // print out supporting read pairs
