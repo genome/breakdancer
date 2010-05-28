@@ -20,7 +20,7 @@
 
 using namespace std;
 
-string AlnParser(bam1_t *b, string format, string alt, char *readgroup, map<string, string> &readgroup_platform);
+vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, string> &readgroup_platform, int same_tid, string platform);
 
 /*struct t_buf {
 	string readname;
