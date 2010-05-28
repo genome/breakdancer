@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 				std = atof(std_.c_str());
 				upper = mean + std*float(cut_sd);
 				lower = mean - std*float(cut_sd);
-				lower = atof(lower_.c_str()) > 0 ? atof(lower_.c_str()):0;
+				lower = lower > 0 ? lower : 0;//atof(lower_.c_str()) > 0 ? atof(lower_.c_str()):0; this is not related with lower_
 			}
 			
 			if(readlen_.compare("NA")){
@@ -302,9 +302,14 @@ int main(int argc, char *argv[])
 			}
 			int r;
 			while ((r = samread(in, b)) >= 0) { 
-				char *mtid;
-				mtid = in->header->target_name[b->core.mtid];
-				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+				//char *mtid;
+				//mtid = in->header->target_name[b->core.mtid];
+	if(b->core.pos == 14038767){
+		int kk = 0;
+		kk = kk + 1;
+	}
+				int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
 				string ori = aln_return[1];
 				string readgroup = aln_return[0];
 		
@@ -326,10 +331,14 @@ int main(int argc, char *argv[])
 					nreads[lib] = 1;
 				else
 					nreads[lib] ++;	
-				if(mapQual[lib] != 0 && b->core.qual <= mapQual[lib])
-					continue;
-				else if(b->core.qual <= min_map_qual)
-					continue;
+				if(mapQual.find(lib) != mapQual.end()){
+					if(b->core.qual <= mapQual[lib])
+						continue;
+				}
+				else{
+					if(b->core.qual <= min_map_qual)
+						continue;
+				}
 				if(b->core.flag == 0)
 					continue;
 				if(transchr_rearrange && b->core.flag < 32 || b->core.flag >= 64)
@@ -354,7 +363,11 @@ int main(int argc, char *argv[])
 				
 				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
 					continue;
-			
+				//debug
+				if(b->core.flag==3){
+					int db_b_pos;
+					db_b_pos = b->core.pos;
+				}
 				if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
 					x_readcounts[b->core.flag][lib] ++;	
 				else
@@ -373,9 +386,10 @@ int main(int argc, char *argv[])
 			n_seeks = 0; i = -1; curr_off = 0;
 		 
 			while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
-				char *mtid;
-				mtid = in->header->target_name[b->core.tid];
-				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+				//char *mtid;
+				//mtid = in->header->target_name[b->core.tid];
+				int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
 				string ori = aln_return[1];
 				string readgroup = aln_return[0];
 		
@@ -397,8 +411,9 @@ int main(int argc, char *argv[])
 					nreads[lib] = 1;
 				else
 					nreads[lib] ++;	
-				if(mapQual[lib] != 0 && b->core.qual <= mapQual[lib])
-					continue;
+				if(mapQual.find(lib) != mapQual.end())
+					if(b->core.qual <= mapQual[lib])
+						continue;
 				else if(b->core.qual <= min_map_qual)
 					continue;
 				if(b->core.flag == 0)
@@ -425,7 +440,7 @@ int main(int argc, char *argv[])
 			
 				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
 					continue;
-			
+
 				if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
 					x_readcounts[b->core.flag][lib] ++;	
 				else
@@ -526,9 +541,10 @@ int main(int argc, char *argv[])
 		int r;
 		bam1_t *b = bam_init1();
 		while ((r = samread(in, b)) >= 0) { 
-			char *mtid;
-			mtid = in->header->target_name[b->core.mtid];
-			vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+			//char *mtid;
+			//mtid = in->header->target_name[b->core.mtid];
+			int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+			vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
 			string readgroup = aln_return[0];
 			string ori = aln_return[1];
 			string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -571,9 +587,10 @@ int main(int argc, char *argv[])
 
                                 while(heap->pos != HEAP_EMPTY){
                                         bam1_t *b = heap->b;
-                                        char *mtid;
-                                        mtid = in->header->target_name[b->core.tid];
-                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+                                        //char *mtid;
+                                        //mtid = in->header->target_name[b->core.tid];
+					int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
                                         string ori = aln_return[1];
                                         string readgroup = aln_return[0];
                                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -634,9 +651,10 @@ int main(int argc, char *argv[])
                                 while(heap->pos != HEAP_EMPTY){
                                         bam1_t *b = heap->b;
                                 
-                                        char *mtid;
-                                        mtid = in[0]->header->target_name[b->core.tid];
-                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, mtid, platform);
+                                        //char *mtid;
+                                        //mtid = in[0]->header->target_name[b->core.tid];
+					int same_tid = strcmp(in[0]->header->target_name[b->core.tid],in[0]->header->target_name[b->core.mtid]) == 0 ? 1:0;
+                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
                                         string ori = aln_return[1];
                                         string readgroup = aln_return[0];
                                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -693,17 +711,27 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
   
-	if(b->core.pos == 14004329){
+	if(b->core.pos == 14006454){
 		int kk = 0;
 		kk = kk + 1;
 	}
+	if(*beginc == 14006454){
+		int kk = 0;
+		kk = kk + 1;
+	}
+	/*if(b->core.pos < 14007594 && b->core.pos > 14004330){
+		int kk = 0;
+		kk = kk + 1;
+	}*/
 
-	if(mapQual[lib] >= 0){
+	if(mapQual.find(lib) != mapQual.end()){
 		if(b->core.qual <= mapQual[lib])
 			return;
 	}
-	else if(b->core.qual <= min_map_qual)
-		return;
+	else{
+		if(b->core.qual <= min_map_qual)
+			return;
+	}
 	//if(b->core.tid == '*') // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
 	//	return;
 	if(b->core.flag == 0)
@@ -743,7 +771,11 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 	
 	int do_break = (int(b->core.tid) != *lasts || int(b->core.pos) - *lastc > d)?1:0;
 	
-	if(b->core.pos == 14004329){
+	if(b->core.pos == 14006454){
+		int kk = 0;
+		kk = kk + 1;
+	}
+	if(*beginc == 14006454){
 		int kk = 0;
 		kk = kk + 1;
 	}
@@ -829,6 +861,8 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 		tmp_reg_seq.push_back(itos(int(b->core.pos)));
 		tmp_reg_seq.push_back(ori);
 		tmp_reg_seq.push_back(itos(int(b->core.isize)));
+		if(qname_tmp.compare("21_2801705") == 0)
+			int tmp_flag = b->core.flag;
 		tmp_reg_seq.push_back(itos(int(b->core.flag)));
 		tmp_reg_seq.push_back(itos(int(b->core.qual)));
 		tmp_reg_seq.push_back(itos(int(b->core.l_qseq)));
@@ -849,6 +883,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 	map<int, map<int, int> > link;
 	map<string,vector<int> >::iterator ii_read;
 	for(ii_read = read.begin(); ii_read != read.end(); ii_read++){
+		// test
+		string tmp_str = (*ii_read).first;
 		vector<int> p = (*ii_read).second;
 		if(p.size() != 2) // skip singleton read (non read pairs)
 			continue;
@@ -865,8 +901,21 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 	// segregate graph, find nodes that have connections
 	map<int,int> free_nodes;
 	map<int, map<int, int> >::iterator ii_clink;
+	int tmp_size = clink.size();
+	vector<int> s0_vec;
+	int tmp_read_size = read.size();
 	for(ii_clink = clink.begin(); ii_clink != clink.end(); ii_clink++){
-		int s0 = (*ii_clink).first;
+		s0_vec.push_back((*ii_clink).first);
+		map<int,int> tmp_clink = (*ii_clink).second;
+		int s1, value;
+		for(map<int,int>::iterator ii_tmp_clink = tmp_clink.begin(); ii_tmp_clink != tmp_clink.end(); ii_tmp_clink++){
+			s1 = (*ii_tmp_clink).first;
+			value = (*ii_tmp_clink).second;
+		}
+	}
+	for(vector<int>::iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){
+		int s0 = *ii_s0_vec;
+
 		if(clink.find(s0) == clink.end())
 			continue;
 		// construct a subgraph
@@ -899,7 +948,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 					nodepair[tail][s1] = clink[tail][s1];
 					nodepair[s1][tail] = clink[s1][tail];
 					clink[tail].erase(clink[tail].find(s1));	// use a link only once
-					clink[s1].erase(clink[s1].find(tail));
+					if(tail != s1)
+						clink[s1].erase(clink[s1].find(tail));
 					newtails.push_back(s1);
 					
 					// analysis a nodepair
@@ -927,6 +977,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 						int node = *ii_snodes;
 						map<string,int> orient_count;
 						vector<vector<string> > nonsupportives;
+						//debug
+						int regs_size = regs[node].size();
 						for(vector<vector<string> >::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
 							vector<string> y = *ii_regs;
 							if(y[0].size() == 0)
@@ -950,21 +1002,15 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								// see if initialized 'type_library_readcount' or not
 								if(type_library_readcount.find(y[5]) != type_library_readcount.end() && type_library_readcount[y[5]].find(y[8]) != type_library_readcount[y[5]].end())
 									type_library_readcount[y[5]][y[8]]++;
-								else{
-									map<string, int> tmp_type_library_readcount;
-									tmp_type_library_readcount[y[8]] = 1;
-									type_library_readcount[y[5]] = tmp_type_library_readcount;
-								}
-								// see if initialized 'type_library_meanspan' or not
+								else
+									type_library_readcount[y[5]][y[8]] = 1;
+								
+								int y4_tmp = atoi(y[4].c_str());
 								if(type_library_meanspan.find(y[5]) != type_library_meanspan.end() && type_library_meanspan[y[5]].find(y[8]) != type_library_meanspan[y[5]].end()){
-									int y4_tmp = atoi(y[4].c_str());
 									type_library_meanspan[y[5]][y[8]]+=abs(y4_tmp);
 								}
-								else{
-									map<string,int> tmp_type_library_meanspan;
-									tmp_type_library_meanspan[y[8]] = 1;
-									type_library_meanspan[y[5]] = tmp_type_library_meanspan;
-								}
+								else
+									type_library_meanspan[y[5]][y[8]] = abs(y4_tmp);
 								nread_pairs++;
 								free_reads.push_back(y[0]);
 								support_reads.push_back(y);
@@ -1004,14 +1050,20 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							}
 							string sptype;
 							float diffspan = 0;
+							//debug
+							int tmp_size_tlr = type_library_readcount[fl].size();
 							for(map<string,int>::iterator ii_type_lib_rc = type_library_readcount[fl].begin(); ii_type_lib_rc != type_library_readcount[fl].end(); ii_type_lib_rc ++){
 								string sp = (*ii_type_lib_rc).first;
 								//string str_num_tmp;
 								//sprintf(str_num_tmp, "%s", (*ii_type_lib_rc).second); 
 								if(!sptype.empty())
-									sptype.append(":").append(sp).append("|").append(itos((*ii_type_lib_rc).second));
+									sptype += ":" +  sp + "|" + itos((*ii_type_lib_rc).second);
 								else
-									sptype = sp.append("|").append(itos((*ii_type_lib_rc).second));
+									sptype = sp + "|" + itos((*ii_type_lib_rc).second);
+								//debug
+								int tmp_tlm = type_library_meanspan[fl][sp];
+								int tmp_tlr = type_library_readcount[fl][sp];
+								int tmp_mi = mean_insertsize[sp];
 								diffspan += float(type_library_meanspan[fl][sp]) - float(type_library_readcount[fl][sp])*mean_insertsize[sp];
 							}
 							diffspans[fl] = int(diffspan/float(type[fl]) + 0.5);
@@ -1180,9 +1232,10 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
 		while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
 			string format = "sam";
 			string alt = "";
-			char *mtid;
-			mtid = in->header->target_name[b->core.tid];
-			vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, mtid, platform);
+			//char *mtid;
+			//mtid = in->header->target_name[b->core.tid];
+			int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+			vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, platform);
 			string ori = aln_return[1];
 			string readgroup = aln_return[0];
 		
@@ -1255,6 +1308,8 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
 	float logpvalue = 0;
 	for(map<string,int>::iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
 		string lib = (*ii_rlibrary_readcount).first;
+		// debug
+		int db_x_rc = x_readcounts[type][lib];
 		lambda = float(total_region_size* x_readcounts[type][lib])/float(reference_len);
 		logpvalue += LogPoissonTailProb(float(rlibrary_readcount[lib]),lambda);
 	}
