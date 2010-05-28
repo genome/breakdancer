@@ -29,10 +29,10 @@ if(b->core.pos == 14006454){
 			
 		uint32_t flag = b->core.flag;
 		// convert to string
-		std::string str_flag;
-		std::stringstream ss_flag;
-		ss_flag << flag;
-		ss_flag >> str_flag;
+		//string str_flag;
+		//stringstream ss_flag;
+		//ss_flag << flag;
+		//ss_flag >> str_flag;
 		// convert b->core.mtid to string
 		/*std::string str_mtid;
 		std::stringstream ss_mtid;
