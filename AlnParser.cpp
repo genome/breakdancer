@@ -4,7 +4,7 @@ using namespace std;
 extern string platform;
 //extern std::map<char *, std::string> readgroup_platform;
 
-vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, string> &readgroup_platform, char *mtid, string platform){
+vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, string> &readgroup_platform, int same_tid, string platform){
 	string ori;
 	string readgroup;
 	vector<string> return_;
@@ -18,6 +18,9 @@ vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, strin
  			}
  		}
 	}*/ // do not do maq now
+if(b->core.pos == 14006454){
+	int a = 0;
+}
 	/*else */if(! format.compare("sam")){
 //		string flag;
 //		string mchr;
@@ -35,7 +38,7 @@ vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, strin
 		std::stringstream ss_mtid;
 		ss_mtid << b->core.mtid;
 		ss_mtid >> str_mtid;*/
-		string str_mtid(mtid);
+		//string str_mtid(mtid);
 		
 		ori = (flag&0x0010 /*|| str_flag.find("r") != string::npos*/)?"-":"+";
 		b->core.flag = 0;
@@ -72,22 +75,22 @@ vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, strin
 					b->core.flag = 192;
 				else if(flag & 0x0008 /*|| str_flag.find("U")*/)
 					b->core.flag = 64;
-				else if(str_mtid.find("=")!=string::npos)
+				else if(same_tid != 1)
 					b->core.flag = 32;
 				else if(flag & 0x0002 /*|| str_flag.find("P")*/){
-					if(platform.compare("solid")) // need to work on insensitive case
+					if(platform.find("solid")!=string::npos) // need to work on insensitive case
 						b->core.flag = 18;
 					else{
 						if(b->core.pos < b->core.mpos)
-							b->core.flag = (ori.compare("+") != 0)?20:18;
+							b->core.flag = (ori.compare("+") == 0)?18:20;
 						else
-							b->core.flag = (ori.compare("+") != 0)?18:20;
+							b->core.flag = (ori.compare("+") == 0)?20:18;
 					}
 				}
 				else{
 					if(platform.find("solid")!=string::npos) {// insensitive case 
-						if(ori != ori2)
-							b->core.flag = (ori2.compare("+") != 0)?8:1;
+						if(ori.compare(ori2) != 0)
+							b->core.flag = (ori2.compare("+") == 0)?1:8;
 						else if(ori.compare("+") == 0){
 							if(flag & 0x0040)
 								b->core.flag = (b->core.pos < b->core.mpos)?2:4;
@@ -104,8 +107,8 @@ vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, strin
 							//b->core.flag = 2;
 					}
 					else{
-						if(ori != ori2)
-							b->core.flag = (ori2.compare("+") != 0)?8:1;
+						if(ori.compare(ori2) == 0)
+							b->core.flag = (ori2.compare("+") == 0)?1:8;
 						else if(b->core.mpos > b->core.pos && (ori.compare("-") == 0) || b->core.pos > b->core.mpos && (ori.compare("+") == 0))
 							b->core.flag = 4;
 						else
