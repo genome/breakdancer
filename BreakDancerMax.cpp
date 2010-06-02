@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
 	
 	// configure file
 	ifstream CONFIG;
-	//CONFIG.open(argv[optind]);
-	CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configure2.cfg");
+	CONFIG.open(argv[optind]);
+	//CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configure2.cfg");
 	char line_[256]; // each line of the config file
 	if(CONFIG.is_open())
 	{
@@ -200,12 +200,18 @@ int main(int argc, char *argv[])
 			}
 			fmaps[fmap] = lib;
 			
-			if(mean_.compare("NA") && std_.compare("NA") && (!upper_.compare("NA") || !lower_.compare("NA"))){
+			if(mean_.compare("NA") && std_.compare("NA")){
 				mean = atof(mean_.c_str());
 				std = atof(std_.c_str());
-				upper = mean + std*float(cut_sd);
-				lower = mean - std*float(cut_sd);
-				lower = lower > 0 ? lower : 0;//atof(lower_.c_str()) > 0 ? atof(lower_.c_str()):0; this is not related with lower_
+				if(!upper_.compare("NA") || !lower_.compare("NA")){
+					upper = mean + std*float(cut_sd);
+					lower = mean - std*float(cut_sd);
+					lower = lower > 0 ? lower : 0;//atof(lower_.c_str()) > 0 ? atof(lower_.c_str()):0; this is not related with lower_
+				}
+				else{
+					upper = atof(upper_.c_str());
+					lower = atof(lower_.c_str());
+				}
 			}
 			
 			if(readlen_.compare("NA")){
@@ -382,10 +388,6 @@ int main(int argc, char *argv[])
 			}
 		}
 		else if(chr <= 23 && chr >= 1){
-			char in_mode[5] = "";
-			char *fn_list = 0;
-			strcpy(in_mode, "r");
-			strcat(in_mode, "b");
 			char *bam_name_;
 			bam_name_ = new char[bam_name.length()+1];
 			strcpy(bam_name_, bam_name.c_str());
@@ -414,7 +416,7 @@ int main(int argc, char *argv[])
 			while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
 				//char *mtid;
 				//mtid = in->header->target_name[b->core.tid];
-				if(b->core.tid < 0)
+				if(b->core.tid < 0 || b->core.tid != tid || b->core.pos >= end)
 					continue;
 				int same_tid = b->core.tid == b->core.mtid? 1:0;
 				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
@@ -589,6 +591,7 @@ int main(int argc, char *argv[])
 				if(!library.empty())
 					Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
 			}
+			bam_destroy1(b);
 			samclose(in);
 		}
 		/*else{
@@ -634,14 +637,17 @@ int main(int argc, char *argv[])
 					break;
 				if(b->core.tid < 0)
 					continue;
-				int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
-                                string ori = aln_return[1];
-                                string readgroup = aln_return[0];
-                                string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-                                if(!library.empty())
-                                        Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
+				if(b->core.tid == tid && b->core.pos < end){
+					int same_tid = b->core.tid == b->core.mtid ? 1:0;
+        	                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+                	                string ori = aln_return[1];
+                        	        string readgroup = aln_return[0];
+                                	string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+	                                if(!library.empty())
+        	                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
+				}
 			}
+			bam_destroy1(b);
                         samclose(in);
             	}
 	}
@@ -766,25 +772,47 @@ int main(int argc, char *argv[])
 					return 0;
 				}
 				fp[i] = in[i]->x.bam;
+				off[i] = ReadBamChr_prep(chr_str, big_bam[i], &tid[i], &beg[i], &end[i], in[i], &n_off[i]);
+				if(fp[i] == 0){
+					int j;
+					cout << "[bam_merge_core] fail to open file " << big_bam[i] << "\n";
+					for(int j = 0; j < i; ++j)
+						bam_close(fp[j]);
+					free(fp);
+					free(heap);
+					return 0;
+				}
+				heap1_t *h;
+				h = heap + i;
+				h->i = i;
+				h->b = (bam1_t *)calloc(1,sizeof(bam1_t));
+				if(bam_read1(fp[i],h->b) >= 0){
+				//if((r = samread(in[i], h->b)) >= 0) {
+					h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
+					h->idx = idx++;
+				}
+				else h->pos = HEAP_EMPTY;
 			}
+			ks_heapmake(heap, n, heap);
+			int merge_tmp = 1;
 
-                        int merge_tmp = MergeBamsChr_prep(big_bam, n, fp, heap, chr_str, tid, beg, end, in, off, n_off, &idx);
+                        //int merge_tmp = MergeBamsChr_prep(big_bam, n, fp, heap, chr_str, tid, beg, end, in, off, n_off, &idx);
                         if(merge_tmp){
                                 while(heap->pos != HEAP_EMPTY){
                                         bam1_t *b = heap->b;
                                 	if(b->core.tid < 0)
 						continue;
-                                        //char *mtid;
-                                        //mtid = in[0]->header->target_name[b->core.tid];
-					int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
-                                        string ori = aln_return[1];
-                                        string readgroup = aln_return[0];
-                                        string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-                                        //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
-                                                //continue;
-                                        if(!library.empty())
-                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in[0]);
+					if( b->core.tid == tid[heap->i] && b->core.pos < end[heap->i] ){
+						int same_tid = b->core.tid == b->core.mtid ? 1:0;
+	                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+        	                                string ori = aln_return[1];
+                	                        string readgroup = aln_return[0];
+                        	                string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+                                	        //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
+                                        	        //continue;
+	                                        if(!library.empty())
+        	                                        Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in[0]);
+					}
                                         
                                         int j = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
                                         if(j > 0){
@@ -1603,7 +1631,7 @@ int MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_
 			fprintf(stderr, "[main_samview] fail to read the header.\n");
 			return 0;
 		}*/
-		fp[i] = in[i]->x.bam;
+		//fp[i] = in[i]->x.bam;
 
 		off[i] = ReadBamChr_prep(chr_str, fn[i], &tid_tmp, &beg_tmp, &end_tmp, in[i], &n_off_tmp);
 		//fp[i] = in[i]->x.bam;
