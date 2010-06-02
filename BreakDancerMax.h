@@ -46,11 +46,11 @@ float standard_deviation(vector<int> &stat, float mean);
 
 int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name);
 
-bamFile ReadBamChr_prep(string chr_str, string bam_name, int *tid, int *beg, int *end, samfile_t *in, pair64_t *off, int *n_off);
+pair64_t * ReadBamChr_prep(string chr_str, string bam_name, int *tid, int *beg, int *end, samfile_t *in, int *n_off);
 
 int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t *curr_off, int *i, int *n_seeks, pair64_t *off, int n_off);
 
-int MergeBams_prep(string *fn, int n, bamFile *fp, heap1_t *heap, uint64_t *idx);
+int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *idx);
 
 int MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_str, int *tid, int *beg, int *end, samfile_t **in, pair64_t **off, int *n_off, uint64_t *idx);
 
