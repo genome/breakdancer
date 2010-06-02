@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
 	
 	// configure file
 	ifstream CONFIG;
-	CONFIG.open(argv[optind]);
-	//CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configureDebug.cfg");
+	//CONFIG.open(argv[optind]);
+	CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configure2.cfg");
 	char line_[256]; // each line of the config file
 	if(CONFIG.is_open())
 	{
@@ -302,10 +302,12 @@ int main(int argc, char *argv[])
 			}
 			int r;
 			while ((r = samread(in, b)) >= 0) { 
-				/*if(b->core.pos > 46944115){
-					cout << b->core.tid << "\t" << in->header->target_name[b->core.tid] << "\t" << p_chr << endl;
-					return 1;
-				}*/
+				if(b->core.pos == 14690951){
+					//cout << b->core.tid << "\t" << in->header->target_name[b->core.tid] << "\t" << p_chr << endl;
+					//return 1;
+					int k = 0;
+					k++;
+				}
 				//cout << b->core.pos << "\t";
 				int same_tid = (b->core.tid == b->core.mtid)? 1:0;
 				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
@@ -380,12 +382,31 @@ int main(int argc, char *argv[])
 			}
 		}
 		else if(chr <= 23 && chr >= 1){
+			char in_mode[5] = "";
+			char *fn_list = 0;
+			strcpy(in_mode, "r");
+			strcat(in_mode, "b");
+			char *bam_name_;
+			bam_name_ = new char[bam_name.length()+1];
+			strcpy(bam_name_, bam_name.c_str());
+			if ((in = samopen(bam_name_, in_mode, fn_list)) == 0) {
+				fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+				return 0;
+			}
+			if (in->header == 0) {
+				fprintf(stderr, "[main_samview] fail to read the header.\n");
+				return 0;
+			}
+			bamFile fp = in->x.bam;
+
 			// chromosome defined
 			bam_index_t *idx;		
 			int tid, beg, end, n_off;		
 			string chr_str = itos(chr);
 			pair64_t *off;
-			bamFile fp = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, off, &n_off);
+			//bamFile fp;
+			off = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, &n_off);
+			//bamFile fp = in->x.bam;
 			uint64_t curr_off;
 			int i, ret, n_seeks;
 			n_seeks = 0; i = -1; curr_off = 0;
@@ -395,13 +416,17 @@ int main(int argc, char *argv[])
 				//mtid = in->header->target_name[b->core.tid];
 				if(b->core.tid < 0)
 					continue;
-				int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+				int same_tid = b->core.tid == b->core.mtid? 1:0;
 				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
 				string ori = aln_return[1];
 				string readgroup = aln_return[0];
 		
-				if(strcmp(in->header->target_name[b->core.tid], p_chr) == 0)
+				string tmp_p_chr(in->header->target_name[b->core.tid]);
+				string p_chr_str(p_chr);
+				if(tmp_p_chr.compare(p_chr_str) == 0)
 					ref_len += b->core.pos - p_pos;
+				//if(strcmp(in->header->target_name[b->core.tid], p_chr) == 0)
+				//	ref_len += b->core.pos - p_pos;
 				p_pos = b->core.pos;
 				p_chr = in->header->target_name[b->core.tid];
 				string lib;
@@ -529,37 +554,96 @@ int main(int argc, char *argv[])
 
 	//################# node index here ###################
 	if(n == 1){
-		samfile_t *in;
-		char tmp_bam_name[maps[0].size()+1];
-		strcpy(tmp_bam_name, maps[0].c_str());
-		/*char *fn_list = 0;
-		char in_mode[5] = "";
-		strcpy(in_mode, "r");
-		strcat(in_mode, "b");*/
-		if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
-			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-			return 0;
+		if(chr == 0){
+			samfile_t *in;
+			char tmp_bam_name[maps[0].size()+1];
+			strcpy(tmp_bam_name, maps[0].c_str());
+			/*char *fn_list = 0;
+			char in_mode[5] = "";
+			strcpy(in_mode, "r");
+			strcat(in_mode, "b");*/
+			if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
+				fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+				return 0;
+			}
+			if (in->header == 0) {
+				fprintf(stderr, "[main_samview] fail to read the header.\n");
+				return 0;
+			}
+			int r;
+			bam1_t *b = bam_init1();
+			while ((r = samread(in, b)) >= 0) { 
+				if(b->core.tid < 0)
+					continue;
+				//char *mtid;
+				//mtid = in->header->target_name[b->core.mtid];
+				if(b->core.pos == 14690951){
+					int k = 0;
+					k++;
+				}
+				int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+				string readgroup = aln_return[0];
+				string ori = aln_return[1];
+				string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+				if(!library.empty())
+					Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
+			}
+			samclose(in);
 		}
-		if (in->header == 0) {
-			fprintf(stderr, "[main_samview] fail to read the header.\n");
-			return 0;
-		}
-		int r;
-		bam1_t *b = bam_init1();
-		while ((r = samread(in, b)) >= 0) { 
-			if(b->core.tid < 0)
-				continue;
-			//char *mtid;
-			//mtid = in->header->target_name[b->core.mtid];
-			int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
-			vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
-			string readgroup = aln_return[0];
-			string ori = aln_return[1];
-			string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-			if(!library.empty())
-				Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
-		}
-		samclose(in);
+		/*else{
+			bam_index_t *idx = 0;
+    		        if (is_bamin) idx = bam_index_load(argv[optind]); // load BAM index
+    			if (idx == 0) { // index is unavailable
+    		                fprintf(stderr, "[main_samview] random alignment retrieval only works for indexed BAM files.\n");
+				return 0;
+			}
+
+
+			bam_index_destroy(idx); // destroy the BAM index
+		}*/
+		else{
+                        // totally different from the perl version; use customized samtools instead
+			samfile_t *in;
+                        int tid, beg, end, n_off;
+
+                        string chr_str = itos(chr);
+                        
+                        pair64_t *off;
+                        uint64_t curr_off = 0;
+                        int i = -1, n_seeks = 0;
+                        char tmp_bam_name[maps[0].size()+1];
+			strcpy(tmp_bam_name, maps[0].c_str());
+			if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
+				fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+				return 0;
+			}
+			if (in->header == 0) {
+				fprintf(stderr, "[main_samview] fail to read the header.\n");
+				return 0;
+			}
+			bamFile fp;
+			fp = in->x.bam;
+
+			off = ReadBamChr_prep(chr_str, maps[0], &tid, &beg, &end, in, &n_off);
+
+			bam1_t *b = bam_init1();
+			for(;;){ 
+				int j = ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off);
+				if(j <= 0)
+					break;
+				if(b->core.tid < 0)
+					continue;
+				int same_tid = b->core.tid == b->core.mtid ? 1:0;
+                                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+                                string ori = aln_return[1];
+                                string readgroup = aln_return[0];
+                                string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+                                if(!library.empty())
+                                        Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
+			}
+                        samclose(in);
+            	}
 	}
 	else{
 		string *big_bam = new string[n];
@@ -571,15 +655,18 @@ int main(int argc, char *argv[])
 		heap1_t *heap;
 		fp = (bamFile*)calloc(n,sizeof(bamFile));
 		heap = (heap1_t*)calloc(n,sizeof(heap1_t));
+
+		samfile_t **in;
+                in = new samfile_t *[n];
 		uint64_t idx = 0;
 
 		if(/*merge && fmaps.size()>1 && !(format[0].compare("sam")) &&*/ chr == 0 ){
  			// open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu) samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - maq mapmerge 
    			// dig into merge samtools code and utilize what we needed
 
-			if(MergeBams_prep(big_bam, n, fp, heap, &idx)){
-				// for reading the first header
-   				char tmp_bam_name[big_bam[0].size()+1];
+			if(MergeBams_prep(big_bam, n, in, heap, &idx)){
+				/*// for reading the first header
+   				char tmp_bam_name[big_bam[0].length()];
 				strcpy(tmp_bam_name, big_bam[0].c_str());
 				char *in_mode = "rb";
 				char *fn_list = 0;
@@ -591,7 +678,7 @@ int main(int argc, char *argv[])
                                 if (in->header == 0) {
                                         fprintf(stderr, "[main_samview] fail to read the header.\n");
                                     return 0;
-                                }
+                                }*/
 
                                 while(heap->pos != HEAP_EMPTY){
                                         bam1_t *b = heap->b;
@@ -599,7 +686,7 @@ int main(int argc, char *argv[])
 						continue;
                                         //char *mtid;
                                         //mtid = in->header->target_name[b->core.tid];
-					int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+					int same_tid = b->core.tid == b->core.mtid ? 1:0;
                                         vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
                                         string ori = aln_return[1];
                                         string readgroup = aln_return[0];
@@ -607,10 +694,11 @@ int main(int argc, char *argv[])
                                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                                                 //continue;
                                         if(!library.empty())
-                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
+                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in[heap->i]);
                                         
-                                        int j = bam_read1(fp[heap->i], b);
-                                        if(j >= 0){
+                                        //int j = bam_read1(fp[heap->i], b);
+					int j;
+                                        if(/*j >= 0*/ (j = samread(in[heap->i], b)) >= 0){
                                                 heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
                                                 heap -> idx = idx++;
                                         }
@@ -622,6 +710,11 @@ int main(int argc, char *argv[])
                                         }
                                         else
                                                 cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
+					//debug
+					if(heap->i == 0){
+						int kk = 0;
+						kk ++;
+					}
                                         ks_heapadjust(heap, 0, n, heap);
                                 }
                         }
@@ -636,14 +729,14 @@ int main(int argc, char *argv[])
                         end = new int[n];
                         n_off = new int[n];
 
-                        samfile_t **in;
-                        in = new samfile_t *[n];
+                        //samfile_t **in;
+                        //in = new samfile_t *[n];
 
 
                         string chr_str = itos(chr);
                         
                         pair64_t **off;
-                        *off = new pair64_t[n];
+                        off = new pair64_t *[n];
                         
                         uint64_t *curr_off;
                         curr_off = new uint64_t[n];
@@ -656,6 +749,25 @@ int main(int argc, char *argv[])
                                 curr_off[k] = 0;
                         }
                         
+			for(int i = 0; i!=n; ++i){
+				char in_mode[5] = "";
+				char *fn_list = 0;
+				strcpy(in_mode, "r");
+				strcat(in_mode, "b");
+				char *bam_name_;
+				bam_name_ = new char[big_bam[i].length()+1];
+				strcpy(bam_name_, big_bam[i].c_str());
+				if ((in[i] = samopen(bam_name_, in_mode, fn_list)) == 0) {
+					fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+					return 0;
+				}
+				if (in[i]->header == 0) {
+					fprintf(stderr, "[main_samview] fail to read the header.\n");
+					return 0;
+				}
+				fp[i] = in[i]->x.bam;
+			}
+
                         int merge_tmp = MergeBamsChr_prep(big_bam, n, fp, heap, chr_str, tid, beg, end, in, off, n_off, &idx);
                         if(merge_tmp){
                                 while(heap->pos != HEAP_EMPTY){
@@ -664,7 +776,7 @@ int main(int argc, char *argv[])
 						continue;
                                         //char *mtid;
                                         //mtid = in[0]->header->target_name[b->core.tid];
-					int same_tid = strcmp(in[0]->header->target_name[b->core.tid],in[0]->header->target_name[b->core.mtid]) == 0 ? 1:0;
+					int same_tid = b->core.tid == b->core.mtid ? 1:0;
                                         vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
                                         string ori = aln_return[1];
                                         string readgroup = aln_return[0];
@@ -679,7 +791,7 @@ int main(int argc, char *argv[])
                                                 heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
                                                 heap -> idx = idx++;
                                         }
-                                        else if(j == -1){
+                                        else if(j == 0){
                                                 heap->pos = HEAP_EMPTY;
                                                 free(heap->b->data);
                                                 free(heap->b);
@@ -698,11 +810,14 @@ int main(int argc, char *argv[])
                         delete []curr_off;
                         delete []i;
                         delete []n_seeks;
-                        for(int kk = 0; kk < n; kk++)
-                                samclose(in[kk]);
+                        //for(int kk = 0; kk < n; kk++)
+                          //      samclose(in[kk]);
             	}
-            	for(int k = 0; k!=n; k++)
-                	bam_close(fp[k]);
+            	/*for(int k = 0; k!=n; k++)
+                	bam_close(fp[k]);*/
+		for(int k = 0; k!=n; k++)
+			samclose(in[k]);
+		free(in);
             	free(fp);
             	free(heap);
             
@@ -722,7 +837,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
   
-	if(b->core.pos == 14006454){
+	if(b->core.pos == 14690951){
 		int kk = 0;
 		kk = kk + 1;
 	}
@@ -795,6 +910,10 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 			// register reliable region and supporting reads across gaps
 			int k = (*reg_idx) ++;
 			//sprintf(reg_name[k], "%s\t%d\t%d\t%d", begins, beginc, lastc, nnormal_reads);
+			if(*beginc == 14690951){
+				int k=0;
+				k++;
+			}
 			reg_name[k].push_back(*begins);
 			reg_name[k].push_back(*beginc);
 			reg_name[k].push_back(*lastc);
@@ -1232,14 +1351,34 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
 	
 	bam1_t *b = bam_init1();
 	for(map<string,string>::iterator ii=fmaps.begin(); ii!=fmaps.end(); ++ii){
-		// read the bam file by a chromosome
 		string bam_name = (*ii).first;
-		bam_index_t *idx;
 		samfile_t *in;
+		char in_mode[5] = "";
+		char *fn_list = 0;
+		strcpy(in_mode, "r");
+		strcat(in_mode, "b");
+		char *bam_name_;
+		bam_name_ = new char[bam_name.length()+1];
+		strcpy(bam_name_, bam_name.c_str());
+		if ((in = samopen(bam_name_, in_mode, fn_list)) == 0) {
+			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+			return;
+		}
+		if (in->header == 0) {
+			fprintf(stderr, "[main_samview] fail to read the header.\n");
+			return;
+		}
+		bamFile fp = in->x.bam;
+
+		// read the bam file by a chromosome		
+		bam_index_t *idx;
+		//samfile_t *in;
 		int tid, beg, end, n_off;
 		string chr_str = itos(chr);
 		pair64_t *off;
-		bamFile fp = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, off, &n_off);
+		//bamFile fp;
+		off = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, &n_off);
+		//bamFile fp = in->x.bam;
 		uint64_t curr_off;
 		int i, ret, n_seeks;
 		n_seeks = 0; i = -1; curr_off = 0;
@@ -1349,29 +1488,24 @@ int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name){
 }
 
 // prepare: read bam file by a chromosome
-bamFile ReadBamChr_prep(string chr_str, string bam_name, int *tid, int *beg, int *end, samfile_t *in, pair64_t *off, int *n_off){
-	char *in_mode, *fn_list = 0;
-	strcpy(in_mode, "r");
+pair64_t * ReadBamChr_prep(string chr_str, string bam_name, int *tid, int *beg, int *end, samfile_t *in, int *n_off){	
 	char *bam_name_;
-	bam_name.copy(bam_name_, bam_name.length(), 0);
-	if ((in = samopen(bam_name_, in_mode, fn_list)) == 0) {
-		fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-		return 0;
-	}
-	if (in->header == 0) {
-		fprintf(stderr, "[main_samview] fail to read the header.\n");
-		return 0;
-	}
+	bam_name_ = new char[bam_name.length()+1];
+	strcpy(bam_name_, bam_name.c_str());
+	
+	pair64_t *off;
 	bam_index_t *idx;
 	idx = bam_index_load(bam_name_);// index
 	char *chr_str_;
-	chr_str.copy(chr_str_, chr_str.length(), 0);
+	chr_str_ = new char[chr_str.length()+1];
+	strcpy(chr_str_, chr_str.c_str());
 	bam_parse_region(in->header, chr_str_, tid, beg, end);// parse
 	
 	// return the file handle for handle
-	bamFile fp = in->x.bam;
+	//*fp = in->x.bam;
+	//bamFile fp = in->x.bam;
 	off = get_chunk_coordinates(idx, *tid, *beg, *end, n_off);
-	return fp;
+	return off;
 }
 
 // read bam file by a chromosome by one line; fp will track where we are
@@ -1379,13 +1513,15 @@ int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t *curr_
 
 	if (off == 0) return 0;
 		
-	if (*curr_off == 0 || *curr_off >= off[*i].v) { // then jump to the next chunk
+	if (*curr_off == 0 || (*i>=0 && *curr_off >= off[*i].v)) { // then jump to the next chunk
 		if (*i == n_off - 1) return 0; // no more chunks
-		if (*i >= 0) assert(*curr_off == off[*i].v); // otherwise bug
-		if (*i < 0 || off[*i].v != off[*i+1].u) { // not adjacent chunks; then seek
-			bam_seek(fp, off[*i+1].u, SEEK_SET);
-			*curr_off = bam_tell(fp);
-			++(*n_seeks);
+		if (*i >= 0) return 0;//assert(*curr_off == off[*i].v); // otherwise bug
+		if (*i < 0 || (*i>=0 && off[*i].v != off[*i+1].u)) { // not adjacent chunks; then seek
+			if(*i + 1 >= 0){
+				bam_seek(fp, off[*i+1].u, SEEK_SET);
+				*curr_off = bam_tell(fp);
+				++(*n_seeks);
+			}
 		}
 		++(*i);
 	}
@@ -1400,12 +1536,16 @@ int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t *curr_
 }
 
 // read bam files all together, and merge them
-int MergeBams_prep(string *fn, int n, bamFile *fp, heap1_t *heap, uint64_t *idx){
+int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *idx){
+	char in_mode[5] = "", *fn_list = 0;
+	strcpy(in_mode, "r");
+	strcat(in_mode, "b");
 	for(int i = 0; i!=n; ++i){
 		heap1_t *h;
 		char *fn_;
-		fn[i].copy(fn_, fn[i].length(), 0);
-		fp[i] = bam_open(fn_, "r");
+		fn_ = new char[fn[i].length()+1];
+		strcpy(fn_, fn[i].c_str());
+		/*fp[i] = bam_open(fn_, "r");
 		if(fp[i] == 0){
 			int j;
 			cout << "[bam_merge_core] fail to open file " << fn[i] << "\n";
@@ -1414,11 +1554,22 @@ int MergeBams_prep(string *fn, int n, bamFile *fp, heap1_t *heap, uint64_t *idx)
 			free(fp);
 			free(heap);
 			return 0;
+		}*/
+		
+		if ((in[i] = samopen(fn_, in_mode, fn_list)) == 0) {
+			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+			continue;
+		}
+		if (in[i]->header == 0) {
+			fprintf(stderr, "[main_samview] fail to read the header.\n");
+			continue;
 		}
 		h = heap + i;
 		h->i = i;
 		h->b = (bam1_t*)calloc(1,sizeof(bam1_t));
-		if(bam_read1(fp[i],h->b) >= 0){
+		int r;
+		if ((r = samread(in[i], h->b)) >= 0) { 
+		//if(bam_read1(fp[i],h->b) >= 0){
 			h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
 			h->idx = (*idx)++;
 		}
@@ -1433,7 +1584,35 @@ int MergeBams_prep(string *fn, int n, bamFile *fp, heap1_t *heap, uint64_t *idx)
 int MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_str, int *tid, int *beg, int *end, samfile_t **in, pair64_t **off, int *n_off, uint64_t *idx){
 	for(int i = 0; i!=n; ++i){
 		heap1_t *h;
-		fp[i] = ReadBamChr_prep(chr_str, fn[i], &tid[i], &beg[i], &end[i], in[i], off[i], &n_off[i]);
+		int tid_tmp, beg_tmp, end_tmp, n_off_tmp;
+		pair64_t *off_tmp;
+		//samfile_t *in_tmp;
+		//string fn_tmp;
+		/*char in_mode[5] = "";
+		char *fn_list = 0;
+		strcpy(in_mode, "r");
+		strcat(in_mode, "b");
+		char *bam_name_;
+		bam_name_ = new char[fn[i].length()+1];
+		strcpy(bam_name_, fn[i].c_str());
+		if ((in[i] = samopen(bam_name_, in_mode, fn_list)) == 0) {
+			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+			return 0;
+		}
+		if (in[i]->header == 0) {
+			fprintf(stderr, "[main_samview] fail to read the header.\n");
+			return 0;
+		}*/
+		fp[i] = in[i]->x.bam;
+
+		off[i] = ReadBamChr_prep(chr_str, fn[i], &tid_tmp, &beg_tmp, &end_tmp, in[i], &n_off_tmp);
+		//fp[i] = in[i]->x.bam;
+		tid[i] = tid_tmp;
+		beg[i] = beg_tmp;
+		end[i] = end_tmp;
+		n_off[i] = n_off_tmp;
+		//off[i] = off_tmp;
+		//in[i] = in_tmp;
 		if(fp[i] == 0){
 			int j;
 			cout << "[bam_merge_core] fail to open file " << fn[i] << "\n";
@@ -1443,14 +1622,24 @@ int MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_
 			free(heap);
 			return 0;
 		}
+		/*if (in[i] == 0) {
+			fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+			continue;
+		}
+		if (in[i]->header == 0) {
+			fprintf(stderr, "[main_samview] fail to read the header.\n");
+			continue;
+		}*/
 		h = heap + i;
 		h->i = i;
 		h->b = (bam1_t *)calloc(1,sizeof(bam1_t));
 		if(bam_read1(fp[i],h->b) >= 0){
+		//if((r = samread(in[i], h->b)) >= 0) {
 			h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
 			h->idx = (*idx)++;
 		}
 		else h->pos = HEAP_EMPTY;
+		//fp[i] = in[i]->x.bam;
 	}
 	
 	ks_heapmake(heap, n, heap);
