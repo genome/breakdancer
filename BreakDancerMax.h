@@ -38,7 +38,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 
 float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, int reference_len, int fisher, map<int, vector<int> > &reg_name);
 
-void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform, string platform);
+void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, string chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform, string platform);
 
 float mean(vector<int> &stat);
 
