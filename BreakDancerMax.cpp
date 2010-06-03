@@ -15,7 +15,7 @@ string options ("");
 int main(int argc, char *argv[])
 {
 	int c;
-	int chr = 0; // chromosome
+	string chr("0"); // chromosome
 	int min_len = 7;
 	int cut_sd = 3;
 	int max_sd = 1000000;
@@ -32,9 +32,9 @@ int main(int argc, char *argv[])
 	string prefix_fastq;
 	string dump_BED;
 
-	while((c = getopt(argc, argv, "o:s:c:m:q:r:b:ep:tfd:g:lC")) >= 0){
+	while((c = getopt(argc, argv, "o:s:c:m:q:r:b:e:p:t:f:d:g:l:C")) >= 0){
 		switch(c) {
-			case 'o': chr = atoi(optarg); break;
+			case 'o': chr = strdup(optarg); break;
 			case 's': min_len = atoi(optarg); break;
 			case 'c': cut_sd = atoi(optarg); break;
 			case 'm': max_sd = atoi(optarg); break;
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "\n");
 		fprintf(stderr, "breakdancermax <analysis.config>\n\n");
 		fprintf(stderr, "Options: \n");
-		fprintf(stderr, "	-o INT	operate on a single chromosome [all chromosome]\n");
+		fprintf(stderr, "	-o STRING	operate on a single chromosome [all chromosome]\n");
 		fprintf(stderr, "	-s INT	minimum length of a region [%d]\n", min_len);		 
 		fprintf(stderr, "	-c INT	cutoff in unit of standard deviation [%d]\n", cut_sd);		
 		fprintf(stderr, "	-m INT	maximum SV size [%d]\n", max_sd);		 
@@ -86,11 +86,12 @@ int main(int argc, char *argv[])
 	string platform = Illumina_to_SOLiD?"solid":"illumina";
 	char options_[500];
 	
-	sprintf(options_,"-o %d -s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -p %f -t %d -f %d -l %d -C %d",chr, min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, Illumina_long_insert, Illumina_to_SOLiD);
+	sprintf(options_,"-s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -t %f -f %d -l %d -C %d", min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, Illumina_long_insert, Illumina_to_SOLiD);
 	
 	options = options_;
 	options += " -d " + prefix_fastq;
 	options += " -g " + dump_BED;
+	options += " -o " + chr;
 	
 	// define the map SVtype
 	map<string, string> SVtype;
@@ -262,8 +263,9 @@ int main(int argc, char *argv[])
  	      	format.insert(format.end(),1,"sam");
  	}
  	        
- 	if(learn_par == 1)    
+ 	if(learn_par == 1){
 	 	EstimatePriorParameters(fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, chr, cut_sd, min_map_qual, readgroup_platform, platform);
+	}
 	 	
  	int reference_len = 1;
  	map<string, int> nreads;
@@ -291,7 +293,7 @@ int main(int argc, char *argv[])
  		char *p_chr = "0";
  		
 		string bam_name = (*ii).first;
-		if(chr == 0){
+		if(chr.compare("0") == 0){
 			// no chromosome defined
 			// convert the entire bam file
 			samfile_t *in;
@@ -387,7 +389,7 @@ int main(int argc, char *argv[])
 				//cout << b->core.pos << "\t" << b->core.flag << "\t" << lib << "\t" << x_readcounts[b->core.flag][lib] << endl;
 			}
 		}
-		else if(chr <= 23 && chr >= 1){
+		else{
 			char *bam_name_;
 			bam_name_ = new char[bam_name.length()+1];
 			strcpy(bam_name_, bam_name.c_str());
@@ -404,7 +406,7 @@ int main(int argc, char *argv[])
 			// chromosome defined
 			bam_index_t *idx;		
 			int tid, beg, end, n_off;		
-			string chr_str = itos(chr);
+			string chr_str = chr;
 			pair64_t *off;
 			//bamFile fp;
 			off = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, &n_off);
@@ -556,7 +558,7 @@ int main(int argc, char *argv[])
 
 	//################# node index here ###################
 	if(n == 1){
-		if(chr == 0){
+		if(chr.compare("0") == 0){
 			samfile_t *in;
 			char tmp_bam_name[maps[0].size()+1];
 			strcpy(tmp_bam_name, maps[0].c_str());
@@ -591,6 +593,7 @@ int main(int argc, char *argv[])
 				if(!library.empty())
 					Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
 			}
+			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
 			bam_destroy1(b);
 			samclose(in);
 		}
@@ -610,7 +613,7 @@ int main(int argc, char *argv[])
 			samfile_t *in;
                         int tid, beg, end, n_off;
 
-                        string chr_str = itos(chr);
+                        string chr_str = chr;
                         
                         pair64_t *off;
                         uint64_t curr_off = 0;
@@ -647,6 +650,7 @@ int main(int argc, char *argv[])
         	                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in);
 				}
 			}
+			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
 			bam_destroy1(b);
                         samclose(in);
             	}
@@ -666,7 +670,7 @@ int main(int argc, char *argv[])
                 in = new samfile_t *[n];
 		uint64_t idx = 0;
 
-		if(/*merge && fmaps.size()>1 && !(format[0].compare("sam")) &&*/ chr == 0 ){
+		if(/*merge && fmaps.size()>1 && !(format[0].compare("sam")) &&*/ chr.compare("0") == 0 ){
  			// open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu) samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - maq mapmerge 
    			// dig into merge samtools code and utilize what we needed
 
@@ -724,6 +728,7 @@ int main(int argc, char *argv[])
                                         ks_heapadjust(heap, 0, n, heap);
                                 }
                         }
+                        buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
 		}
 	
     		//############### find the designated chromosome and put all of them together for all bam files #############
@@ -739,7 +744,7 @@ int main(int argc, char *argv[])
                         //in = new samfile_t *[n];
 
 
-                        string chr_str = itos(chr);
+                        string chr_str = chr;//itos(chr);
                         
                         pair64_t **off;
                         off = new pair64_t *[n];
@@ -830,6 +835,7 @@ int main(int argc, char *argv[])
                                         ks_heapadjust(heap, 0, n, heap);
                                 }
                         }
+                        buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
                         
                         delete []tid;
                         delete []beg;
@@ -853,7 +859,7 @@ int main(int argc, char *argv[])
             	big_bam = NULL;
 
 	}
-
+	
 	free(fn_list); free(fn_ref); free(fn_rg);
 	
  	return 0;
@@ -1368,7 +1374,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 }
 
 // this function is good
-void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, int chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform, string platform){
+void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, string chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform, string platform){
 	map<string,float> es_means;
 	map<string,float> es_stds;
 	map<string,float> es_readlens;
@@ -1402,7 +1408,7 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
 		bam_index_t *idx;
 		//samfile_t *in;
 		int tid, beg, end, n_off;
-		string chr_str = itos(chr);
+		string chr_str = chr;
 		pair64_t *off;
 		//bamFile fp;
 		off = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, &n_off);
@@ -1424,7 +1430,8 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
 			string lib = readgroup.empty()?(*ii).second:readgroup_library[readgroup];// when multiple libraries are in a BAM file
 			if(lib.empty())
 				continue;
-			if(chr != -1 && b->core.tid != chr)// analyze 1 chromosome
+			string chr_cmp(in->header->target_name[b->core.tid]);
+			if(chr.compare("0") && chr_cmp.compare(chr))// analyze 1 chromosome
 				continue;
 			//if(readlen_stat.find(lib) == readlen_stat.end())	// don't need to issue a new stat
 				//readlen_stat[lib] = ; // Statistics::Descriptive::Sparse->new() // don't need to issue a new stat
