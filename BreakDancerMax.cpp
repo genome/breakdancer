@@ -638,7 +638,7 @@ int main(int argc, char *argv[])
 	float total_seq_cov = 0;
 
 	int nreads_size = nreads.size();
-	cout << nreads_size << endl;
+	//cout << nreads_size << endl;
 	// recflags = x_readcounts[keys the first key]
 	map<string,int>::iterator nreads_ii;
 	for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
@@ -867,7 +867,7 @@ int main(int argc, char *argv[])
                                         ks_heapadjust(heap, 0, n, heap);
                                 }
                         }
-cout << "build connection:" << endl;
+//cout << "build connection:" << endl;
                         buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
 		}
 	
@@ -1011,7 +1011,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
   
-	if(b->core.pos == 6463578){
+	if(b->core.pos == 57390281){
 		int kk = 0;
 		kk = kk + 1;
 	}
@@ -1095,6 +1095,7 @@ int k = 0;
 			reg_name[k].push_back(*beginc);
 			reg_name[k].push_back(*lastc);
 			reg_name[k].push_back(*nnormal_reads);
+//cout << k << "\t" << *beginc << "\t" << *lastc << endl;
 			
 			vector<vector<string> > p;
 			for(vector<vector<string> >::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
@@ -1107,7 +1108,7 @@ int k = 0;
 			regs[k] = p;
 			(*idx_buff)++;
 			if(*idx_buff > buffer_size){
-cout << "build connection:" << endl;
+//cout << "build connection:" << endl;
 				buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
 				*idx_buff = 0;
 			}
@@ -1186,6 +1187,7 @@ k++;
 		*normal_switch = 1;
 	*lasts = int(b->core.tid);
 	*lastc = int(b->core.pos);
+	
 }
 
 // this function is good. May miss the i/o
@@ -1209,6 +1211,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 			link[p[0]][p[1]] = 1;
 			link[p[1]][p[0]] = 1;
 		}
+//cout << "  " << p[0] << "\t" << p[1] << "\t" << link[p[0]][p[1]] << endl;		
 	}
 	map<int, map<int, int> > clink(link);
 	// segregate graph, find nodes that have connections
@@ -1239,6 +1242,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 			vector<int>::iterator it_tails;
 			for(it_tails = tails.begin(); it_tails != tails.end(); it_tails ++){
 				int tail = *it_tails;
+//cout << ",,,," << tail << endl;				
 				if(clink.find(*it_tails) == clink.end())
 					continue;
 				if(reg_name.find(*it_tails) == reg_name.end())
@@ -1246,9 +1250,11 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 				vector<int> s1s;
 				for(map<int, int>::iterator ii_clink_ = clink[tail].begin(); ii_clink_ != clink[tail].end(); ii_clink_++){
 					s1s.push_back((*ii_clink_).first);
+//cout << ",,," << (*ii_clink_).first << endl;					
 				}
 				for(vector<int>::iterator ii_s1s = s1s.begin(); ii_s1s != s1s.end(); ii_s1s++){
 					int s1 = *ii_s1s;
+//cout << ",," << s1 << endl;					
 					vector<string> free_reads;
 					map<int,map<int,int> > nodepair;
 					int nlinks = clink[tail][s1];
@@ -1269,6 +1275,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 					vector<int> snodes;
 					for(map<int,map<int,int> >::iterator ii_nodepair = nodepair.begin(); ii_nodepair != nodepair.end(); ii_nodepair ++){
 						snodes.push_back((*ii_nodepair).first); 
+//cout << "," << (*ii_nodepair).first << endl;						
 					}
 					int node1 = snodes[0];
 					int node2;
@@ -1295,6 +1302,7 @@ cout << node << endl;
 						int regs_size = regs[node].size();
 						for(vector<vector<string> >::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
 							vector<string> y = *ii_regs;
+cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;							
 							if(read.find(y[0]) == read.end())
 								continue;
 							// initialize orient_count
@@ -1302,10 +1310,11 @@ cout << node << endl;
 								orient_count[y[3]] = 1;
 							else
 								orient_count[y[3]]++;
-cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;
-							if(read_pair[y[0]].size() == 0){
+
+							if(read_pair.find(y[0]) == read_pair.end()){
 								read_pair[y[0]] = y;
 								nonsupportives.push_back(y);
+//cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;								
 							}
 							else{
 								// see if initialized 'type' or not
@@ -1346,6 +1355,7 @@ cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << en
 								continue;
 							nonsupportives.push_back(y);	
 						}
+						regs[node] = nonsupportives;
 					}
 					
 					//float score;//don't know if float; no usage actually
@@ -1396,6 +1406,7 @@ cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << en
 								int start = reg_name[node][1];
 								int end = reg_name[node][2];
 								int nrp = reg_name[node][3];
+//cout << " " << node << "\t" << start << "\t" << end << endl;
 								map<string,int> ori_readcount = type_orient_counts.front();
 								type_orient_counts.erase(type_orient_counts.begin());
 								if(sv_chr1 != -1 && sv_chr2 != -1){
