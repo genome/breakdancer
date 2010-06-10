@@ -721,10 +721,10 @@ int tmp_bug = (*nreads_ii).second;
 					continue;
 				//char *mtid;
 				//mtid = in->header->target_name[b->core.mtid];
-				if(b->core.pos == 14690951){
+				/*if(b->core.pos == 14690951){
 					int k = 0;
 					k++;
-				}
+				}*/
 				int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
 				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
 				string readgroup = aln_return[0];
@@ -860,11 +860,11 @@ int tmp_bug = (*nreads_ii).second;
                                         }
                                         else
                                                 cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
-					//debug
+					/*//debug
 					if(heap->i == 0){
 						int kk = 0;
 						kk ++;
-					}
+					}*/
                                         ks_heapadjust(heap, 0, n, heap);
                                 }
                         }
@@ -1012,14 +1012,14 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
   
-	if(b->core.pos == 57405605){
+	/*if(b->core.pos == 57405605){
 		int kk = 0;
 		kk = kk + 1;
 	}
 	if(*beginc == 14006454){
 		int kk = 0;
 		kk = kk + 1;
-	}
+	}*/
 	/*if(b->core.pos < 14007594 && b->core.pos > 14004330){
 		int kk = 0;
 		kk = kk + 1;
@@ -1072,26 +1072,26 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 	
 	int do_break = (int(b->core.tid) != *lasts || int(b->core.pos) - *lastc > d)?1:0;
 	
-	if(b->core.pos == 14006454){
+	/*if(b->core.pos == 14006454){
 		int kk = 0;
 		kk = kk + 1;
 	}
 	if(*beginc == 14006454){
 		int kk = 0;
 		kk = kk + 1;
-	}
+	}*/
 	if(do_break){ // breakpoint in the assembly
-if(*lastc == 6463676 && *beginc == 6463676){
+/*if(*lastc == 6463676 && *beginc == 6463676){
 int k = 0;
-}
+}*/
 		if(*lastc - *beginc > min_len){ // skip short/unreliable flnaking supporting regions
 			// register reliable region and supporting reads across gaps
 			int k = (*reg_idx) ++;
 			//sprintf(reg_name[k], "%s\t%d\t%d\t%d", begins, beginc, lastc, nnormal_reads);
-			if(*beginc == 14690951){
+			/*if(*beginc == 14690951){
 				int k=0;
 				k++;
-			}
+			}*/
 			reg_name[k].push_back(*begins);
 			reg_name[k].push_back(*beginc);
 			reg_name[k].push_back(*lastc);
@@ -1180,10 +1180,6 @@ int k = 0;
 		tmp_reg_seq.push_back(itos(int(b->core.l_qseq)));
 		tmp_reg_seq.push_back(lib);
 		reg_seq.push_back(tmp_reg_seq);		
-if(b->core.pos == 6463578){
-int k = 0;
-k++;
-}
 		//cout << b->core.pos + 1 << "\t" << qname_tmp << endl;
 	}
 	if(reg_seq.size() == 1)
@@ -1274,9 +1270,14 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 						continue;
 					nodepair[tail][s1] = clink[tail][s1];
 					nodepair[s1][tail] = clink[s1][tail];
-					clink[tail].erase(clink[tail].find(s1));	// use a link only once
-					if(tail != s1)
-						clink[s1].erase(clink[s1].find(tail));
+					if(clink[tail].find(s1)!=clink[tail].end()){
+						clink[tail].erase(clink[tail].find(s1));	// use a link only once
+					}
+					if(tail != s1){
+						if(clink[s1].find(tail)!=clink[s1].end()){
+							clink[s1].erase(clink[s1].find(tail));
+						}
+					}
 					newtails.push_back(s1);
 					
 					// analysis a nodepair
@@ -1347,7 +1348,9 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 //cout << y[0] << endl;								
 								support_reads.push_back(y);
 								support_reads.push_back(read_pair[y[0]]);
-								read_pair.erase(read_pair.find(y[0]));
+								if(read_pair.find(y[0])!=read_pair.end()){
+									read_pair.erase(read_pair.find(y[0]));
+								}
 							}
 						}
 						regs[node] = nonsupportives;
@@ -1417,7 +1420,9 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								int nrp = reg_name[node][3];
 //cout << " " << node << "\t" << start << "\t" << end << endl;
 								map<string,int> ori_readcount = type_orient_counts.front();
-								type_orient_counts.erase(type_orient_counts.begin());
+								if(type_orient_counts.size()!=0){
+									type_orient_counts.erase(type_orient_counts.begin());
+								}
 								if(sv_chr1 != -1 && sv_chr2 != -1){
 									sv_chr1 = sv_chr2;
 									sv_pos1 = sv_pos2;
@@ -1463,16 +1468,12 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							// make the coordinates with base 1
 							sv_pos1 = sv_pos1 + 1;
 							sv_pos2 = sv_pos2 + 1;
-							if(sv_pos1 == 17535916){
+							/*if(sv_pos1 == 17535916){
 								int k = 0;
 								k++;
-							}
+							}*/
 							cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
 							//printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
-							if(sv_pos1 == 57405606){
-							int k = 0;
-							}
-							
 							if(!prefix_fastq.empty()){ // print out supporting read pairs
 								map<string,int> pairing;
 								for(vector<vector<string> >::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
@@ -1523,7 +1524,9 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 						}
 						// free reads
 						for(vector<string>::iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
-							read.erase(read.find(*ii_free_reads));
+							if(read.find(*ii_free_reads) != read.end()){
+								read.erase(read.find(*ii_free_reads));
+							}
 						}
 						//free_reads.clear();
 						//record list of nodes that can be potentially freed
@@ -1531,7 +1534,9 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 						free_nodes[node2] = 1;
 					}
 				}
-				clink.erase(clink.find(tail));
+				if(clink.find(tail)!=clink.end()){
+					clink.erase(clink.find(tail));
+				}
 			}
 			tails = newtails;
 		}
@@ -1547,11 +1552,17 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 				vector<string> y = *ii_reads;
 				string readname = y[0];
 //cout << readname << endl;				
-				read.erase(read.find(readname));
+				if(read.find(readname)!=read.end()){
+					read.erase(read.find(readname));
+				}
 			}
 			// remove regions
-			regs.erase(regs.find(node));
-			reg_name.erase(reg_name.find(node));
+			if(regs.find(node) != regs.end()){
+				regs.erase(regs.find(node));
+			}
+			if(reg_name.find(node) != reg_name.end()){
+				reg_name.erase(reg_name.find(node));
+			}
 		}
 	}
 }
