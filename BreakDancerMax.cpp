@@ -474,7 +474,7 @@ int main(int argc, char *argv[])
 				}
 				if(lib.length() == 0)
 					continue;
-				
+			
 				if(nreads.find(lib) == nreads.end())
 					nreads[lib] = 1;
 				else
@@ -644,6 +644,7 @@ int main(int argc, char *argv[])
 	for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
 	{
 		string lib = (*nreads_ii).first;
+int tmp_bug = (*nreads_ii).second;
 		float sequence_coverage = float(nreads[lib]*readlens[lib])/float(reference_len);
 		total_seq_cov += sequence_coverage;
 		float physical_coverage = float(nreads[lib]*mean_insertsize[lib])/float(reference_len)/2;
@@ -1011,7 +1012,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
   
-	if(b->core.pos == 57390281){
+	if(b->core.pos == 57405605){
 		int kk = 0;
 		kk = kk + 1;
 	}
@@ -1103,6 +1104,7 @@ int k = 0;
 				///string s = get_item_from_string(*it_reg_seq,0); // extract the ith item from the string
 				string s = (*it_reg_seq)[0];
 				read[s].push_back(k);
+//cout << "read push: " << s << "\t" << k << endl;				
 			}
 			
 			regs[k] = p;
@@ -1120,6 +1122,7 @@ int k = 0;
 					string s= (*it_reg_seq)[0];
 					if(read.find(s) != read.end())
 						read.erase(read.find(s));
+//cout << "read erase: " << s << endl;						
 				}
 			}
 		}
@@ -1203,6 +1206,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 		vector<int> p = (*ii_read).second;
 		if(p.size() != 2) // skip singleton read (non read pairs)
 			continue;
+//cout << tmp_str << "\t" << p[0] << "\t" << p[1] << endl;			
 		if(link.find(p[0]) != link.end() && link[p[0]].find(p[1]) != link[p[0]].end()){
 			++link[p[0]][p[1]];
 			++link[p[1]][p[0]];
@@ -1211,7 +1215,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 			link[p[0]][p[1]] = 1;
 			link[p[1]][p[0]] = 1;
 		}
-//cout << "  " << p[0] << "\t" << p[1] << "\t" << link[p[0]][p[1]] << endl;		
+//cout << tmp_str << endl;		
+//cout << p[0] << "\t" << p[1] << "\t" << link[p[0]][p[1]] << endl;		
 	}
 	map<int, map<int, int> > clink(link);
 	// segregate graph, find nodes that have connections
@@ -1220,18 +1225,21 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 	int tmp_size = clink.size();
 	vector<int> s0_vec;
 	int tmp_read_size = read.size();
+//cout << tmp_read_size << endl;	
 	for(ii_clink = clink.begin(); ii_clink != clink.end(); ii_clink++){
 		s0_vec.push_back((*ii_clink).first);
+//cout << ",,,,," << (*ii_clink).first << endl;		
 		map<int,int> tmp_clink = (*ii_clink).second;
 		int s1, value;
 		for(map<int,int>::iterator ii_tmp_clink = tmp_clink.begin(); ii_tmp_clink != tmp_clink.end(); ii_tmp_clink++){
 			s1 = (*ii_tmp_clink).first;
+//cout << ",,,," << s1 << endl;			
 			value = (*ii_tmp_clink).second;
 		}
 	}
 	for(vector<int>::iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){
 		int s0 = *ii_s0_vec;
-
+//cout << ",,,,," << s0 << endl;
 		if(clink.find(s0) == clink.end())
 			continue;
 		// construct a subgraph
@@ -1295,14 +1303,14 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 					vector<vector<string> > support_reads;
 					for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
 						int node = *ii_snodes;
-cout << node << endl;
+//cout << node << endl;
 						map<string,int> orient_count;
 						vector<vector<string> > nonsupportives;
 						//debug
 						int regs_size = regs[node].size();
 						for(vector<vector<string> >::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
 							vector<string> y = *ii_regs;
-cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;							
+//cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;							
 							if(read.find(y[0]) == read.end())
 								continue;
 							// initialize orient_count
@@ -1336,6 +1344,7 @@ cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << en
 									type_library_meanspan[y[5]][y[8]] = abs(y4_tmp);
 								nread_pairs++;
 								free_reads.push_back(y[0]);
+//cout << y[0] << endl;								
 								support_reads.push_back(y);
 								support_reads.push_back(read_pair[y[0]]);
 								read_pair.erase(read_pair.find(y[0]));
@@ -1454,12 +1463,15 @@ cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << en
 							// make the coordinates with base 1
 							sv_pos1 = sv_pos1 + 1;
 							sv_pos2 = sv_pos2 + 1;
-							if(sv_pos1 == 141478771){
+							if(sv_pos1 == 17535916){
 								int k = 0;
 								k++;
 							}
 							cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
 							//printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
+							if(sv_pos1 == 57405606){
+							int k = 0;
+							}
 							
 							if(!prefix_fastq.empty()){ // print out supporting read pairs
 								map<string,int> pairing;
@@ -1510,7 +1522,10 @@ cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << en
 							}
 						}
 						// free reads
-						free_reads.clear();
+						for(vector<string>::iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
+							read.erase(read.find(*ii_free_reads));
+						}
+						//free_reads.clear();
 						//record list of nodes that can be potentially freed
 						free_nodes[node1] = 1;
 						free_nodes[node2] = 1;
@@ -1527,10 +1542,11 @@ cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << en
 		// remove reads in the regions
 		int node = (*ii_free_nodes).first;
 		vector<vector<string> > reads = regs[node];
-		if(reads.size()+1 < min_read_pair){
+		if(reads.size() < min_read_pair){
 			for(vector<vector<string> >::iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
 				vector<string> y = *ii_reads;
 				string readname = y[0];
+//cout << readname << endl;				
 				read.erase(read.find(readname));
 			}
 			// remove regions
@@ -1671,7 +1687,7 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
 	
 	/*if(fisher && logpvalue < 0){
 		// Fisher's Method
-		float fisherP = 1 - // Math::CDF::pchisq(-2*logpvalue, 2*(rlibrary_readcount.size()+1));
+		float fisherP = 1 - // Math::CDF::pchisq(-2*logpvalue, 2*(rlibrary_readcount.size()));
 		logpvalue = (fisherP > ZERO)?log(fisherP):LZERO;
 	}*/
 	return logpvalue;
