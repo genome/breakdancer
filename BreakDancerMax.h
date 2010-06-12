@@ -68,5 +68,7 @@ string itos(int i);
 
 string get_string(uint8_t *pt, int32_t length);
 
+string get_string_qual(uint8_t *pt, int32_t length);
+
 string char2str(char *str_);
 
