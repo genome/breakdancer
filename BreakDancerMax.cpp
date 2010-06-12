@@ -148,15 +148,14 @@ int main(int argc, char *argv[])
 	ifstream CONFIG;
 	CONFIG.open(argv[optind]);
 	//CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configure2.cfg");
-	char line_[256]; // each line of the config file
+	char line_[512]; // each line of the config file
 	if(CONFIG.is_open())
 	{
 		while(CONFIG.good())
 		{
-			CONFIG.getline(line_, 256);
+			CONFIG.getline(line_, 512);
 			//string line = char2str(line_);
 			string line(line_);
-
 			if(line.length()==0)
 				break;
 			// analyze the line
@@ -188,21 +187,21 @@ int main(int argc, char *argv[])
 			string exe = get_from_line(line,"exe",0);
 			if(prefix_fastq != ""){
 				//ofstream ReadsOut[lib.append("1")](prefix_fastq.append(lib).append(".1.fastq"), ios::out | ios::app | ios::binary);
-				ReadsOut[lib.append("1")] = prefix_fastq.append(lib).append(".1.fastq");
-				char ReadsOutTmp_char1[ReadsOut[lib.append("1")].length()];
-				strcpy(ReadsOutTmp_char1, ReadsOut[lib.append("1")].c_str());
+				ReadsOut[lib + "1"] = prefix_fastq + "." + lib + ".1.fastq";
+				char ReadsOutTmp_char1[ReadsOut[lib + "1"].length()];
+				strcpy(ReadsOutTmp_char1, ReadsOut[lib + "1"].c_str());
 				ofstream ReadsOutTmp;
 				ReadsOutTmp.open(ReadsOutTmp_char1);
 				if(!ReadsOutTmp.is_open())
-					cout << "unable to open " << lib << ".1.fastq, check write permission\n";
+					cout << "unable to open " << prefix_fastq << "." << lib << ".1.fastq, check write permission\n";
 				//ofstream ReadsOut[lib.append("2")](prefix_fastq.append(lib).append(".2.fastq"), ios::out | ios::app | ios::binary);
 				ReadsOutTmp.close();
-				ReadsOut[lib.append("2")] = prefix_fastq.append(lib).append(".2.fastq");
-				char ReadsOutTmp_char2[ReadsOut[lib.append("2")].length()];
-				strcpy(ReadsOutTmp_char2, ReadsOut[lib.append("2")].c_str());
+				ReadsOut[lib + "2"] = prefix_fastq + "." + lib + ".2.fastq";
+				char ReadsOutTmp_char2[ReadsOut[lib + "2"].length()];
+				strcpy(ReadsOutTmp_char2, ReadsOut[lib + "2"].c_str());
 				ReadsOutTmp.open(ReadsOutTmp_char2);
 				if(!ReadsOutTmp.is_open())
-					cout << "unable to open " << lib << ".2.fastq, check write permission\n";					
+					cout << "unable to open " << prefix_fastq << "." << lib << ".2.fastq, check write permission\n";					
 				ReadsOutTmp.close();
 			}		
 			
@@ -239,7 +238,6 @@ int main(int argc, char *argv[])
 			uppercutoff[lib] = upper;
 			lowercutoff[lib] = lower;
 			readlens[lib] = readlen;
-			
 			if(exes.find(fmap) == exes.end())
 				exes[fmap] = exe.compare("NA")?exe:"cat";
 			else if(exes[fmap].compare(exe) != 0){
@@ -1143,7 +1141,7 @@ int k = 0;
 	//bam1_qname(b) = qname_tmp; // this might be quite hard to implement in samtools; ///////////////////////
 	
 	string seq = get_string(bam1_seq(b), b->core.l_qseq);
-	string basequal = get_string(bam1_qual(b), b->core.l_qseq);
+	string basequal = get_string_qual(bam1_qual(b), b->core.l_qseq);
 	if(! prefix_fastq.empty() && ! seq.empty() && ! basequal.empty()){
 		//string tmp_str1;
 		//sprintf(tmp_str1, "%s %d %d %c %d %d %s %d %s %s %s", bam1_qname(b), b->core.chr, b->core.pos, ori/*problem*/, b->core.isize, b->core.flag, b->core.qual, /* readlen */, lib, bam1_seq(b), bam1_qual(b));
@@ -1198,7 +1196,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 	map<string,vector<int> >::iterator ii_read;
 	for(ii_read = read.begin(); ii_read != read.end(); ii_read++){
 		// test
-		string tmp_str = (*ii_read).first;
+		//string tmp_str = (*ii_read).first;
 		vector<int> p = (*ii_read).second;
 		if(p.size() != 2) // skip singleton read (non read pairs)
 			continue;
@@ -1226,12 +1224,12 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 		s0_vec.push_back((*ii_clink).first);
 //cout << ",,,,," << (*ii_clink).first << endl;		
 		map<int,int> tmp_clink = (*ii_clink).second;
-		int s1, value;
+		/*int s1, value;
 		for(map<int,int>::iterator ii_tmp_clink = tmp_clink.begin(); ii_tmp_clink != tmp_clink.end(); ii_tmp_clink++){
 			s1 = (*ii_tmp_clink).first;
 //cout << ",,,," << s1 << endl;			
 			value = (*ii_tmp_clink).second;
-		}
+		}*/
 	}
 	for(vector<int>::iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){
 		int s0 = *ii_s0_vec;
@@ -1308,7 +1306,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 						map<string,int> orient_count;
 						vector<vector<string> > nonsupportives;
 						//debug
-						int regs_size = regs[node].size();
+						//int regs_size = regs[node].size();
 						for(vector<vector<string> >::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
 							vector<string> y = *ii_regs;
 //cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;							
@@ -1387,7 +1385,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							string sptype;
 							float diffspan = 0;
 							//debug
-							int tmp_size_tlr = type_library_readcount[fl].size();
+							//int tmp_size_tlr = type_library_readcount[fl].size();
 							for(map<string,int>::iterator ii_type_lib_rc = type_library_readcount[fl].begin(); ii_type_lib_rc != type_library_readcount[fl].end(); ii_type_lib_rc ++){
 								string sp = (*ii_type_lib_rc).first;
 								//string str_num_tmp;
@@ -1397,9 +1395,9 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								else
 									sptype = sp + "|" + itos((*ii_type_lib_rc).second);
 								//debug
-								int tmp_tlm = type_library_meanspan[fl][sp];
-								int tmp_tlr = type_library_readcount[fl][sp];
-								int tmp_mi = mean_insertsize[sp];
+								//int tmp_tlm = type_library_meanspan[fl][sp];
+								//int tmp_tlr = type_library_readcount[fl][sp];
+								//int tmp_mi = mean_insertsize[sp];
 								diffspan += float(type_library_meanspan[fl][sp]) - float(type_library_readcount[fl][sp])*mean_insertsize[sp];
 							}
 							diffspans[fl] = int(diffspan/float(type[fl]) + 0.5);
@@ -1478,7 +1476,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								map<string,int> pairing;
 								for(vector<vector<string> >::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
 									vector<string> y = *ii_support_reads;
-									if(y.size() != 10 || y[5].compare(flag))
+									if(y.size() != 11 || y[5].compare(flag))
 										continue;
 									string fh_tmp_str = (pairing.find(y[0])!= pairing.end())?ReadsOut[y[8].append("1")]:ReadsOut[y[8].append("2")];
 									char fh_tmp_str_[fh_tmp_str.length()];
@@ -1691,7 +1689,7 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
 	for(map<string,int>::iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
 		string lib = (*ii_rlibrary_readcount).first;
 		// debug
-		int db_x_rc = x_readcounts[type][lib];
+		//int db_x_rc = x_readcounts[type][lib];
 		lambda = float(total_region_size)* (float(x_readcounts[type][lib])/float(reference_len));
 		logpvalue += LogPoissonTailProb(float(rlibrary_readcount[lib]),lambda);
 	}
@@ -1986,6 +1984,16 @@ string itos(int i){
 	stringstream i_str_stream;
 	i_str_stream << i;
 	return i_str_stream.str();
+}
+
+string get_string_qual(uint8_t *pt, int32_t length){
+	char seq_[length + 1];
+	for(int i = 0; i < length ; i++){
+		seq_[i] = pt[i] + 33;
+	}
+	seq_[length] = '\0';
+	string seq(seq_);// the good way to turn char * to string
+	return seq;
 }
 
 string get_string(uint8_t *pt, int32_t length){
