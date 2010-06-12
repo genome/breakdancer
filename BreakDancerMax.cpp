@@ -65,14 +65,14 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "	-q INT	minimum alternative mapping quality [%d]\n", min_map_qual);	
 		fprintf(stderr, "	-r INT	minimum number of read pairs required to establish a connection [%d]\n", min_read_pair);		 
 		fprintf(stderr, "	-b INT	buffer size for building connection [%d]\n", buffer_size);		
-		fprintf(stderr, "	-e INT	learn parameters from data before applying to SV detection [%d]\n", learn_par);		 
-		fprintf(stderr, "	-p FLOAT	prior probability of SV [%f]\n", prior_prob);	
+		//fprintf(stderr, "	-e INT	learn parameters from data before applying to SV detection [%d]\n", learn_par);		 
+		//fprintf(stderr, "	-p FLOAT	prior probability of SV [%f]\n", prior_prob);	
 		fprintf(stderr, "	-t INT	only detect transchromosomal rearrangement [%d]\n", transchr_rearrange);		 
-		fprintf(stderr, "	-f INT	use Fisher's method to combine P values from multiple library [%d]\n", fisher);		
+		//fprintf(stderr, "	-f INT	use Fisher's method to combine P values from multiple library [%d]\n", fisher);		
 		fprintf(stderr, "	-d STRING	prefix of fastq files that SV supporting reads will be saved by library\n");		 
 		fprintf(stderr, "	-g STRING	dump SVs and supporting reads in BED format for GBrowse\n");
 		fprintf(stderr, "	-l INT	analyze Illumina long insert (mate-pair) library [%d]\n", Illumina_long_insert);		 
-		fprintf(stderr, "	-C INT	change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
+		//fprintf(stderr, "	-C INT	change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
 		//fprintf(stderr, "Version: %s\n", version);
 		fprintf(stderr, "\n");
 		return 1;
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 	// define the readgroup_platform map
 	map<string, string> readgroup_platform;	
 	map<string,string> ReadsOut;
-	int d = 1e10;// global
+	int d = 1e8;// global
 	
 	// configure file
 	ifstream CONFIG;
@@ -637,6 +637,12 @@ int main(int argc, char *argv[])
 
 	int nreads_size = nreads.size();
 	//cout << nreads_size << endl;
+
+	cout << "#Software: " << version << endl;
+	cout << "#Command: ";
+	for(int i=0;i<argc;i++){cout << argv[i] << " ";}
+	cout << endl;
+	cout << "#Library Statistics:" << endl;
 	// recflags = x_readcounts[keys the first key]
 	map<string,int>::iterator nreads_ii;
 	for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
@@ -673,8 +679,9 @@ int tmp_bug = (*nreads_ii).second;
 	}
 
 
-	printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\tAllele_frequency\tVersion\tRun_Param\n");
-	
+	//printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\tAllele_frequency\tVersion\tRun_Param\n");
+	printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\tAllele_frequency\n");
+
 	int begins;// global (chr)
 	int beginc = -1;// global
 	int lasts;// global (chr, should be int in samtools)
@@ -1470,7 +1477,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								int k = 0;
 								k++;
 							}*/
-							cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
+							//cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
+							cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << endl;
 							//printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
 							if(!prefix_fastq.empty()){ // print out supporting read pairs
 								map<string,int> pairing;
