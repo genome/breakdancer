@@ -873,7 +873,7 @@ int tmp_bug = (*nreads_ii).second;
                                         ks_heapadjust(heap, 0, n, heap);
                                 }
                         }
-//cout << "build connection:" << endl;
+cout << "build connection:" << endl;
                         buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
 		}
 	
@@ -993,6 +993,7 @@ int tmp_bug = (*nreads_ii).second;
                         //for(int kk = 0; kk < n; kk++)
                           //      samclose(in[kk]);
             	}
+cout << "release memory\n";
             	/*for(int k = 0; k!=n; k++)
                 	bam_close(fp[k]);*/
 		for(int k = 0; k!=n; k++)
@@ -1038,8 +1039,8 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 		if(b->core.qual <= min_map_qual)
 			return;
 	}
-	//if(b->core.tid == '*') // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
-	//	return;
+	if(strcmp(in->header->target_name[b->core.tid],"*")) // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
+		return;
 	if(b->core.flag == 0)
 		return; // return fragment reads
 	if(transchr_rearrange && b->core.flag < 32 || b->core.flag >=64) // only care flag 32 for CTX
@@ -1464,7 +1465,6 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							float LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag_int), x_readcounts, reference_len, fisher, reg_name);
 							float PhredQ_tmp = -10*LogPvalue/log(10);
 							int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
-							
 							float AF = float(type[flag])/float(type[flag]+normal_rp);
 							
 							sv_pos1 += max_readlen - 5; // apply extra padding to the start coordinates
