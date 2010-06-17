@@ -852,11 +852,13 @@ int tmp_bug = (*nreads_ii).second;
                                 }*/
 
 								bam1_t *b = heap->b;
+								int skip_previous = 0;
                                 while(heap->pos != HEAP_EMPTY){
                                 
+                                if(skip_previous == 0){
                                         //char *mtid;
                                         //mtid = in->header->target_name[b->core.tid];
-					int same_tid = b->core.tid == b->core.mtid ? 1:0;
+										int same_tid = b->core.tid == b->core.mtid ? 1:0;
                                         vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
                                         string ori = aln_return[1];
                                         string readgroup = aln_return[0];
@@ -865,7 +867,7 @@ int tmp_bug = (*nreads_ii).second;
                                                 //continue;
                                         if(!library.empty())
                                                 Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in[heap->i]);
-                                        
+                                 }
                                         //int j = bam_read1(fp[heap->i], b);
 					int j = samread(in[heap->i],heap->b);
 					//	j = -1;
@@ -873,8 +875,12 @@ int tmp_bug = (*nreads_ii).second;
                                                 heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
                                                 heap -> idx = idx++;
                                                 b = heap->b;
-		                                        if(b->core.tid < 0)
+		                                        if(b->core.tid < 0){
+		                                        	skip_previous = 1;
     		                                    	continue;
+    		                                    }
+    		                                    if(skip_previous == 1)
+    		                                    	skip_previous = 0;
     		                                    ks_heapadjust(heap, 0, n, heap);
                                                 //if(strcmp(in[heap->i]->header->target_name[b->core.tid],"NT_113888") == 0)
                                                 	//int k = 0;
@@ -895,10 +901,10 @@ cout << "heap empty" << endl;
                         }
 cout << "build connection:" << endl;
                         buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
-		}
+		    }
 	
     		//############### find the designated chromosome and put all of them together for all bam files #############
-                else{//#customized merge & sort
+            else{//#customized merge & sort
                         // totally different from the perl version; use customized samtools instead
                         int *tid, *beg, *end, *n_off;
                         tid = new int[n];
@@ -968,13 +974,14 @@ cout << "build connection:" << endl;
 			int merge_tmp = 1;
 
                         //int merge_tmp = MergeBamsChr_prep(big_bam, n, fp, heap, chr_str, tid, beg, end, in, off, n_off, &idx);
-                        if(merge_tmp){
+            if(merge_tmp){
+                         bam1_t *b = heap->b;
+                         int skip_previous = 0;
                                 while(heap->pos != HEAP_EMPTY){
-                                        bam1_t *b = heap->b;
-                                	if(b->core.tid < 0)
-						continue;
-					if( b->core.tid == tid[heap->i] && b->core.pos < end[heap->i] ){
-						int same_tid = b->core.tid == b->core.mtid ? 1:0;
+                                       
+                                	if(skip_previous == 0){
+										if( b->core.tid == tid[heap->i] && b->core.pos < end[heap->i] ){
+											int same_tid = b->core.tid == b->core.mtid ? 1:0;
 	                                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
         	                                string ori = aln_return[1];
                 	                        string readgroup = aln_return[0];
@@ -983,12 +990,20 @@ cout << "build connection:" << endl;
                                         	        //continue;
 	                                        if(!library.empty())
         	                                        Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in[0]);
-					}
-                                        
+										}
+                                    }
                                         int j = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
                                         if(j > 0){
                                                 heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
                                                 heap -> idx = idx++;
+                                                b = heap->b;
+                                                if(b->core.tid < 0){
+                                               		skip_previous = 1;
+													continue;
+												}
+												if(skip_previous == 1)
+													skip_previous = 0;
+												ks_heapadjust(heap, 0, n, heap);
                                         }
                                         else if(j == 0){
                                                 heap->pos = HEAP_EMPTY;
@@ -998,7 +1013,7 @@ cout << "build connection:" << endl;
                                         }
                                         else
                                                 cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
-                                        ks_heapadjust(heap, 0, n, heap);
+                                        
                                 }
                         }
                         buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
@@ -1010,20 +1025,16 @@ cout << "build connection:" << endl;
                         delete []curr_off;
                         delete []i;
                         delete []n_seeks;
-                        //for(int kk = 0; kk < n; kk++)
-                          //      samclose(in[kk]);
-            	}
+         }
 cout << "release memory\n";
-            	/*for(int k = 0; k!=n; k++)
-                	bam_close(fp[k]);*/
 		for(int k = 0; k!=n; k++)
 			samclose(in[k]);
 		free(in);
-            	free(fp);
-            	free(heap);
+      	free(fp);
+      	free(heap);
             
-            	delete []big_bam;
-            	big_bam = NULL;
+       	delete []big_bam;
+       	big_bam = NULL;
 
 	}
 	
