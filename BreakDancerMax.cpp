@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 	string prefix_fastq;
 	string dump_BED;
 
-	while((c = getopt(argc, argv, "o:s:c:m:q:r:b:e:p:t:f:d:g:l:C")) >= 0){
+	while((c = getopt(argc, argv, "o:s:c:m:q:r:b:ep:tfd:g:lC")) >= 0){
 		switch(c) {
 			case 'o': chr = strdup(optarg); break;
 			case 's': min_len = atoi(optarg); break;
@@ -41,14 +41,14 @@ int main(int argc, char *argv[])
 			case 'q': min_map_qual = atoi(optarg); break;
 			case 'r': min_read_pair = atoi(optarg); break;
 			case 'b': buffer_size = atoi(optarg); break;
-			case 'e': learn_par = atoi(optarg); break;
+			case 'e': learn_par = 1; break;
 			case 'p': prior_prob = atof(optarg); break;
-			case 't': transchr_rearrange = atoi(optarg); break;
-			case 'f': fisher = atoi(optarg); break;
+			case 't': transchr_rearrange = 1; break;
+			case 'f': fisher = 1; break;
 			case 'd': prefix_fastq = strdup(optarg); break;
 			case 'g': dump_BED = strdup(optarg); break;
-			case 'l': Illumina_long_insert = atoi(optarg); break;
-			case 'C': Illumina_to_SOLiD = atoi(optarg); break;
+			case 'l': Illumina_long_insert = 1; break;
+			case 'C': Illumina_to_SOLiD = 1; break;
 			
 			default: fprintf(stderr, "Unrecognized option '-%c'.\n", c);
 			return 1;
@@ -67,11 +67,11 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "	-b INT	buffer size for building connection [%d]\n", buffer_size);		
 		//fprintf(stderr, "	-e INT	learn parameters from data before applying to SV detection [%d]\n", learn_par);		 
 		//fprintf(stderr, "	-p FLOAT	prior probability of SV [%f]\n", prior_prob);	
-		fprintf(stderr, "	-t INT	only detect transchromosomal rearrangement [%d]\n", transchr_rearrange);		 
+		fprintf(stderr, "	-t 		only detect transchromosomal rearrangement [%d]\n", transchr_rearrange);		 
 		//fprintf(stderr, "	-f INT	use Fisher's method to combine P values from multiple library [%d]\n", fisher);		
 		fprintf(stderr, "	-d STRING	prefix of fastq files that SV supporting reads will be saved by library\n");		 
 		fprintf(stderr, "	-g STRING	dump SVs and supporting reads in BED format for GBrowse\n");
-		fprintf(stderr, "	-l INT	analyze Illumina long insert (mate-pair) library [%d]\n", Illumina_long_insert);		 
+		fprintf(stderr, "	-l 			analyze Illumina long insert (mate-pair) library [%d]\n", Illumina_long_insert);		 
 		//fprintf(stderr, "	-C INT	change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
 		//fprintf(stderr, "Version: %s\n", version);
 		fprintf(stderr, "\n");
@@ -402,6 +402,8 @@ int main(int argc, char *argv[])
 	}
 	CONFIG3.close();
 	cout << reference_len << endl;*/
+	int global_control = 1;
+	int previous = -1;
  	for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii)
  	{
 
@@ -434,12 +436,26 @@ int main(int argc, char *argv[])
 			int r;
 			char *chr_ = "";
 			while ((r = samread(in, b)) >= 0) { 
-				if(b->core.pos == 6463578){
+			//cout << b->core.tid << "\t";
+					/*if(b->core.tid >=0){
+					if(b->core.tid != previous){
+					cout << b->core.tid << endl;
+					previous = b->core.tid;
+					}
+					string NT(in->header->target_name[b->core.tid]);
+					if(NT.find("NT") == string::npos && global_control == 1){
+						cout << "Chr: " << NT << endl;
+						global_control = 0;
+					}
+					}*/			
+						
+						
+				/*if(b->core.pos == 6463578){
 					//cout << b->core.tid << "\t" << in->header->target_name[b->core.tid] << "\t" << p_chr << endl;
 					//return 1;
 					int k = 0;
 					k++;
-				}
+				}*/
 				//char *chr__ = in->header->target_name[b->core.tid];
 				//if(strcmp(chr_, chr__)){
 					//cout << chr__;
@@ -835,10 +851,9 @@ int tmp_bug = (*nreads_ii).second;
                                     return 0;
                                 }*/
 
+								bam1_t *b = heap->b;
                                 while(heap->pos != HEAP_EMPTY){
-                                        bam1_t *b = heap->b;
-					if(b->core.tid < 0)
-						continue;
+                                
                                         //char *mtid;
                                         //mtid = in->header->target_name[b->core.tid];
 					int same_tid = b->core.tid == b->core.mtid ? 1:0;
@@ -852,25 +867,30 @@ int tmp_bug = (*nreads_ii).second;
                                                 Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, max_readlen, ori, in[heap->i]);
                                         
                                         //int j = bam_read1(fp[heap->i], b);
-					int j;
-                                        if(/*j >= 0*/ (j = samread(in[heap->i], b)) >= 0){
+					int j = samread(in[heap->i],heap->b);
+					//	j = -1;
+                                        if(j >= 0){
                                                 heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
                                                 heap -> idx = idx++;
+                                                b = heap->b;
+		                                        if(b->core.tid < 0)
+    		                                    	continue;
+    		                                    ks_heapadjust(heap, 0, n, heap);
+                                                //if(strcmp(in[heap->i]->header->target_name[b->core.tid],"NT_113888") == 0)
+                                                	//int k = 0;
                                         }
                                         else if(j == -1){
                                                 heap->pos = HEAP_EMPTY;
+cout << "heap empty" << endl;
                                                 free(heap->b->data);
                                                 free(heap->b);
                                                 heap->b = 0;
+                                                cout << "here" << endl;
                                         }
                                         else
                                                 cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
-					/*//debug
-					if(heap->i == 0){
-						int kk = 0;
-						kk ++;
-					}*/
-                                        ks_heapadjust(heap, 0, n, heap);
+                                                
+                                        
                                 }
                         }
 cout << "build connection:" << endl;
@@ -1039,8 +1059,12 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 		if(b->core.qual <= min_map_qual)
 			return;
 	}
-	if(strcmp(in->header->target_name[b->core.tid],"*")) // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
+	if(strcmp(in->header->target_name[b->core.tid],"*")==0) // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
 		return;
+	// temporarily take NT out
+//	string NT(in->header->target_name[b->core.tid]);
+//	if(NT.find("NT") != string::npos)
+//		return;
 	if(b->core.flag == 0)
 		return; // return fragment reads
 	if(transchr_rearrange && b->core.flag < 32 || b->core.flag >=64) // only care flag 32 for CTX
@@ -1116,8 +1140,9 @@ int k = 0;
 			regs[k] = p;
 			(*idx_buff)++;
 			if(*idx_buff > buffer_size){
-//cout << "build connection:" << endl;
+cout << "build connection:" << endl;
 				buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
+cout << "out of build connection" << endl;
 				*idx_buff = 0;
 			}
 		}
@@ -1224,14 +1249,14 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 	// segregate graph, find nodes that have connections
 	map<int,int> free_nodes;
 	map<int, map<int, int> >::iterator ii_clink;
-	int tmp_size = clink.size();
+//	int tmp_size = clink.size();
 	vector<int> s0_vec;
-	int tmp_read_size = read.size();
+//	int tmp_read_size = read.size();
 //cout << tmp_read_size << endl;	
 	for(ii_clink = clink.begin(); ii_clink != clink.end(); ii_clink++){
 		s0_vec.push_back((*ii_clink).first);
 //cout << ",,,,," << (*ii_clink).first << endl;		
-		map<int,int> tmp_clink = (*ii_clink).second;
+//		map<int,int> tmp_clink = (*ii_clink).second;
 		/*int s1, value;
 		for(map<int,int>::iterator ii_tmp_clink = tmp_clink.begin(); ii_tmp_clink != tmp_clink.end(); ii_tmp_clink++){
 			s1 = (*ii_tmp_clink).first;
