@@ -887,11 +887,11 @@ int tmp_bug = (*nreads_ii).second;
                                         }
                                         else if(j == -1){
                                                 heap->pos = HEAP_EMPTY;
-cout << "heap empty" << endl;
+//cout << "heap empty" << endl;
                                                 free(heap->b->data);
                                                 free(heap->b);
                                                 heap->b = 0;
-                                                cout << "here" << endl;
+//                                                cout << "here" << endl;
                                         }
                                         else
                                                 cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
@@ -899,7 +899,7 @@ cout << "heap empty" << endl;
                                         
                                 }
                         }
-cout << "build connection:" << endl;
+//cout << "build connection:" << endl;
                         buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
 		    }
 	
@@ -1026,7 +1026,7 @@ cout << "build connection:" << endl;
                         delete []i;
                         delete []n_seeks;
          }
-cout << "release memory\n";
+//cout << "release memory\n";
 		for(int k = 0; k!=n; k++)
 			samclose(in[k]);
 		free(in);
@@ -1151,9 +1151,9 @@ int k = 0;
 			regs[k] = p;
 			(*idx_buff)++;
 			if(*idx_buff > buffer_size){
-cout << "build connection:" << endl;
+//cout << "build connection:" << endl;
 				buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
-cout << "out of build connection" << endl;
+//cout << "out of build connection" << endl;
 				*idx_buff = 0;
 			}
 		}
