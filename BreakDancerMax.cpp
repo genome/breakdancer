@@ -421,8 +421,9 @@ int main(int argc, char *argv[])
 
 			// no chromosome defined
 			// convert the entire bam file
-			samfile_t *in;
-			char tmp_bam_name[bam_name.size()+1];
+			//samfile_t *in;
+			char *tmp_bam_name;
+			tmp_bam_name = new char[bam_name.length()+1];
 			strcpy(tmp_bam_name, bam_name.c_str());
 			//bam_name.copy(tmp_bam_name, bam_name.length(), 0);
 			if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
@@ -534,6 +535,7 @@ int main(int argc, char *argv[])
 				//cout << b->core.pos << "\t" << b->core.flag << "\t" << lib << "\t" << x_readcounts[b->core.flag][lib] << endl;
 			}
 			samclose(in);
+			delete []tmp_bam_name;
 		}
 		else{
 
@@ -636,6 +638,7 @@ int main(int argc, char *argv[])
 					x_readcounts[b->core.flag][lib] = 1;		
 			}
 			samclose(in);
+			delete []bam_name_;
 		}
 		//if (r < -1) fprintf(stderr, "[main_samview] truncated file.\n");
 		if(ref_len == 0)
@@ -721,7 +724,8 @@ int tmp_bug = (*nreads_ii).second;
 	if(n == 1){
 		if(chr.compare("0") == 0){
 			samfile_t *in;
-			char tmp_bam_name[maps[0].size()+1];
+			char *tmp_bam_name;
+			tmp_bam_name = new char[maps[0].size()+1];
 			strcpy(tmp_bam_name, maps[0].c_str());
 			/*char *fn_list = 0;
 			char in_mode[5] = "";
@@ -746,7 +750,7 @@ int tmp_bug = (*nreads_ii).second;
 					int k = 0;
 					k++;
 				}*/
-				int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+				int same_tid = b->core.tid == b->core.mtid ? 1:0;
 				vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
 				string readgroup = aln_return[0];
 				string ori = aln_return[1];
@@ -757,6 +761,7 @@ int tmp_bug = (*nreads_ii).second;
 			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
 			bam_destroy1(b);
 			samclose(in);
+			delete []tmp_bam_name;
 		}
 		/*else{
 			bam_index_t *idx = 0;
@@ -779,7 +784,8 @@ int tmp_bug = (*nreads_ii).second;
                         pair64_t *off;
                         uint64_t curr_off = 0;
                         int i = -1, n_seeks = 0;
-                        char tmp_bam_name[maps[0].size()+1];
+                        char *tmp_bam_name;
+			tmp_bam_name = new char[maps[0].size()+1];
 			strcpy(tmp_bam_name, maps[0].c_str());
 			if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
 				fprintf(stderr, "[main_samview] fail to open file for reading.\n");
@@ -814,6 +820,7 @@ int tmp_bug = (*nreads_ii).second;
 			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
 			bam_destroy1(b);
                         samclose(in);
+			delete []tmp_bam_name;
             	}
 	}
 	else{
@@ -858,7 +865,7 @@ int tmp_bug = (*nreads_ii).second;
                                 if(skip_previous == 0){
                                         //char *mtid;
                                         //mtid = in->header->target_name[b->core.tid];
-										int same_tid = b->core.tid == b->core.mtid ? 1:0;
+					int same_tid = b->core.tid == b->core.mtid ? 1:0;
                                         vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
                                         string ori = aln_return[1];
                                         string readgroup = aln_return[0];
@@ -1778,6 +1785,7 @@ pair64_t * ReadBamChr_prep(string chr_str, string bam_name, int *tid, int *beg, 
 	chr_str_ = new char[chr_str.length()+1];
 	strcpy(chr_str_, chr_str.c_str());
 	bam_parse_region(in->header, chr_str_, tid, beg, end);// parse
+	delete []chr_str_;
 	
 	// return the file handle for handle
 	//*fp = in->x.bam;
@@ -1852,6 +1860,7 @@ int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *i
 			h->idx = (*idx)++;
 		}
 		else h->pos = HEAP_EMPTY;
+		delete []fn_;
 	}
 	
 	ks_heapmake(heap, n, heap);
