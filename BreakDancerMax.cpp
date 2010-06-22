@@ -1956,6 +1956,10 @@ string get_from_line(string line,string search,int flag){
 			pos = pos + search.length();
 			size_t pos_begin = line.find(":", pos);
 			if(pos_begin != string::npos){
+				string substr_tmp = line.substr(pos,pos_begin-pos);
+				if(substr_tmp.find("\t") != string::npos || substr_tmp.find(" ") != string::npos)
+					return "NA";
+
 				size_t pos_end = line.find("\t",pos_begin);
 				if(pos_end == string::npos)
 					pos_end = line.find("\0", pos_begin);
@@ -1994,7 +1998,12 @@ string get_from_line_two(string line,string search1,string search2,int flag2){
 			else{
 				pos2 = pos2 + search2.length();
 				size_t pos_begin = line.find(":", pos2);
-				if(pos2 != string::npos){
+				if(pos_begin != string::npos){
+
+					string substr_tmp = line.substr(pos,pos_begin-pos);
+					if(substr_tmp.find("\t") != string::npos || substr_tmp.find(" ") != string::npos)
+						return "NA";
+
 					size_t pos_end = line.find("\t",pos2);
 					if(pos_end == string::npos)
 						pos_end = line.find("\0",pos2);
