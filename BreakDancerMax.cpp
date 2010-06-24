@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 	}
 	if(optind == argc){
 		fprintf(stderr, "\n");
-		fprintf(stderr, "breakdancermax <analysis.config>\n\n");
+		fprintf(stderr, "breakdancer_max <analysis.config>\n\n");
 		fprintf(stderr, "Options: \n");
 		fprintf(stderr, "	-o STRING	operate on a single chromosome [all chromosome]\n");
 		fprintf(stderr, "	-s INT	minimum length of a region [%d]\n", min_len);		 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
 		//fprintf(stderr, "	-f INT	use Fisher's method to combine P values from multiple library [%d]\n", fisher);		
 		fprintf(stderr, "	-d STRING	prefix of fastq files that SV supporting reads will be saved by library\n");		 
 		fprintf(stderr, "	-g STRING	dump SVs and supporting reads in BED format for GBrowse\n");
-		fprintf(stderr, "	-l 			analyze Illumina long insert (mate-pair) library [%d]\n", Illumina_long_insert);		 
+		fprintf(stderr, "	-l 		analyze Illumina long insert (mate-pair) library [%d]\n", Illumina_long_insert);		 
 		//fprintf(stderr, "	-C INT	change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
 		//fprintf(stderr, "Version: %s\n", version);
 		fprintf(stderr, "\n");
