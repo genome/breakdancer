@@ -1,4 +1,4 @@
-BreakDancer-0.0.1, released under GPLv3, is a Perl package that provides genome-wide detection of structural variants from next generation paired-end sequencing reads. It includes two complementary programs. BreakDancerMax predicts five types of structural variants: insertions, deletions, inversions, inter- and intra-chromosomal translocations from next-generation short paired-end sequencing reads using read pairs that are mapped with unexpected separation distances or orientation.  BreakDancerMini focuses on detecting small indels (usually between 10bp and 100bp) using normally mapped read pairs.  Please read our paper for detailed algorithmic description. http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html
+BreakDancer-1.0, released under GPLv3, is a Perl/Cpp package that provides genome-wide detection of structural variants from next generation paired-end sequencing reads. It includes two complementary programs. BreakDancerMax predicts five types of structural variants: insertions, deletions, inversions, inter- and intra-chromosomal translocations from next-generation short paired-end sequencing reads using read pairs that are mapped with unexpected separation distances or orientation.  BreakDancerMini focuses on detecting small indels (usually between 10bp and 100bp) using normally mapped read pairs.  Please read our paper for detailed algorithmic description. http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html
 
 BreakDancerMax
 ----------------------
@@ -19,19 +19,22 @@ Options:
          -b INT    buffer size for building connection [100]
          -r INT    minimum number of read pairs required to establish a connection
 
-Version: BreakDancerMax-0.0.1r81
+Version: BreakDancerMax-1.0
 
-Most of these options are self-explanatory.  It is convenient to use the -o option to parallelize SV detection for each chromosome.  When -o is used, the detection of inter-chromosomal translocation is disabled.  In that case, it may be convenient to use -t in a separate process to detect putative inter-chromosomal translocations without bothering to analyze read pairs that are mapped to the same chromosome.
+Most of these options are self-explanatory.  It is convenient to use the -o option to parallelize SV detection for each chromosome.  When -o is used, the detection of inter-chromosomal translocation is disabled.  In that case, it may be convenient to use -t in a separate process to detect putative inter-chromosomal translocations without bothering to analyze read pairs that are mapped to the same chromosome. 
 
-The input to BreakDancerMax-0.0.1 is a set of map files produced by a front-end aligner such as MAQ, BWA, NovoAlign and Bfast, and a tab-delimited configuration file that specifies the locations of the map files, the detection parameters, and the sample information.
-If your map files are in the sam/bam format, you can use the bam2cfg.pl in the released package to automatic generate a configuration file (bam2cfg.pl also has dependence on AlnParser.pm in the release package).  If you have a single bam file that contains multiple libraries, make sure that the readgroup and library information are properly encoded in the sam/bam header, and in each alignment record, otherwise bam2cfg.pl may fail to produce a correct configuration file.  Please follow instructions on http://samtools.sourceforge.net to properly format your bam files.
+The beta-test x86_64 Cpp version breakdancermax directly utilizes samtools C library. It is fully compatible with the perl version with identical usage and functions but is over 10 times faster. However, it only supports properly formated bam files and has only been tested using bam files produced by BWA. To obtain the correct result, it is important to have readgroup (@RG) tag in both the header and each alignment in the bam files. If you experience technical difficulty with the Cpp version, please email breakdancer-help@lists.sourceforge.net or consider using the perl version.
+
+The input to BreakDancerMax-1.0 is a set of map files produced by a front-end aligner such as MAQ, BWA, NovoAlign and Bfast, and a tab-delimited configuration file that specifies the locations of the map files, the detection parameters, and the sample information.
+
+If your map files are in the sam/bam format, you can use the bam2cfg.pl in the released package to automatic generate a configuration file (bam2cfg.pl also has dependence on AlnParser.pm in the release package). If you have a single bam file that contains multiple libraries, make sure that the readgroup and library information are properly encoded in the sam/bam header, and in each alignment record, otherwise bam2cfg.pl may fail to produce a correct configuration file.  Please follow instructions on http://samtools.sourceforge.net to properly format your bam files.
 
 An example manual configuration file is like this
 
-map:1.map mean:219 std:18 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b
-map:2.map mean:220 std:19 readlen:36.00 sample:tB exe:maq-0.6.8 mapview -b
-map:3.map mean:219 std:18 readlen:36.00 sample:nA exe:maq-0.7.1 mapview -b
-map:4.map mean:219 std:18 readlen:36.00 sample:nB exe:maq-0.7.1 mapview -b
+map:1.map mean:219 std:18 readlen:36.00 sample:tA exe:maq-0.6.8 mapview
+map:2.map mean:220 std:19 readlen:36.00 sample:tB exe:maq-0.6.8 mapview
+map:3.map mean:219 std:18 readlen:36.00 sample:nA exe:maq-0.7.1 mapview
+map:4.map mean:219 std:18 readlen:36.00 sample:nB exe:maq-0.7.1 mapview
 
 An example configuration file produced by bam2cfg.pl look like this:
 
@@ -78,28 +81,6 @@ The -d specifies a fastq file where all SV supporting reads will be saved in the
 
 Listing multiple map files in a single configuration file would automatically enable pooled analysis: reads from all the map files are jointly analyzed to find unified SV hypotheses across all the map files.
 
-BreakDancerMini
-----------------------
-Usage:   BreakDancerMini.pl <analysis_config_file>
-Options:
-         -o STRING Operate on a single chromosome [all chromosome]
-         -p INT    Cutoff in the Kolmogorov-Smirnov(KS) P value [0.001]
-         -m INT    Maximum SV size [100000]
-         -q INT    Minimum alternative mapping quality [10]
-         -w INT    SV flanking window size [mean + std insert size - mean read length]
-         -s INT    Step size [20]
-         -e INT    SV score method (0: average, 1: max) of the flanking region scores [0]
-         -r INT    Minimum number of read pairs required to establish a connection [2]
-         -b INT    Number of regions registered before calling SVs [100]
-         -v INT    Verbose mode 0-2 [0]
-Version: BreakDancerMini-0.0.1
-
-Most of the user options are consistent between BreakDancerMax and BreakDancerMini.  The -p option specifies the P value threshold derived from the sliding window Kolmogorov-Smirnov test. Only regions with P values smaller than the threshold are used to derive SV hypotheses.
-The -s option specifies the step size of the sliding windows which provides a tradeoff between speed and resolution. 
-The -e option specifies the method to combine confidence scores from the left and the right anchoring regions.  The results obtained under these two different methods: average or max, only has minor difference in our evaluation.
-The default parameters work well in most cases.
-
-The configuration file for BreakDancerMini is identical to BreakDancerMax.  The key:value pairs that must have are map, sample, readlen, and exe.
 
 The output format
 ----------------------
@@ -147,8 +128,7 @@ An 13 bp insertion detected by BreakDancerMini between chr1:62767 and chr1:63126
 Notes:
 Real SV breakpoints are expected to reside within the predicted boundaries with a margin > the read length.
 
-
-
+The BreakDancerMini code will not be included in the coming releases.  We recommend using Pindel to detect intermediate size indels (10-80 bp).
 
 Dependence over other Perl Modules
 ------------------------------------
@@ -160,8 +140,7 @@ http://search.cpan.org/~colink/Statistics-Descriptive-2.6/Descriptive.pm
 http://search.cpan.org/~callahan/Math-CDF-0.1/CDF.pm
 
 use Poisson;
-This is provided. Please make sure the "use lib" at the beginning of the scripts contains the correct path.
-
+This is provided. Please make sure the "use lib" at the beginning of the perl scripts contains the correct path.
 
 
 Acknowledgements
@@ -170,7 +149,7 @@ Heng Li at Wellcome Trust Sanger Institute has contributed an early version of t
 Many colleagues at The Genome Center of Washington University have supported this effort.
 
 
-Ken Chen
+Ken Chen and Xian Fan
 Washington University Genome Center
 
 July 14, 2009
