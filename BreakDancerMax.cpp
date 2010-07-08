@@ -743,12 +743,12 @@ int tmp_bug = (*nreads_ii).second;
 	map<int, map<string, uint32_t> > read_count_ROI_map; // global
 	map<string, uint32_t> nread_FR;	// global
 	map<int, map<string, uint32_t> > read_count_FR_map; // global
-	map<string, map<string, vector<int> > > nread_ROI_debug; // global
-	map<int, map<string, map<string, vector<int> > > > read_count_ROI_debug; // global
-	map<string, map<string, vector<int> > > nread_FR_debug; // global
-	map<int, map<string, map<string, vector<int> > > > read_count_FR_debug; // global
+	////map<string, map<string, vector<int> > > nread_ROI_debug; // global
+	////map<int, map<string, map<string, vector<int> > > > read_count_ROI_debug; // global
+	////map<string, map<string, vector<int> > > nread_FR_debug; // global
+	////map<int, map<string, map<string, vector<int> > > > read_count_FR_debug; // global
 	map<string, uint32_t > possible_fake_data;
-	map<string, map<string, vector<int> > > possible_fake_data_debug;
+	////map<string, map<string, vector<int> > > possible_fake_data_debug;
 	map<int, vector<vector<string> > > regs;//global in analysis
 	map<string, vector<int> > read;// global in analysis
 	map<int,vector<int> > reg_name;// global in analysis
@@ -762,7 +762,7 @@ int tmp_bug = (*nreads_ii).second;
 	int nnormal_reads = 0; // global
 	uint32_t ntotal_nucleotides = 0; // global
 
-	int possible_fake = 0; // global
+	////int possible_fake = 0; // global
 
         max_readlen = 0;
 
@@ -811,7 +811,7 @@ int count_no_lib = 0;
 				string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 	
 				if(!library.empty()){
-					Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, possible_fake_data, possible_fake_data_debug);
+					Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/);
 				}
 /*else{
 if(b->core.pos >= 39124151 && b->core.pos <= 39125220){
@@ -876,8 +876,14 @@ count_no_lib ++;
                         	        string readgroup = aln_return[0];
                                 	string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 					if(!library.empty()){
-						Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, possible_fake_data, possible_fake_data_debug);
+						Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/);
 					}
+/*else{
+if(b->core.pos >= 43803315 && b->core.pos <= 103860201){
+count_no_lib ++;
+//cout << b->core.pos + 1 << endl;
+}
+}*/
 				}
 			}
 			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in, read_count_ROI_map, read_count_FR_map, read_density);//, read_count_ROI_debug, read_count_FR_debug);
@@ -936,8 +942,15 @@ count_no_lib ++;
                                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                                                 //continue;
 									if(!library.empty()){
-										Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[heap->i], seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, possible_fake_data, possible_fake_data_debug);
+										Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[heap->i], seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake,*/ possible_fake_data/*, possible_fake_data_debug*/);
 									}
+/*else{
+if(b->core.pos >= 43803315 && b->core.pos <= 103860201){
+count_no_lib ++;
+//cout << b->core.pos + 1 << endl;
+}
+}*/
+
                                  }
                                         //int j = bam_read1(fp[heap->i], b);
 					int j = samread(in[heap->i],heap->b);
@@ -1060,7 +1073,7 @@ count_no_lib ++;
                                 	        //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                                         	        //continue;
 	                                        if(!library.empty()){
-												Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[0], seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, possible_fake_data, possible_fake_data_debug);
+												Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[0], seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/);
 											}
 										}
                                     }
@@ -1156,13 +1169,14 @@ int n = 0;
 }
 cout << "\n\n" << whole_number << endl;
 cout <<"no library: "<< count_no_lib <<endl;*/
+//cout <<"no library: "<< count_no_lib <<endl;
 	free(fn_list); free(fn_ref); free(fn_rg);
 	
  	return 0;
 }
 
 // this function is good
-void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string, float> &uppercutoff, map<string, float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int *max_readlen, string ori, samfile_t *in, int seq_coverage_lim, uint32_t *ntotal_nucleotides, map<string, uint32_t> &nread_ROI, map<int, map<string, uint32_t> > &read_count_ROI_map, map<string, uint32_t> &nread_FR, map<int, map<string, uint32_t> > &read_count_FR_map, map<string, float> &read_density, map<string, map<string, vector<int> > > &nread_ROI_debug, map<int, map<string, map<string, vector<int> > > > &read_count_ROI_debug, map<string, map<string, vector<int> > > &nread_FR_debug, map<int, map<string, map<string, vector<int> > > > &read_count_FR_debug, int *possible_fake, map<string, uint32_t> &possible_fake_data, map<string, map<string, vector<int> > > & possible_fake_data_debug){
+void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string, float> &uppercutoff, map<string, float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int *max_readlen, string ori, samfile_t *in, int seq_coverage_lim, uint32_t *ntotal_nucleotides, map<string, uint32_t> &nread_ROI, map<int, map<string, uint32_t> > &read_count_ROI_map, map<string, uint32_t> &nread_FR, map<int, map<string, uint32_t> > &read_count_FR_map, map<string, float> &read_density,/* map<string, map<string, vector<int> > > &nread_ROI_debug, map<int, map<string, map<string, vector<int> > > > &read_count_ROI_debug, map<string, map<string, vector<int> > > &nread_FR_debug, map<int, map<string, map<string, vector<int> > > > &read_count_FR_debug, int *possible_fake,*/ map<string, uint32_t> &possible_fake_data/*, map<string, map<string, vector<int> > > & possible_fake_data_debug*/){
 
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
@@ -1187,7 +1201,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 			else 
 				nread_ROI[lib] ++;
 			
-			nread_ROI_debug[lib][bam1_qname(b)].push_back( b->core.pos + 1);
+			////nread_ROI_debug[lib][bam1_qname(b)].push_back( b->core.pos + 1);
 		//}
 /*if(nread_ROI_debug.find("NA12878.1") != nread_ROI_debug.end()){
 int k = 0;
@@ -1211,7 +1225,7 @@ int n = 0;
 				possible_fake_data[lib] = 1;
 			else
 				possible_fake_data[lib] ++;
-			possible_fake_data_debug[lib][bam1_qname(b)].push_back(b->core.pos + 1);
+			////possible_fake_data_debug[lib][bam1_qname(b)].push_back(b->core.pos + 1);
 //		}
 		
 		//if(*normal_switch == 1 && b->core.isize > 0){
@@ -1224,7 +1238,7 @@ int n = 0;
 			else 
 				nread_FR[lib] ++;
 			
-			nread_FR_debug[lib][bam1_qname(b)].push_back(b->core.pos + 1);
+			////nread_FR_debug[lib][bam1_qname(b)].push_back(b->core.pos + 1);
 		//}
 
 	if(mapQual.find(lib) != mapQual.end()){
@@ -1329,12 +1343,12 @@ int i = 0;
 					read_count_ROI_map[k][lib_] += nread_ROI[lib_];
 					
 				}
-for(map<string, vector<int> >::iterator nread_ROI_debug_it = nread_ROI_debug[lib_].begin(); nread_ROI_debug_it != nread_ROI_debug[lib_].end(); nread_ROI_debug_it++){
+/*////for(map<string, vector<int> >::iterator nread_ROI_debug_it = nread_ROI_debug[lib_].begin(); nread_ROI_debug_it != nread_ROI_debug[lib_].end(); nread_ROI_debug_it++){
 vector<int> a = (*nread_ROI_debug_it).second;
 for(int i= 0; i < a.size(); i++){
 if(k==5 && a[i] == 39122312)
 int i = 0;
-						read_count_ROI_debug[k][lib_][(*nread_ROI_debug_it).first].push_back(a[i]);}}
+						read_count_ROI_debug[k][lib_][(*nread_ROI_debug_it).first].push_back(a[i]);}}////*/
 			}
 			//}
 
@@ -1368,9 +1382,9 @@ int i = 0;
 					if(diff < 0)
 						cout << "wrong, the subtraction is negative";
 					else if(diff >= 0){
-						read_count_FR_map[k][lib_] = (*nread_FR_it).second - read_count_ROI_map[k][lib_];
-						map<string, vector<int> > nread_ROI_debug_ = read_count_ROI_debug[k][lib_];
-						for(map<string, vector<int> >::iterator nread_ROI_debug_it = nread_ROI_debug_.begin(); nread_ROI_debug_it != nread_ROI_debug_.end(); nread_ROI_debug_it ++){
+						read_count_FR_map[k][lib_] = diff;//(*nread_FR_it).second - read_count_ROI_map[k][lib_];
+						////map<string, vector<int> > nread_ROI_debug_ = read_count_ROI_debug[k][lib_];
+						/*////for(map<string, vector<int> >::iterator nread_ROI_debug_it = nread_ROI_debug_.begin(); nread_ROI_debug_it != nread_ROI_debug_.end(); nread_ROI_debug_it ++){
 							vector<int> vector1 = (*nread_ROI_debug_it).second;
 
 							/*for(vector<int>::iterator it = vector1.begin(); it != vector1.end(); it++){
@@ -1380,10 +1394,10 @@ int i = 0;
 										nread_FR_debug[lib_][(*nread_ROI_debug_it).first].erase(it1);
 								}
 							}*/
-							if(nread_FR_debug[lib_][(*nread_ROI_debug_it).first].size() == 0)
+							/*////if(nread_FR_debug[lib_][(*nread_ROI_debug_it).first].size() == 0)
 								nread_FR_debug[lib_].erase((*nread_ROI_debug_it).first);
 						}
-						read_count_FR_debug[k][lib_] = nread_FR_debug[lib_];
+						read_count_FR_debug[k][lib_] = nread_FR_debug[lib_];////*/
 					}
 					//else
 					//	cout << "lib only exist in ROI rather than FR";
@@ -1458,12 +1472,12 @@ for(int i = 0; i < a.size(); i++)
 					else{
 						read_count_ROI_map[*reg_idx-1][lib_] += possible_fake_data[lib_];
 					}
-						for(map<string, vector<int> >::iterator possible_fake_data_debug_it = possible_fake_data_debug[lib_].begin(); possible_fake_data_debug_it != possible_fake_data_debug[lib_].end(); possible_fake_data_debug_it ++){
+						/*////for(map<string, vector<int> >::iterator possible_fake_data_debug_it = possible_fake_data_debug[lib_].begin(); possible_fake_data_debug_it != possible_fake_data_debug[lib_].end(); possible_fake_data_debug_it ++){
 vector<int> a = (*possible_fake_data_debug_it).second;
 for(int i = 0; i < a.size(); i++){
 if(*reg_idx-1==5 && a[i] == 39122312)
 int i = 0;
-							read_count_ROI_debug[*reg_idx-1][lib_][(*possible_fake_data_debug_it).first].push_back(a[i]);}}
+							read_count_ROI_debug[*reg_idx-1][lib_][(*possible_fake_data_debug_it).first].push_back(a[i]);}}////*/
 
 				}
 			}
@@ -1517,12 +1531,12 @@ int n = 0;
 }*/
 		// clear possible fake data
 		possible_fake_data.clear();
-possible_fake_data_debug.clear();
+////possible_fake_data_debug.clear();
 nread_ROI.clear();
-nread_ROI_debug.clear();
+////nread_ROI_debug.clear();
 		// clear FR
 		nread_FR.clear();
-		nread_FR_debug.clear();
+		////nread_FR_debug.clear();
 /*if(read_count_ROI_debug[1]["NA12878.1"].find("ERR001310.5612927") != read_count_ROI_debug[1]["NA12878.1"].end()){
 for(int i = 0; i < read_count_ROI_debug[1]["NA12878.1"]["ERR001310.5612927"].size(); i++){
 int k = read_count_ROI_debug[1]["NA12878.1"]["ERR001310.5612927"][i];
@@ -1599,7 +1613,7 @@ int n = 0;
 }
 }*/
 	nread_ROI.clear();
-	nread_ROI_debug.clear();
+	////nread_ROI_debug.clear();
 	
 }
 
@@ -1942,7 +1956,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
                                                                         if(copy_number.find(sp) != copy_number.end()){
 										copy_number_ = copy_number[sp];
                                                                                 stringstream sstr;
-                                                                                sstr << copy_number_;
+                                                                                sstr << setprecision(3) << copy_number_;
                                                                                 copy_number_str = sstr.str();
                                                                         }
 									//string str_num_tmp;
