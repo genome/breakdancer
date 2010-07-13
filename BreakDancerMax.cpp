@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 	int Illumina_long_insert = 0;// bool
 	int Illumina_to_SOLiD = 0;// bool
         int seq_coverage_lim = 1000;
-	int CN_bam = 0;//bool
+	int CN_bam = 1;//bool
 	int print_AF = 0;//bool
 	string bam_file;
 	string prefix_fastq;
