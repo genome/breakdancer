@@ -1923,7 +1923,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
                                         if(copy_number.find(sp) != copy_number.end()){
 											copy_number_ = copy_number[sp];
                                             stringstream sstr;
-                                            sstr << setprecision(3) << copy_number_;
+                                            sstr << fixed;
+                                            sstr << setprecision(2) << copy_number_;
                                             copy_number_str = sstr.str();
                                         }
 										//string str_num_tmp;
@@ -1977,7 +1978,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 										cout << "\tnan";
 									else {
 										cout << "\t";
-										cout << setprecision(3) << copy_number[maps[i]];
+                                                                                cout << fixed;
+										cout << setprecision(2) << copy_number[maps[i]];
 									}
 								}
 							}
