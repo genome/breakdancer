@@ -398,17 +398,19 @@ int main(int argc, char *argv[])
 				if(lib.length() == 0)
 					continue;
 			
-				if(nreads.find(lib) == nreads.end())
+                                if(b->core.qual > min_map_qual){
+				    if(nreads.find(lib) == nreads.end())
 					nreads[lib] = 1;
-				else
+			    	    else
 					nreads[lib] ++;
 				
-				if(CN_bam == 1){
+				    if(CN_bam == 1){
 					if(nreads_.find(libmaps[lib]) == nreads_.end())
 						nreads_[libmaps[lib]] = 1;
 					else
 						nreads_[libmaps[lib]] ++;
-				}
+				    }
+                                }
 
 				if(mapQual.find(lib) != mapQual.end()){
 					if(b->core.qual <= mapQual[lib])
@@ -516,18 +518,19 @@ int main(int argc, char *argv[])
 				if(lib.length() == 0)
 					continue;
 				
-				
-				if(nreads.find(lib) == nreads.end())
+				if(b->core.qual > min_map_qual){
+				    if(nreads.find(lib) == nreads.end())
 					nreads[lib] = 1;
-				else
+				    else
 					nreads[lib] ++;	
 				
-				if(CN_bam == 1){
+				    if(CN_bam == 1){
 					if(nreads_.find(libmaps[lib]) == nreads_.end())
 						nreads_[libmaps[lib]] = 1;
 					else 
 						nreads_[libmaps[lib]] ++;
-				}
+				    }
+                                }
 
 				if(mapQual.find(lib) != mapQual.end()){
 					if(b->core.qual <= mapQual[lib])
@@ -1135,18 +1138,20 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 
 		//if(*possible_fake == 0){
 			// region between last and next begin
-	if(CN_bam == 0){
+        if(b->core.qual > min_map_qual){
+    	    if(CN_bam == 0){
 			if(nread_ROI.find(lib) == nread_ROI.end())
 				nread_ROI[lib] = 1;
 			else 
 				nread_ROI[lib] ++;
-	}
-	else if(CN_bam == 1){
+	    }
+	    else if(CN_bam == 1){
 		if(nread_ROI.find(bam_name) == nread_ROI.end())
 			nread_ROI[bam_name] = 1;
 		else
 			nread_ROI[bam_name] ++;
-	}
+	    }
+        
 
 			
 			////nread_ROI_debug[lib][bam1_qname(b)].push_back( b->core.pos + 1);
@@ -1169,18 +1174,18 @@ int n = 0;
 }
 }*/
 //		if(*possible_fake == 1){
-	if(CN_bam == 0){
+	    if(CN_bam == 0){
 			if(possible_fake_data.find(lib) == possible_fake_data.end())
 				possible_fake_data[lib] = 1;
 			else
 				possible_fake_data[lib] ++;
-	}
-	else if(CN_bam == 1){
+	    }
+	    else if(CN_bam == 1){
 		if(possible_fake_data.find(bam_name) == possible_fake_data.end())
 			possible_fake_data[bam_name] = 1;
 		else 
 			possible_fake_data[bam_name] ++;
-	}
+	    }
 
 			////possible_fake_data_debug[lib][bam1_qname(b)].push_back(b->core.pos + 1);
 //		}
@@ -1190,19 +1195,19 @@ int n = 0;
 			// ignore nnormal_reads afterwards, while normal_switch stills works a little for us
 			
 			// region between begin and last
-	if(CN_bam == 0){
+	    if(CN_bam == 0){
 			if(nread_FR.find(lib) == nread_FR.end())
 				nread_FR[lib] = 1;
 			else 
 				nread_FR[lib] ++;
-	}
-	else if(CN_bam == 1){
+	    }
+	    else if(CN_bam == 1){
 		if(nread_FR.find(bam_name) == nread_FR.end())
 			nread_FR[bam_name] = 1;
 		else 
 			nread_FR[bam_name] ++;
-	}
-
+	    }
+        }
 			 
 			
 			////nread_FR_debug[lib][bam1_qname(b)].push_back(b->core.pos + 1);
