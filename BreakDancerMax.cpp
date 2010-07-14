@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 	string chr("0"); // chromosome
 	int min_len = 7;
 	int cut_sd = 3;
-	int max_sd = 1000000;
+	int max_sd = 1000000000;
 	int min_map_qual = 35;
 	int min_read_pair = 2;
 	int buffer_size = 100;//temporarily for debug
@@ -74,13 +74,13 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "       -b INT          buffer size for building connection [%d]\n", buffer_size);		
 		//fprintf(stderr, "	-e INT	learn parameters from data before applying to SV detection [%d]\n", learn_par);		 
 		//fprintf(stderr, "	-p FLOAT	prior probability of SV [%f]\n", prior_prob);	
-		fprintf(stderr, "       -t              only detect transchromosomal rearrangement\n");		 
+		fprintf(stderr, "       -t              only detect transchromosomal rearrangement, by default off\n");		 
 		//fprintf(stderr, "	-f INT	use Fisher's method to combine P values from multiple library [%d]\n", fisher);		
 		fprintf(stderr, "       -d STRING       prefix of fastq files that SV supporting reads will be saved by library\n");		 
 		fprintf(stderr, "       -g STRING       dump SVs and supporting reads in BED format for GBrowse\n");
 		fprintf(stderr, "       -l              analyze Illumina long insert (mate-pair) library\n");		 
-		fprintf(stderr, "		-a				print out copy number by bam file rather than library\n");
-		fprintf(stderr, "		-h				print out Allele Frequency column\n");
+		fprintf(stderr, "		-a				print out copy number by bam file rather than library, by default on\n");
+		fprintf(stderr, "		-h				print out Allele Frequency column, by default off\n");
 		//fprintf(stderr, "	-C INT	change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
 		//fprintf(stderr, "Version: %s\n", version);
 		fprintf(stderr, "\n");
@@ -1919,7 +1919,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 									if(CN_bam == 0){
 										float copy_number_ = 0;
 								
-                                        string copy_number_str = "0";        
+                                        string copy_number_str = "NA";        
                                         if(copy_number.find(sp) != copy_number.end()){
 											copy_number_ = copy_number[sp];
                                             stringstream sstr;
@@ -1975,7 +1975,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							if(CN_bam == 1){
 								for(int i = 0; i < maps.size(); i++){
 									if(copy_number.find(maps[i]) == copy_number.end())
-										cout << "\tnan";
+										cout << "\tNA";
 									else {
 										cout << "\t";
                                                                                 cout << fixed;
