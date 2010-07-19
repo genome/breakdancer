@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
         int seq_coverage_lim = 1000;
 	int CN_bam = 1;//bool
 	int print_AF = 0;//bool
-        int score_threshold = 40;// for output
+        int score_threshold = 30;// for output
 	string bam_file;
 	string prefix_fastq;
 	string dump_BED;
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
 			case 'd': prefix_fastq = strdup(optarg); break;
 			case 'g': dump_BED = strdup(optarg); break;
 			case 'l': Illumina_long_insert = 1; break;
-			case 'C': Illumina_to_SOLiD = 1; break;
+			//case 'C': Illumina_to_SOLiD = 1; break;
 			case 'a': CN_bam = 1; break;
 			case 'h': print_AF = 1; break;
                         case 'y': score_threshold = atoi(optarg); break;
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 	string platform = Illumina_to_SOLiD?"solid":"illumina";
 	char options_[500];
 	
-	sprintf(options_,"-s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -t %f -f %d -l %d -C %d -a %d -h %d -y %d", min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, Illumina_long_insert, Illumina_to_SOLiD, CN_bam, print_AF, score_threshold);
+	sprintf(options_,"-s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -t %f -f %d -l %d -a %d -h %d -y %d", min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, Illumina_long_insert, /*Illumina_to_SOLiD, */CN_bam, print_AF, score_threshold);
 	
 	options = options_;
 	options += " -d " + prefix_fastq;
