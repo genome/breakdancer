@@ -4,7 +4,7 @@
 
 using namespace std;
 
-string version ("BreakDancerMax-1.0r112");
+string version ("BreakDancerMax-1.1r112");
 string options ("");
 
 
@@ -398,7 +398,7 @@ int main(int argc, char *argv[])
 				if(lib.length() == 0)
 					continue;
 			
-                                if(b->core.qual > min_map_qual && b->core.flag < 64 && b->core.flag >=18){
+                                if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >=18){
 				    if(nreads.find(lib) == nreads.end())
 					nreads[lib] = 1;
 			    	    else
@@ -518,7 +518,7 @@ int main(int argc, char *argv[])
 				if(lib.length() == 0)
 					continue;
 				
-				if(b->core.qual > min_map_qual && b->core.flag < 64 && b->core.flag >= 18){
+				if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
 				    if(nreads.find(lib) == nreads.end())
 					nreads[lib] = 1;
 				    else
@@ -1138,7 +1138,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 
 		//if(*possible_fake == 0){
 			// region between last and next begin
-        if(b->core.qual > min_map_qual && b->core.flag < 64 && b->core.flag >= 18){
+        if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
     	    if(CN_bam == 0){
 			if(nread_ROI.find(lib) == nread_ROI.end())
 				nread_ROI[lib] = 1;
