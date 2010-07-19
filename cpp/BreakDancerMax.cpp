@@ -4,7 +4,7 @@
 
 using namespace std;
 
-string version ("BreakDancerMax-1.0r112");
+string version ("BreakDancerMax-1.1r112");
 string options ("");
 
 
@@ -18,7 +18,7 @@ int main(int argc, char *argv[])
 	string chr("0"); // chromosome
 	int min_len = 7;
 	int cut_sd = 3;
-	int max_sd = 1000000;
+	int max_sd = 1000000000;
 	int min_map_qual = 35;
 	int min_read_pair = 2;
 	int buffer_size = 100;//temporarily for debug
@@ -29,11 +29,14 @@ int main(int argc, char *argv[])
 	int Illumina_long_insert = 0;// bool
 	int Illumina_to_SOLiD = 0;// bool
         int seq_coverage_lim = 1000;
+	int CN_bam = 1;//bool
+	int print_AF = 0;//bool
+        int score_threshold = 40;// for output
 	string bam_file;
 	string prefix_fastq;
 	string dump_BED;
 
-	while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:ep:tfd:g:lC")) >= 0){
+	while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:ep:tfd:g:lCahy:")) >= 0){
 		switch(c) {
 			case 'o': chr = strdup(optarg); break;
 			case 's': min_len = atoi(optarg); break;
@@ -51,7 +54,9 @@ int main(int argc, char *argv[])
 			case 'g': dump_BED = strdup(optarg); break;
 			case 'l': Illumina_long_insert = 1; break;
 			case 'C': Illumina_to_SOLiD = 1; break;
-			
+			case 'a': CN_bam = 1; break;
+			case 'h': print_AF = 1; break;
+                        case 'y': score_threshold = atoi(optarg); break;
 			default: fprintf(stderr, "Unrecognized option '-%c'.\n", c);
 			return 1;
 		}
@@ -70,11 +75,14 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "       -b INT          buffer size for building connection [%d]\n", buffer_size);		
 		//fprintf(stderr, "	-e INT	learn parameters from data before applying to SV detection [%d]\n", learn_par);		 
 		//fprintf(stderr, "	-p FLOAT	prior probability of SV [%f]\n", prior_prob);	
-		fprintf(stderr, "       -t              only detect transchromosomal rearrangement\n");		 
+		fprintf(stderr, "       -t              only detect transchromosomal rearrangement, by default off\n");		 
 		//fprintf(stderr, "	-f INT	use Fisher's method to combine P values from multiple library [%d]\n", fisher);		
 		fprintf(stderr, "       -d STRING       prefix of fastq files that SV supporting reads will be saved by library\n");		 
 		fprintf(stderr, "       -g STRING       dump SVs and supporting reads in BED format for GBrowse\n");
 		fprintf(stderr, "       -l              analyze Illumina long insert (mate-pair) library\n");		 
+		fprintf(stderr, "	-a		print out copy number by bam file rather than library, by default on\n");
+		fprintf(stderr, "	-h		print out Allele Frequency column, by default off\n");
+                fprintf(stderr, "       -y INT          output score filter [%d]\n", score_threshold);
 		//fprintf(stderr, "	-C INT	change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
 		//fprintf(stderr, "Version: %s\n", version);
 		fprintf(stderr, "\n");
@@ -89,7 +97,7 @@ int main(int argc, char *argv[])
 	string platform = Illumina_to_SOLiD?"solid":"illumina";
 	char options_[500];
 	
-	sprintf(options_,"-s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -t %f -f %d -l %d -C %d", min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, Illumina_long_insert, Illumina_to_SOLiD);
+	sprintf(options_,"-s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %d -t %f -f %d -l %d -C %d -a %d -h %d -y %d", min_len, cut_sd, max_sd, min_map_qual, min_read_pair, buffer_size, learn_par, prior_prob, transchr_rearrange, fisher, Illumina_long_insert, Illumina_to_SOLiD, CN_bam, print_AF, score_threshold);
 	
 	options = options_;
 	options += " -d " + prefix_fastq;
@@ -284,6 +292,7 @@ int main(int argc, char *argv[])
 	 	
  	uint32_t reference_len = 1;
  	map<string, int> nreads;
+	map<string, int> nreads_;	// only to compute density per bam
  	int defined_all_readgroups = 1;
  	    
 	samfile_t *in = 0;
@@ -296,117 +305,9 @@ int main(int argc, char *argv[])
 	string alt = "";
 	vector<string> maps;	
 
-
-
-	/*ifstream CONFIG1;
-	CONFIG1.open(argv[optind+1]);
-	//char line_[256]; 
-	string comma(",");
-
-	if(CONFIG1.is_open())
-	{
-		while(CONFIG1.good())
-		{
-			CONFIG1.getline(line_, 256);
-			//string line = char2str(line_);
-			string line(line_);
-
-			if(line.length()==0)
-				break;
-			// analyze the line
-			size_t pos_end1 = line.find("\t",0);
-			string str1 = line.substr(0, pos_end1);
-			char str1_[str1.length()];
-			strcpy(str1_,str1.c_str());
-			uint32_t str1_int = uint32_t(atoi(str1_));
-			cout << str1_int << endl;
-			size_t pos_end2 = line.find("\t",pos_end1+1);
-			string str2 = line.substr(pos_end1+1, pos_end2 - pos_end1 - 1);
-			size_t pos_end3 = line.find("\0", pos_end2+1);
-			string str3 = line.substr(pos_end2+1);//, pos_end3 - pos_end2);
-			char str3_[str3.length()];
-			strcpy(str3_,str3.c_str());
-			int str3_int = atoi(str3_);
-			//cout << str1 << comma << str2 << comma << str3_int << comma << endl;
-			x_readcounts[str1_int][str2] = str3_int;
-		}
-	}
-	CONFIG1.close();
-	for(map<uint32_t, map<string,int> >::iterator i_x_readcounts = x_readcounts.begin(); i_x_readcounts != x_readcounts.end(); i_x_readcounts ++){
-		uint32_t tmp1 = (*i_x_readcounts).first;
-		map<string,int> i_x_readcounts_second = (*i_x_readcounts).second;
-		for(map<string,int>::iterator ii_x_readcounts = i_x_readcounts_second.begin(); ii_x_readcounts != i_x_readcounts_second.end(); ii_x_readcounts++){
-			string str_tmp = (*ii_x_readcounts).first;
-			int num_tmp = (*ii_x_readcounts).second;
-			cout << tmp1 << "," << str_tmp << "," << num_tmp << "\n";
-		}
-	}
-
-	ifstream CONFIG2;
-	CONFIG2.open(argv[optind+2]);
-
-	if(CONFIG2.is_open())
-	{
-		while(CONFIG2.good())
-		{
-			CONFIG2.getline(line_, 256);
-			//string line = char2str(line_);
-			string line(line_);
-
-			if(line.length()==0)
-				break;
-			// analyze the line
-			size_t pos_end1 = line.find("\t",0);
-			string str1 = line.substr(0, pos_end1);
-			size_t pos_end2 = line.find("\t",pos_end1+1);
-			string str2 = line.substr(pos_end1+1, pos_end2 - pos_end1 - 1);
-			char str2_[str2.length()];
-			strcpy(str2_,str2.c_str());
-			int str2_int = atoi(str2_);
-			nreads[str1] = str2_int;
-		}
-	}
-	CONFIG2.close();
-	for(map<string, int>::iterator i_nreads = nreads.begin(); i_nreads != nreads.end(); i_nreads ++){
-		string tmp1 = (*i_nreads).first;
-		int tmp2 = (*i_nreads).second;
-		cout << tmp1 << "\t" << tmp2 << "\n";
-	}
-	
-	ifstream CONFIG3;
-	CONFIG3.open(argv[optind+3]);
-
-	if(CONFIG3.is_open())
-	{
-		while(CONFIG3.good())
-		{
-			CONFIG3.getline(line_, 256);
-			//string line = char2str(line_);
-			string line(line_);
-
-			if(line.length()==0)
-				break;
-			// analyze the line
-			size_t pos_end1 = line.find("\t",0);
-			string str1 = line.substr(0, pos_end1);
-			char str1_[str1.length()];
-			strcpy(str1_,str1.c_str());
-			uint32_t str1_int = atoi(str1_);
-			//size_t pos_end2 = line.find("\t",pos_end1+1);
-			string str2 = line.substr(pos_end1+1, line.length() - pos_end1);
-			char str2_[str2.length()];
-			strcpy(str2_,str2.c_str());
-			uint32_t str2_int = atoi(str2_);
-			if(reference_len < str1_int)
-				reference_len = str1_int;
-			if(reference_len < str2_int)
-				reference_len = str2_int;
-		}
-	}
-	CONFIG3.close();
-	cout << reference_len << endl;*/
 	int global_control = 1;
 	int previous = -1;
+		
  	for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii)
  	{
 
@@ -420,6 +321,9 @@ int main(int argc, char *argv[])
  		char *p_chr = "0";
  		//cout << "hello!" << endl;
 		string bam_name = (*ii).first;
+		
+		//cout << "hello" << bam_name << endl;
+
 		if(chr.compare("0") == 0){
 
 			// no chromosome defined
@@ -430,7 +334,8 @@ int main(int argc, char *argv[])
 			strcpy(tmp_bam_name, bam_name.c_str());
 			//bam_name.copy(tmp_bam_name, bam_name.length(), 0);
 			if ((in = samopen(tmp_bam_name, in_mode, fn_list)) == 0) {
-				fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+				fprintf(stderr, "[main_samview] fail to open file for reading\n");
+				cout << tmp_bam_name << endl;
 				continue;
 			}
 			if (in->header == 0) {
@@ -493,10 +398,20 @@ int main(int argc, char *argv[])
 				if(lib.length() == 0)
 					continue;
 			
-				if(nreads.find(lib) == nreads.end())
+                                if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >=18){
+				    if(nreads.find(lib) == nreads.end())
 					nreads[lib] = 1;
-				else
-					nreads[lib] ++;	
+			    	    else
+					nreads[lib] ++;
+				
+				    if(CN_bam == 1){
+					if(nreads_.find(libmaps[lib]) == nreads_.end())
+						nreads_[libmaps[lib]] = 1;
+					else
+						nreads_[libmaps[lib]] ++;
+				    }
+                                }
+
 				if(mapQual.find(lib) != mapQual.end()){
 					if(b->core.qual <= mapQual[lib])
 						continue;
@@ -527,8 +442,13 @@ int main(int argc, char *argv[])
 						b->core.flag = 3;
 				}
 				
-				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
+				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130){
+					/*if(nreads_.find(lib) == nreads_.end())
+						nreads_[lib] = 1;
+					else
+						nreads_[lib] ++;*/
 					continue;
+				}
 				
 				if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
 					x_readcounts[b->core.flag][lib] ++;	
@@ -598,10 +518,20 @@ int main(int argc, char *argv[])
 				if(lib.length() == 0)
 					continue;
 				
-				if(nreads.find(lib) == nreads.end())
+				if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
+				    if(nreads.find(lib) == nreads.end())
 					nreads[lib] = 1;
-				else
+				    else
 					nreads[lib] ++;	
+				
+				    if(CN_bam == 1){
+					if(nreads_.find(libmaps[lib]) == nreads_.end())
+						nreads_[libmaps[lib]] = 1;
+					else 
+						nreads_[libmaps[lib]] ++;
+				    }
+                                }
+
 				if(mapQual.find(lib) != mapQual.end()){
 					if(b->core.qual <= mapQual[lib])
 						continue;
@@ -632,8 +562,13 @@ int main(int argc, char *argv[])
 						b->core.flag = 3;
 				}
 			
-				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130)
+				if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130){
+					/*if(nreads_.find(lib) == nreads_.end())
+						nreads_[lib] = 1;
+					else
+						nreads_[lib] ++;*/
 					continue;
+				}
 
 				if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
 					x_readcounts[b->core.flag][lib] ++;	
@@ -653,6 +588,10 @@ int main(int argc, char *argv[])
 		//samclose(in);		
 	}
 	bam_destroy1(b);
+		
+	// need to read the total base
+	
+		
 	int merge = (cmds.size()==1 && defined_all_readgroups)?1:0;
 	
 	float total_phy_cov = 0;
@@ -668,12 +607,32 @@ int main(int argc, char *argv[])
 	cout << "#Library Statistics:" << endl;
 	// recflags = x_readcounts[keys the first key]
 	map<string,int>::iterator nreads_ii;
+	map<string,float> read_density;
 	for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
 	{
 		string lib = (*nreads_ii).first;
 int tmp_bug = (*nreads_ii).second;
 		float sequence_coverage = float(nreads[lib]*readlens[lib])/float(reference_len);
 		total_seq_cov += sequence_coverage;
+		
+		// compute read_density
+		if(CN_bam == 0){
+			if(nreads.find(lib) != nreads.end())
+				read_density[lib] = float(nreads[lib])/float(reference_len);
+			else{
+				read_density[lib] = 0.000001;
+				cout << lib << " does not contain any normals" << endl;
+			}
+		}
+		else if(CN_bam == 1){
+			if(nreads_.find(libmaps[lib]) != nreads_.end())
+				read_density[libmaps[lib]] = float(nreads_[libmaps[lib]])/float(reference_len);
+			else{
+				read_density[libmaps[lib]] = 0.000001;
+				cout << lib << " does not contain any normals" << endl;
+			}
+		}
+		
 		float physical_coverage = float(nreads[lib]*mean_insertsize[lib])/float(reference_len)/2;
 		total_phy_cov += physical_coverage;
 		
@@ -700,15 +659,37 @@ int tmp_bug = (*nreads_ii).second;
 		}
 		printf("\n");
 	}
+			
+	printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib");
+	if(print_AF == 1)
+		printf("\tAllele_frequency");
+	if(CN_bam == 1){
+		for(vector<string>::iterator it_map = maps.begin(); it_map != maps.end(); it_map++){
+			size_t tmp = (*it_map).rfind("/");
+			if(tmp!=string::npos)
+				cout << "\t" << (*it_map).substr(tmp + 1);
+			else
+				cout << "\t" << *it_map;
+		}
+	}
 
+	cout << "\n";
 
-	//printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\tAllele_frequency\tVersion\tRun_Param\n");
-	printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib\tAllele_frequency\n");
-
+	
 	int begins;// global (chr)
 	int beginc = -1;// global
 	int lasts;// global (chr, should be int in samtools)
 	int lastc = -1; // global
+	map<string, uint32_t> nread_ROI; // global
+	map<int, map<string, uint32_t> > read_count_ROI_map; // global
+	map<string, uint32_t> nread_FR;	// global
+	map<int, map<string, uint32_t> > read_count_FR_map; // global
+	////map<string, map<string, vector<int> > > nread_ROI_debug; // global
+	////map<int, map<string, map<string, vector<int> > > > read_count_ROI_debug; // global
+	////map<string, map<string, vector<int> > > nread_FR_debug; // global
+	////map<int, map<string, map<string, vector<int> > > > read_count_FR_debug; // global
+	map<string, uint32_t > possible_fake_data;
+	////map<string, map<string, vector<int> > > possible_fake_data_debug;
 	map<int, vector<vector<string> > > regs;//global in analysis
 	map<string, vector<int> > read;// global in analysis
 	map<int,vector<int> > reg_name;// global in analysis
@@ -722,13 +703,20 @@ int tmp_bug = (*nreads_ii).second;
 	int nnormal_reads = 0; // global
 	uint32_t ntotal_nucleotides = 0; // global
 
+	////int possible_fake = 0; // global
+
         max_readlen = 0;
 
 	// first, need to merge the bam files into one big string seperated by blank, and return the number
 	int n = fmaps.size();
 
+int count_no_lib = 0;
+	if(n == 0){
+		cout << "wrong: no bam file!\n";
+		return 0;
+	}
 	//################# node index here ###################
-	if(n == 1){
+	else if(n == 1){
 		if(chr.compare("0") == 0){
 			samfile_t *in;
 			char *tmp_bam_name;
@@ -762,10 +750,18 @@ int tmp_bug = (*nreads_ii).second;
 				string readgroup = aln_return[0];
 				string ori = aln_return[1];
 				string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-				if(!library.empty())
-					Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides);
+	
+				if(!library.empty()){
+					Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/, CN_bam, libmaps, maps, print_AF, score_threshold);
+				}
+/*else{
+if(b->core.pos >= 39124151 && b->core.pos <= 39125220){
+count_no_lib ++;
+//cout << b->core.pos + 1 << endl;
+}
+}*/
 			}
-			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
+			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in, read_count_ROI_map, read_count_FR_map, read_density, CN_bam, maps, print_AF, score_threshold);//, read_count_ROI_debug, read_count_FR_debug);
 			bam_destroy1(b);
 			samclose(in);
 			delete []tmp_bam_name;
@@ -820,11 +816,18 @@ int tmp_bug = (*nreads_ii).second;
                 	                string ori = aln_return[1];
                         	        string readgroup = aln_return[0];
                                 	string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-	                                if(!library.empty())
-        	                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides);
+					if(!library.empty()){
+						Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/, CN_bam, libmaps, maps, print_AF, score_threshold);
+					}
+/*else{
+if(b->core.pos >= 43803315 && b->core.pos <= 103860201){
+count_no_lib ++;
+//cout << b->core.pos + 1 << endl;
+}
+}*/
 				}
 			}
-			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
+			buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in, read_count_ROI_map, read_count_FR_map, read_density, CN_bam, maps, print_AF, score_threshold);//, read_count_ROI_debug, read_count_FR_debug);
 			bam_destroy1(b);
                         samclose(in);
 			delete []tmp_bam_name;
@@ -879,8 +882,16 @@ int tmp_bug = (*nreads_ii).second;
                                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                                                 //continue;
-                                        if(!library.empty())
-                                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[heap->i], seq_coverage_lim, &ntotal_nucleotides);
+									if(!library.empty()){
+										Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[heap->i], seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake,*/ possible_fake_data/*, possible_fake_data_debug*/, CN_bam, libmaps, maps, print_AF, score_threshold);
+									}
+/*else{
+if(b->core.pos >= 43803315 && b->core.pos <= 103860201){
+count_no_lib ++;
+//cout << b->core.pos + 1 << endl;
+}
+}*/
+
                                  }
                                         //int j = bam_read1(fp[heap->i], b);
 					int j = samread(in[heap->i],heap->b);
@@ -914,7 +925,7 @@ int tmp_bug = (*nreads_ii).second;
                                 }
                         }
 //cout << "build connection:" << endl;
-                        buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
+                        buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0], read_count_ROI_map, read_count_FR_map, read_density, CN_bam, maps, print_AF, score_threshold);//, read_count_ROI_debug, read_count_FR_debug);
 		    }
 	
     		//############### find the designated chromosome and put all of them together for all bam files #############
@@ -1002,8 +1013,9 @@ int tmp_bug = (*nreads_ii).second;
                         	                string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                                 	        //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                                         	        //continue;
-	                                        if(!library.empty())
-        	                                        Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[0], seq_coverage_lim, &ntotal_nucleotides);
+	                                        if(!library.empty()){
+												Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[0], seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/, CN_bam, libmaps, maps, print_AF, score_threshold);
+											}
 										}
                                     }
                                         int j = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
@@ -1030,7 +1042,7 @@ int tmp_bug = (*nreads_ii).second;
                                         
                                 }
                         }
-                        buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0]);
+                        buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0], read_count_ROI_map, read_count_FR_map, read_density, CN_bam, maps, print_AF, score_threshold);//, read_count_ROI_debug, read_count_FR_debug);
                         
                         delete []tid;
                         delete []beg;
@@ -1051,15 +1063,63 @@ int tmp_bug = (*nreads_ii).second;
        	big_bam = NULL;
 
 	}
-	
+/*int whole_number = 0;
+int number = 0;
+for(map<int, map<string, map<string, vector<int> > > >::iterator it1 = read_count_ROI_debug.begin(); it1 != read_count_ROI_debug.end(); it1++){
+int k = (*it1).first;
+if(k!=5) continue;
+	cout << "new node " << k << " generated: " << reg_name[k][1] << ", " << reg_name[k][2] << endl;
+//cout << "ROI region: " << endl;
+for(map<string, map<string, vector<int> > >::iterator it = read_count_ROI_debug[k].begin(); it != read_count_ROI_debug[k].end(); it++){
+//for(int i = 0; i < read_count_ROI_debug[k][(*it).first].size(); i++)
+	//cout << (*it).first << "\tNumber: " << read_count_ROI_map[k][(*it).first] << endl;
+whole_number += read_count_ROI_map[k][(*it).first];
+	map<string, vector<int> > it_tmp = (*it).second;
+	for(map<string, vector<int> >::iterator itt = it_tmp.begin(); itt != it_tmp.end(); itt++)
+		for(int i = 0; i < (*itt).second.size(); i++){
+		cout << (*itt).second[i] << "\t" << (*itt).first << endl;
+number++;}
+}
+}*/
+/*for(map<int, map<string, map<string, vector<int> > > >::iterator it1 = read_count_FR_debug.begin(); it1 != read_count_FR_debug.end(); it1++){
+int k = (*it1).first;
+if(k!=0) continue;
+	cout << "new node " << k << " generated: " << reg_name[k][1] << ", " << reg_name[k][2] << endl;
+//cout << "ROI region: " << endl;
+for(map<string, map<string, vector<int> > >::iterator it = read_count_FR_debug[k].begin(); it != read_count_FR_debug[k].end(); it++){
+//for(int i = 0; i < read_count_ROI_debug[k][(*it).first].size(); i++)
+	//cout << (*it).first << "\tNumber: " << read_count_ROI_map[k][(*it).first] << endl;
+if(read_count_FR_map[k].find("Solexa-3631") != read_count_FR_map[k].end()){
+int i = 0;
+}
+whole_number += read_count_FR_map[k][(*it).first];
+	map<string, vector<int> > it_tmp = (*it).second;
+	for(map<string, vector<int> >::iterator itt = it_tmp.begin(); itt != it_tmp.end(); itt++)
+		for(int i = 0; i < (*itt).second.size(); i++){
+		cout << (*itt).second[i] << "\t" << (*itt).first << endl;
+number++;}
+}
+}*/
+/*if(read_count_ROI_debug[1]["NA12878.1"].find("ERR001310.5612927") != read_count_ROI_debug[1]["NA12878.1"].end()){
+for(int i= 0; i < read_count_ROI_debug[1]["NA12878.1"].size(); i++){
+int k = read_count_ROI_debug[1]["NA12878.1"]["ERR001310.5612927"][i];
+if(k == 39124011){
+int n = 0;
+}
+}
+}
+cout << "\n\n" << whole_number << endl;
+cout <<"no library: "<< count_no_lib <<endl;*/
+//cout <<"no library: "<< count_no_lib <<endl;
 	free(fn_list); free(fn_ref); free(fn_rg);
 	
  	return 0;
 }
 
 // this function is good
-void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string, float> &uppercutoff, map<string, float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int *max_readlen, string ori, samfile_t *in, int seq_coverage_lim, uint32_t *ntotal_nucleotides){
+void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string, float> &uppercutoff, map<string, float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int *max_readlen, string ori, samfile_t *in, int seq_coverage_lim, uint32_t *ntotal_nucleotides, map<string, uint32_t> &nread_ROI, map<int, map<string, uint32_t> > &read_count_ROI_map, map<string, uint32_t> &nread_FR, map<int, map<string, uint32_t> > &read_count_FR_map, map<string, float> &read_density,/* map<string, map<string, vector<int> > > &nread_ROI_debug, map<int, map<string, map<string, vector<int> > > > &read_count_ROI_debug, map<string, map<string, vector<int> > > &nread_FR_debug, map<int, map<string, map<string, vector<int> > > > &read_count_FR_debug, int *possible_fake,*/ map<string, uint32_t> &possible_fake_data/*, map<string, map<string, vector<int> > > & possible_fake_data_debug*/, int CN_bam, map<string, string> libmaps, vector<string> maps, int print_AF, int score_threshold){
 
+	string bam_name = libmaps[lib];
   //main analysis code
   //return if($t->{qual}<$opts{q} && $t->{flag}!=64 && $t->{flag}!=192);   #include unmapped reads, high false positive rate
   
@@ -1076,6 +1136,83 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 		kk = kk + 1;
 	}*/
 
+		//if(*possible_fake == 0){
+			// region between last and next begin
+        if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
+    	    if(CN_bam == 0){
+			if(nread_ROI.find(lib) == nread_ROI.end())
+				nread_ROI[lib] = 1;
+			else 
+				nread_ROI[lib] ++;
+	    }
+	    else if(CN_bam == 1){
+		if(nread_ROI.find(bam_name) == nread_ROI.end())
+			nread_ROI[bam_name] = 1;
+		else
+			nread_ROI[bam_name] ++;
+	    }
+        
+
+			
+			////nread_ROI_debug[lib][bam1_qname(b)].push_back( b->core.pos + 1);
+		//}
+/*if(nread_ROI_debug.find("NA12878.1") != nread_ROI_debug.end()){
+int k = 0;
+}
+string tmp1("NA12878.1");
+string tmp2("ERR001310.5612927");
+string tmp3(bam1_qname(b));
+if(tmp1.compare(lib) == 0){
+if(tmp2.compare(bam1_qname(b)) == 0){
+if(nread_ROI_debug[lib].find(bam1_qname(b)) != nread_ROI_debug[lib].end()){
+for(int i = 0; i < nread_ROI_debug[lib][bam1_qname(b)].size(); i++){
+int k = nread_ROI_debug[lib][bam1_qname(b)][i];
+if(k == 39124011)
+int n = 0;
+}
+}
+}
+}*/
+//		if(*possible_fake == 1){
+	    if(CN_bam == 0){
+			if(possible_fake_data.find(lib) == possible_fake_data.end())
+				possible_fake_data[lib] = 1;
+			else
+				possible_fake_data[lib] ++;
+	    }
+	    else if(CN_bam == 1){
+		if(possible_fake_data.find(bam_name) == possible_fake_data.end())
+			possible_fake_data[bam_name] = 1;
+		else 
+			possible_fake_data[bam_name] ++;
+	    }
+
+			////possible_fake_data_debug[lib][bam1_qname(b)].push_back(b->core.pos + 1);
+//		}
+		
+		//if(*normal_switch == 1 && b->core.isize > 0){
+		//if(*normal_switch == 1){	
+			// ignore nnormal_reads afterwards, while normal_switch stills works a little for us
+			
+			// region between begin and last
+	    if(CN_bam == 0){
+			if(nread_FR.find(lib) == nread_FR.end())
+				nread_FR[lib] = 1;
+			else 
+				nread_FR[lib] ++;
+	    }
+	    else if(CN_bam == 1){
+		if(nread_FR.find(bam_name) == nread_FR.end())
+			nread_FR[bam_name] = 1;
+		else 
+			nread_FR[bam_name] ++;
+	    }
+        }
+			 
+			
+			////nread_FR_debug[lib][bam1_qname(b)].push_back(b->core.pos + 1);
+		//}
+
 	if(mapQual.find(lib) != mapQual.end()){
 		if(b->core.qual <= mapQual[lib])
 			return;
@@ -1090,6 +1227,7 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 //	string NT(in->header->target_name[b->core.tid]);
 //	if(NT.find("NT") != string::npos)
 //		return;
+
 	if(b->core.flag == 0)
 		return; // return fragment reads
 	if(transchr_rearrange && b->core.flag < 32 || b->core.flag >=64) // only care flag 32 for CTX
@@ -1120,8 +1258,9 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 		return;
 	
 	if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130){
-		if(*normal_switch == 1 && b->core.isize > 0)
+		if(*normal_switch == 1 && b->core.isize > 0){
 			(*nnormal_reads)++;
+		}
 		return;
 	}
 
@@ -1155,6 +1294,92 @@ int k = 0;
 			reg_name[k].push_back(*beginc);
 			reg_name[k].push_back(*lastc);
 			reg_name[k].push_back(*nnormal_reads);
+
+			// never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
+			//if(*possible_fake == 0 || k == 0){
+			// record nread_ROI
+			for(map<string, uint32_t>::iterator nread_ROI_it = nread_ROI.begin(); nread_ROI_it != nread_ROI.end(); nread_ROI_it ++){
+				string lib_ = (*nread_ROI_it).first;
+/*if(lib_.compare("Solexa-3631") == 0){
+int i = 0;
+}*/
+				if(read_count_ROI_map.find(k) == read_count_ROI_map.end()){
+					read_count_ROI_map[k][lib_] = nread_ROI[lib_];
+					//read_count_ROI_debug[k][lib_] = nread_ROI_debug[lib_];
+				}
+				else if(read_count_ROI_map[k].find(lib_) == read_count_ROI_map[k].end()){
+					read_count_ROI_map[k][lib_] = nread_ROI[lib_];
+					//read_count_ROI_debug[k][lib_] = nread_ROI_debug[lib_];
+				}
+				else{
+					read_count_ROI_map[k][lib_] += nread_ROI[lib_];
+					
+				}
+/*////for(map<string, vector<int> >::iterator nread_ROI_debug_it = nread_ROI_debug[lib_].begin(); nread_ROI_debug_it != nread_ROI_debug[lib_].end(); nread_ROI_debug_it++){
+vector<int> a = (*nread_ROI_debug_it).second;
+for(int i= 0; i < a.size(); i++){
+if(k==5 && a[i] == 39122312)
+int i = 0;
+						read_count_ROI_debug[k][lib_][(*nread_ROI_debug_it).first].push_back(a[i]);}}////*/
+			}
+			//}
+
+			/*else if(*possible_fake == 1){
+				// record the last possible fake data
+				for(map<string, uint32_t>::iterator possible_fake_data_it = possible_fake_data.begin(); possible_fake_data_it != possible_fake_data.end(); possible_fake_data_it ++){
+					string lib_ = (*possible_fake_data_it).first;
+					if(read_count_ROI_map.find(*reg_idx) == read_count_ROI_map.end()){
+						read_count_ROI_map[*reg_idx][lib_] = possible_fake_data[lib_];
+						read_count_ROI_debug[*reg_idx][lib_] = possible_fake_data_debug[lib_];
+					}
+					else if(read_count_ROI_map[*reg_idx].find(lib_) == read_count_ROI_map[*reg_idx].end()){
+						read_count_ROI_map[*reg_idx][lib_] = possible_fake_data[lib_];
+						read_count_ROI_debug[*reg_idx][lib_] = possible_fake_data_debug[lib_];
+					}
+					else{
+						read_count_ROI_map[*reg_idx][lib_] += possible_fake_data[lib_];
+						for(map<string, int>::iterator possible_fake_data_debug_it = possible_fake_data_debug[lib_].begin(); possible_fake_data_debug_it != possible_fake_data_debug[lib_].end(); possible_fake_data_debug_it ++)
+							read_count_ROI_debug[*reg_idx][lib_][(*possible_fake_data_debug_it).first] = (*possible_fake_data_debug_it).second;
+					}
+				}
+			}*/				
+			
+			// compute nread_FR and record it
+			for(map<string, uint32_t>::iterator nread_FR_it = nread_FR.begin(); nread_FR_it != nread_FR.end(); nread_FR_it ++){
+				string lib_ = (*nread_FR_it).first;
+				if(read_count_ROI_map[k].find(lib_) == read_count_ROI_map[k].end())
+					read_count_FR_map[k][lib_] = (*nread_FR_it).second;
+				else{
+					uint32_t diff = (*nread_FR_it).second - read_count_ROI_map[k][lib_];
+					if(diff < 0)
+						cout << "wrong, the subtraction is negative";
+					else if(diff >= 0){
+						read_count_FR_map[k][lib_] = diff;//(*nread_FR_it).second - read_count_ROI_map[k][lib_];
+						////map<string, vector<int> > nread_ROI_debug_ = read_count_ROI_debug[k][lib_];
+						/*////for(map<string, vector<int> >::iterator nread_ROI_debug_it = nread_ROI_debug_.begin(); nread_ROI_debug_it != nread_ROI_debug_.end(); nread_ROI_debug_it ++){
+							vector<int> vector1 = (*nread_ROI_debug_it).second;
+
+							/*for(vector<int>::iterator it = vector1.begin(); it != vector1.end(); it++){
+
+								for(vector<int>::iterator it1 = nread_FR_debug[lib_][(*nread_ROI_debug_it).first].begin(); it1 != nread_FR_debug[lib_][(*nread_ROI_debug_it).first].end(); it1++){
+									if((*it1) == (*it))
+										nread_FR_debug[lib_][(*nread_ROI_debug_it).first].erase(it1);
+								}
+							}*/
+							/*////if(nread_FR_debug[lib_][(*nread_ROI_debug_it).first].size() == 0)
+								nread_FR_debug[lib_].erase((*nread_ROI_debug_it).first);
+						}
+						read_count_FR_debug[k][lib_] = nread_FR_debug[lib_];////*/
+					}
+					//else
+					//	cout << "lib only exist in ROI rather than FR";
+				}
+				
+			}
+
+			
+		// turn off possible fake data
+//		*possible_fake = 0;
 //cout << k << "\t" << *beginc << "\t" << *lastc << endl;
 			
 			vector<vector<string> > p;
@@ -1170,12 +1395,67 @@ int k = 0;
 			(*idx_buff)++;
 			if(*idx_buff > buffer_size){
 //cout << "build connection:" << endl;
-				buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, *max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in);
+				buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, *max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in, read_count_ROI_map, read_count_FR_map, read_density, CN_bam, maps, print_AF, score_threshold);//, read_count_ROI_debug, read_count_FR_debug);
 //cout << "out of build connection" << endl;
 				*idx_buff = 0;
 			}
 		}
+		// possible fake
 		else{
+
+			// restore ROI for copy number since lastc will be cleared, but the new node has not been registered
+
+			// possible fake is off, never gone to possible fake before, save the ROI
+			/*if( *possible_fake == 0 && *reg_idx >= 1){
+			for(map<string, uint32_t>::iterator nread_ROI_it = nread_ROI.begin(); nread_ROI_it != nread_ROI.end(); nread_ROI_it ++){
+				string lib_ = (*nread_ROI_it).first;
+				if(read_count_ROI_map.find(*reg_idx-1) == read_count_ROI_map.end()){
+					read_count_ROI_map[*reg_idx-1][lib_] = nread_ROI[lib_];
+					//read_count_ROI_debug[*reg_idx-1][lib_] = nread_ROI_debug[lib_];
+				}
+				else if(read_count_ROI_map[*reg_idx-1].find(lib_) == read_count_ROI_map[*reg_idx-1].end()){
+					read_count_ROI_map[*reg_idx-1][lib_] = nread_ROI[lib_];
+					//read_count_ROI_debug[*reg_idx-1][lib_] = nread_ROI_debug[lib_];
+				}
+				else{
+int n = read_count_ROI_map[*reg_idx-1][lib_];
+					read_count_ROI_map[*reg_idx-1][lib_] += nread_ROI[lib_];
+					
+				}
+for(map<string, vector<int> >::iterator nread_ROI_debug_it = nread_ROI_debug[lib_].begin(); nread_ROI_debug_it != nread_ROI_debug[lib_].end(); nread_ROI_debug_it++){
+vector<int> a = (*nread_ROI_debug_it).second;
+for(int i = 0; i < a.size(); i++)
+						read_count_ROI_debug[*reg_idx-1][lib_][(*nread_ROI_debug_it).first].push_back(a[i]);
+					}
+			}
+			}
+			// possible fake is on, has been to possible fake before, save the possible fake
+			else*/ if(/* *possible_fake == 1 &&*/ *reg_idx >= 1){
+				for(map<string, uint32_t>::iterator possible_fake_data_it = possible_fake_data.begin(); possible_fake_data_it != possible_fake_data.end(); possible_fake_data_it ++){
+					string lib_ = (*possible_fake_data_it).first;
+					if(read_count_ROI_map.find(*reg_idx-1) == read_count_ROI_map.end()){
+						read_count_ROI_map[*reg_idx-1][lib_] = possible_fake_data[lib_];
+						//read_count_ROI_debug[*reg_idx-1][lib_] = possible_fake_data_debug[lib_];
+					}
+					else if(read_count_ROI_map[*reg_idx-1].find(lib_) == read_count_ROI_map[*reg_idx-1].end()){
+						read_count_ROI_map[*reg_idx-1][lib_] = possible_fake_data[lib_];
+						//read_count_ROI_debug[*reg_idx-1][lib_] = possible_fake_data_debug[lib_];
+					}
+					else{
+						read_count_ROI_map[*reg_idx-1][lib_] += possible_fake_data[lib_];
+					}
+						/*////for(map<string, vector<int> >::iterator possible_fake_data_debug_it = possible_fake_data_debug[lib_].begin(); possible_fake_data_debug_it != possible_fake_data_debug[lib_].end(); possible_fake_data_debug_it ++){
+vector<int> a = (*possible_fake_data_debug_it).second;
+for(int i = 0; i < a.size(); i++){
+if(*reg_idx-1==5 && a[i] == 39122312)
+int i = 0;
+							read_count_ROI_debug[*reg_idx-1][lib_][(*possible_fake_data_debug_it).first].push_back(a[i]);}}////*/
+
+				}
+			}
+						
+			//*possible_fake = 1;
+
 			if(reg_seq.size()>0){
 				for(vector<vector<string> >::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
 					///string s = get_item_from_string(*it_reg_seq,0);
@@ -1185,6 +1465,17 @@ int k = 0;
 //cout << "read erase: " << s << endl;						
 				}
 			}
+			
+			// node unregistered, need to change the last node's ROI
+			/*if((*reg_idx) >= 1 && read_count_FR_map.find((*reg_idx)) != read_count_FR_map.end()){
+				// must have been registered so that read_count_FR_map has something
+				for(map<string, uint32_t>::iterator nread_FR_it = nread_FR.begin(); nread_FR_it != nread_FR.end(); nread_FR_it ++){
+					if(read_count_FR_map[(*reg_idx)].find((*nread_FR_it).first) != read_count_FR_map[(*reg_idx)].end())
+						read_count_FR_map[(*reg_idx)][(*nread_FR_it).first] += (*nread_FR_it).second;
+					else
+						read_count_FR_map[(*reg_idx)][(*nread_FR_it).first] = (*nread_FR_it).second;
+				}
+			}*/
 		}
 		*begins = int(b->core.tid);
 		*beginc = int(b->core.pos);
@@ -1193,7 +1484,42 @@ int k = 0;
 		*nnormal_reads = 0;
                 *max_readlen = 0;
                 *ntotal_nucleotides = 0;
+
+/*if(read_count_ROI_debug[1]["NA12878.1"].find("ERR001310.5612927") != read_count_ROI_debug[1]["NA12878.1"].end()){
+for(int i = 0; i < read_count_ROI_debug[1]["NA12878.1"]["ERR001310.5612927"].size(); i++){
+int k = read_count_ROI_debug[1]["NA12878.1"]["ERR001310.5612927"][i];
+if(k == 39124011){
+int n = 0;
+}
+}
+}
+if(nread_ROI_debug["NA12878.1"].find("ERR001310.5612927") != nread_ROI_debug["NA12878.1"].end()){
+for(int i = 0; i < nread_ROI_debug["NA12878.1"]["ERR001310.5612927"].size(); i++){
+int k = nread_ROI_debug["NA12878.1"]["ERR001310.5612927"][i];
+if(k == 39124011){
+int n = 0;
+}
+}
+}*/
+		// clear possible fake data
+		possible_fake_data.clear();
+////possible_fake_data_debug.clear();
+nread_ROI.clear();
+////nread_ROI_debug.clear();
+		// clear FR
+		nread_FR.clear();
+		////nread_FR_debug.clear();
+/*if(read_count_ROI_debug[1]["NA12878.1"].find("ERR001310.5612927") != read_count_ROI_debug[1]["NA12878.1"].end()){
+for(int i = 0; i < read_count_ROI_debug[1]["NA12878.1"]["ERR001310.5612927"].size(); i++){
+int k = read_count_ROI_debug[1]["NA12878.1"]["ERR001310.5612927"][i];
+if(k == 39124011){
+int n = 0;
+}
+}
+}*/
+
 	}
+
 	// deal with the name string
 	string qname_tmp = bam1_qname(b);
 	size_t found1 = qname_tmp.rfind("/1");
@@ -1248,11 +1574,23 @@ int k = 0;
 		*normal_switch = 1;
 	*lasts = int(b->core.tid);
 	*lastc = int(b->core.pos);
+	// count from whenever *lastc is updated, but if next time still comes here without going to break, need to make it count from zero.
+	// clear ROI
+/*if(nread_ROI_debug["NA12878.1"].find("ERR001310.5612927") != nread_ROI_debug["NA12878.1"].end()){
+for(int i = 0; i < nread_ROI_debug["NA12878.1"]["ERR001310.5612927"].size(); i++){
+int k = nread_ROI_debug["NA12878.1"]["ERR001310.5612927"][i];
+if(k==39124011){
+int n = 0;
+}
+}
+}*/
+	nread_ROI.clear();
+	////nread_ROI_debug.clear();
 	
 }
 
 // this function is good. May miss the i/o
-void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, int min_read_pair, string dump_BED, int max_readlen, string prefix_fastq, map<string,string> &ReadsOut, map<string,string> &SVtype, map<string,float> &mean_insertsize, samfile_t *in){
+void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, int min_read_pair, string dump_BED, int max_readlen, string prefix_fastq, map<string,string> &ReadsOut, map<string,string> &SVtype, map<string,float> &mean_insertsize, samfile_t *in, map<int, map<string, uint32_t> > &read_count_ROI_map, map<int, map<string, uint32_t> > &read_count_FR_map, map<string, float> &read_density, int CN_bam, vector<string> maps, int print_AF, int score_threshold){//, map<int, map<string, map<string, int> > > &read_count_ROI_debug, map<int, map<string, map<string, int> > > &read_count_FR_debug){
   // build connections
   // find paired regions that are supported by paired reads
   //warn("-- link regions\n");
@@ -1446,7 +1784,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								maxscore = ptype;
 								flag = fl;
 							}
-							string sptype;
+							/*string sptype;
 							float diffspan = 0;
 							//debug
 							//int tmp_size_tlr = type_library_readcount[fl].size();
@@ -1465,7 +1803,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								diffspan += float(type_library_meanspan[fl][sp]) - float(type_library_readcount[fl][sp])*mean_insertsize[sp];
 							}
 							diffspans[fl] = int(diffspan/float(type[fl]) + 0.5);
-							sptypes[fl] = sptype;
+							sptypes[fl] = sptype;*/
 						}
 						
 						if(type[flag] >= min_read_pair){
@@ -1473,13 +1811,18 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							int sv_chr1 = -1, sv_pos1 = 0, sv_chr2 = -1, sv_pos2 = 0;
 							string sv_ori1, sv_ori2;
 							int normal_rp; 
-							// find inner most positions
+							
+							int first_node;
+							map<string, uint32_t> read_count;
+							// find inner most positions							
 							for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes ++){
 								int node = *ii_snodes;
+                                                                //cout << node << "\t";
 								int chr = reg_name[node][0];
 								int start = reg_name[node][1];
 								int end = reg_name[node][2];
 								int nrp = reg_name[node][3];
+								
 //cout << " " << node << "\t" << start << "\t" << end << endl;
 								map<string,int> ori_readcount = type_orient_counts.front();
 								if(type_orient_counts.size()!=0){
@@ -1499,8 +1842,43 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 										//sprintf(sv_ori2_tmp2, "%s", ori_readcount["-"]);
 										sv_ori2_tmp2 = itos(ori_readcount["-"]);
 									sv_ori2 = sv_ori2_tmp1.append("+").append(sv_ori2_tmp2).append("-");
+									
+									// add up the read number
+									for(int i_node = first_node; i_node < node; i_node++){
+										map<string, uint32_t> read_count_ROI_map_second = read_count_ROI_map[i_node];
+										map<string, uint32_t> read_count_FR_map_second = read_count_FR_map[i_node];
+										//cout << "\nROI:" << reg_name[i_node][2] << "\t" << reg_name[i_node + 1][1] << "\n";
+										for(map<string, uint32_t>::iterator read_count_ROI_map_second_it = read_count_ROI_map_second.begin(); read_count_ROI_map_second_it != read_count_ROI_map_second.end(); read_count_ROI_map_second_it ++){
+											string lib = (*read_count_ROI_map_second_it).first;
+											if(read_count.find(lib) == read_count.end())
+												read_count[lib] = read_count_ROI_map[i_node][lib];
+											else
+												read_count[lib] += read_count_ROI_map[i_node][lib];
+											
+											//for(map<string, int>::iterator i_debug = read_count_ROI_debug[i_node][lib].begin(); i_debug != read_count_ROI_debug[i_node][lib].end(); i_debug++){
+										//		cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
+											//}
+										}
+										
+										// flanking region doesn't contain the first node
+										if(i_node == first_node)
+											continue;
+										//cout << "\nFR:" << reg_name[i_node][1] << "\t" << reg_name[i_node][2] << "\n";
+										for(map<string, uint32_t>::iterator read_count_FR_map_second_it = read_count_FR_map_second.begin(); read_count_FR_map_second_it != read_count_FR_map_second.end(); read_count_FR_map_second_it ++){
+											string lib = (*read_count_FR_map_second_it).first;
+											if(read_count.find(lib) == read_count.end())
+												read_count[lib] = read_count_FR_map[i_node][lib];
+											else
+												read_count[lib] += read_count_FR_map[i_node][lib];
+											
+										//	for(map<string, int>::iterator i_debug = read_count_FR_debug[i_node][lib].begin(); i_debug != read_count_FR_debug[i_node][lib].end(); i_debug++){
+										//		cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
+										//	}
+										}
+									}
 								}
 								else{
+									first_node = node;
 									sv_chr1 = chr;
 									sv_chr2 = chr;
 									sv_pos1 = start;
@@ -1514,16 +1892,79 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 									sv_ori1 = sv_ori2_tmp1.append("+").append(sv_ori2_tmp2).append("-");
 									sv_ori2 = sv_ori1;
 									normal_rp = nrp;
+									
+									// get the read number for this region: which is not very accurate now. Need to count all of the flags.
+									//read_count_ROI = normal_rp + read_count_intra;
 								}
 							}
+						       // cout << "\n";	
+							//cout << sv_pos1 + 1 << endl;
+							
+							// get the copy_number from read_count
+							map<string, float> copy_number;
+							float copy_number_sum = 0;
+							for(map<string, uint32_t>:: iterator read_count_it = read_count.begin(); read_count_it != read_count.end(); read_count_it ++){
+								string lib = (*read_count_it).first;
+								copy_number[lib] = (float)((*read_count_it).second)/((float)read_density[lib] * float(sv_pos2 - sv_pos1))*2;
+								copy_number_sum += copy_number[lib];
+                                                                //cout << lib << "\t" << (*read_count_it).second << "\t" << read_density[lib] << "\t" << sv_pos2-sv_pos1 << "\t" << copy_number[lib] << endl;
+								
+							}
+							copy_number_sum /= (2.0*(float)read_count.size());
+							
+							sv_pos1 += max_readlen - 5; // apply extra padding to the start coordinates
+							
+							// deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
+								string sptype;
+								float diffspan = 0;
+								//debug
+								//int tmp_size_tlr = type_library_readcount[fl].size();
+								for(map<string,int>::iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
+									string sp = (*ii_type_lib_rc).first;
+									// intialize to be zero, in case of no library, or DEL, or ITX.
+									
+									if(CN_bam == 0){
+										float copy_number_ = 0;
+								
+                                        string copy_number_str = "NA";        
+                                        if(copy_number.find(sp) != copy_number.end()){
+											copy_number_ = copy_number[sp];
+                                            stringstream sstr;
+                                            sstr << fixed;
+                                            sstr << setprecision(2) << copy_number_;
+                                            copy_number_str = sstr.str();
+                                        }
+										//string str_num_tmp;
+										//sprintf(str_num_tmp, "%s", (*ii_type_lib_rc).second); 
+										if(!sptype.empty())
+											sptype += ":" +  sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
+										else
+											sptype = sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
+									}
+									else if(CN_bam == 1){
+										if(!sptype.empty())
+											sptype += ":" + sp + "|" + itos((*ii_type_lib_rc).second);
+										else 
+											sptype = sp + "|" + itos((*ii_type_lib_rc).second);																	  
+									}
+
+									//debug
+									//int tmp_tlm = type_library_meanspan[fl][sp];
+									//int tmp_tlr = type_library_readcount[fl][sp];
+									//int tmp_mi = mean_insertsize[sp];
+									diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*mean_insertsize[sp];
+								}
+								diffspans[flag] = int(diffspan/float(type[flag]) + 0.5);
+								sptypes[flag] = sptype;	
+							
 							
 							int flag_int = atoi(flag.c_str());
 							float LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag_int), x_readcounts, reference_len, fisher, reg_name);
 							float PhredQ_tmp = -10*LogPvalue/log(10);
 							int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
-							float AF = float(type[flag])/float(type[flag]+normal_rp);
+							//float AF = float(type[flag])/float(type[flag]+normal_rp);
+							float AF = 1 - copy_number_sum;
 							
-							sv_pos1 += max_readlen - 5; // apply extra padding to the start coordinates
 							
 							string SVT = SVtype.find(flag)==SVtype.end()?"UN":SVtype[flag]; // UN stands for unknown
 							// make the coordinates with base 1
@@ -1534,9 +1975,27 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 								k++;
 							}*/
 							//cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
-							cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << endl;
-							//printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
-							if(!prefix_fastq.empty()){ // print out supporting read pairs
+                                                        if(PhredQ > score_threshold){
+							    cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag];// << endl;
+							    //printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
+							    if(print_AF == 1)
+							            cout <<  "\t" << AF;
+							    if(CN_bam == 1){
+								    for(int i = 0; i < maps.size(); i++){
+								            if(copy_number.find(maps[i]) == copy_number.end())
+									            cout << "\tNA";
+									    else {
+									            cout << "\t";
+                                                                                    cout << fixed;
+										    cout << setprecision(2) << copy_number[maps[i]];
+									    }
+								    }
+							    }
+							    cout << endl;
+                                                        
+							
+							
+							    if(!prefix_fastq.empty()){ // print out supporting read pairs
 								map<string,int> pairing;
 								for(vector<vector<string> >::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
 									vector<string> y = *ii_support_reads;
@@ -1555,9 +2014,9 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 									//sprintf(fh,"%s\n",y[9]);
 									//sprintf(fh,"+\n%s\n",y[10]);
 								}
-							}
+							    }
 							
-							if(!dump_BED.empty()){	// print out SV and supporting reads in BED format
+							    if(!dump_BED.empty()){	// print out SV and supporting reads in BED format
 								ofstream fh_BED;
 								char dump_BED_[dump_BED.length()];
 								strcpy(dump_BED_, dump_BED.c_str());
@@ -1584,7 +2043,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
                                                                         fh_BED << "chr" << in->header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t" << y[0] << "|" << y[8] << "\t" << aln_score << "\t" << y[3] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n"; 
 								}
 								fh_BED.close();
-							}
+							    }
+                                                        }
 						}
 						// free reads
 						for(vector<string>::iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
