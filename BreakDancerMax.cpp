@@ -1540,7 +1540,7 @@ int n = 0;
 		//tmp_reg_seq.push_back(bam1_qname(b));//can do the other way
 		tmp_reg_seq.push_back(qname_tmp);
 		tmp_reg_seq.push_back(itos(int(b->core.tid)));
-		tmp_reg_seq.push_back(itos(int(b->core.pos)));
+                tmp_reg_seq.push_back(itos(int(b->core.pos)));
 		tmp_reg_seq.push_back(ori);
 		tmp_reg_seq.push_back(itos(int(b->core.isize)));
 		tmp_reg_seq.push_back(itos(int(b->core.flag)));
@@ -1923,7 +1923,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 									string sp = (*ii_type_lib_rc).first;
 									// intialize to be zero, in case of no library, or DEL, or ITX.
 									
-									if(CN_bam == 0){
+									if(CN_bam == 0 && flag.compare("32")!=0){
 										float copy_number_ = 0;
 								
                                         string copy_number_str = "NA";        
@@ -1980,7 +1980,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							    //printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
 							    if(print_AF == 1)
 							            cout <<  "\t" << AF;
-							    if(CN_bam == 1){
+							    if(CN_bam == 1 && flag.compare("32")!=0){
 								    for(int i = 0; i < maps.size(); i++){
 								            if(copy_number.find(maps[i]) == copy_number.end())
 									            cout << "\tNA";
