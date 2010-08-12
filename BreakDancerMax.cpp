@@ -1829,10 +1829,22 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 									type_orient_counts.erase(type_orient_counts.begin());
 								}
 								if(sv_chr1 != -1 && sv_chr2 != -1){
+									if(flag.compare("4") == 0)
+										sv_pos2 = end + max_readlen - 5;
+									else if(flag.compare("1") == 0){
+										sv_pos1 = sv_pos2;
+										sv_pos2 = end + max_readlen - 5;
+									}
+									else if(flag.compare("8") == 0)
+										sv_pos2 = start;
+									else{
+										sv_pos1 = sv_pos2;
+										sv_pos2 = start;
+									}
 									sv_chr1 = sv_chr2;
-									sv_pos1 = sv_pos2;
+									//sv_pos1 = sv_pos2;
 									sv_chr2 = chr;
-									sv_pos2 = start;
+									//sv_pos2 = start;
 									string sv_ori2_tmp1 = "0";
 									string sv_ori2_tmp2 = "0";
 									if(ori_readcount.find("+") != ori_readcount.end())
@@ -1912,7 +1924,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							}
 							copy_number_sum /= (2.0*(float)read_count.size());
 							
-							sv_pos1 += max_readlen - 5; // apply extra padding to the start coordinates
+							if(flag.compare("4") && flag.compare("8"))
+								sv_pos1 += max_readlen - 5; // apply extra padding to the start coordinates
 							
 							// deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
 								string sptype;
