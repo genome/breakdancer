@@ -1924,7 +1924,7 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							}
 							copy_number_sum /= (2.0*(float)read_count.size());
 							
-							if(flag.compare("4") && flag.compare("8"))
+							if(flag.compare("4") && flag.compare("8") && sv_pos1 + max_readlen - 5 < sv_pos2)
 								sv_pos1 += max_readlen - 5; // apply extra padding to the start coordinates
 							
 							// deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
