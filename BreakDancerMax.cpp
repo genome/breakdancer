@@ -178,7 +178,6 @@ int main(int argc, char *argv[])
 			string lower_ = get_from_line(line,"low",0);
 			string mqual_ = get_from_line_two(line,"map","qual",0);
 			string lib = get_from_line(line,"lib",0);
-						
 			float mean,std,readlen,upper,lower;
 			int mqual;
 			if(lib.compare("NA")==0)
@@ -401,13 +400,11 @@ int main(int argc, char *argv[])
 					continue;
 			
                                 if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >=18){
-                                    if(CN_lib == 1){
-				        if(nreads.find(lib) == nreads.end())
-					    nreads[lib] = 1;
-			    	        else
-					    nreads[lib] ++;
-				    }
-                                    else{
+				    if(nreads.find(lib) == nreads.end())
+				        nreads[lib] = 1;
+			    	    else
+				        nreads[lib] ++;
+                                    if(CN_lib == 0){
 					if(nreads_.find(libmaps[lib]) == nreads_.end())
 						nreads_[libmaps[lib]] = 1;
 					else
@@ -522,13 +519,11 @@ int main(int argc, char *argv[])
 					continue;
 				
 				if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
-				    if(CN_lib == 1){
-                                        if(nreads.find(lib) == nreads.end())
-					    nreads[lib] = 1;
-				        else
-					    nreads[lib] ++;	
-				    }
-                                    else{
+                                    if(nreads.find(lib) == nreads.end())
+				        nreads[lib] = 1;
+				    else
+				        nreads[lib] ++;	
+                                    if(CN_lib == 0){
 					if(nreads_.find(libmaps[lib]) == nreads_.end())
 						nreads_[libmaps[lib]] = 1;
 					else 
