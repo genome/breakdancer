@@ -72,5 +72,7 @@ string get_string(uint8_t *pt, int32_t length);
 
 string get_string_qual(uint8_t *pt, int32_t length);
 
+string search_more(string line, string search, 	size_t pos_begin);
+
 string char2str(char *str_);
 
