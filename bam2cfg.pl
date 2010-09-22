@@ -57,6 +57,7 @@ foreach my $fbam(@ARGV){
     %RGlib=%cRGlib;
     %libs=%clibs;
   }
+  my $ppos=0;
   open(BAM,"samtools view -h $fbam |") || die "unable to open $fbam\n";
   while(<BAM>){
     chomp;
@@ -93,7 +94,8 @@ foreach my $fbam(@ARGV){
       last if($recordcounter>$expected_max);
 
       my $t=$AP->in($_,'sam',\%RGplatform,$opts{m});
-
+      die "Please sort bam by position\n" if($t->{pos}<$ppos);
+      $ppos=$t->{pos};
       my $lib=($t->{readgroup})?$RGlib{$t->{readgroup}}:'NA';  #when multiple libraries are in a BAM file
       next unless(defined $lib && $libs{$lib});
       $readlen_stat{$lib}=Statistics::Descriptive::Full->new() if(!defined $readlen_stat{$lib});
@@ -142,7 +144,10 @@ foreach my $fbam(@ARGV){
     $std=$insertsize->standard_deviation();
     next if($mean<$opts{s});
     my $cv=$std/$mean;
-    next if($cv>=$opts{v});
+    if($cv>=$opts{v}){
+      print STDERR "Coefficient of variation $cv in library $lib is larger than the cutoff $opts{v}, poor quality data, excluding from further analysis.\n"
+      next;
+    }
 
     my $num=$insertsize->count();
     next if($num<100);
