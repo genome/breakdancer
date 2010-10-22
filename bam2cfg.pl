@@ -12,7 +12,7 @@ use lib "$FindBin::Bin";
 use AlnParser;
 
 my %opts = (q=>35, n=>10000, v=>1, c=>4, b=>50, s=>50);
-getopts('q:n:c:b:p:hmf:gC', \%opts);
+getopts('q:n:c:b:p:hmf:gCv:', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
@@ -145,7 +145,7 @@ foreach my $fbam(@ARGV){
     next if($mean<$opts{s});
     my $cv=$std/$mean;
     if($cv>=$opts{v}){
-      print STDERR "Coefficient of variation $cv in library $lib is larger than the cutoff $opts{v}, poor quality data, excluding from further analysis.\n"
+      print STDERR "Coefficient of variation $cv in library $lib is larger than the cutoff $opts{v}, poor quality data, excluding from further analysis.\n";
       next;
     }
 
