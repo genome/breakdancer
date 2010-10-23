@@ -1001,6 +1001,7 @@ count_no_lib ++;
             if(merge_tmp){
                          bam1_t *b = heap->b;
                          int skip_previous = 0;
+                         int n_ava_heap = n;
                                 while(heap->pos != HEAP_EMPTY){
                                        
                                 	if(skip_previous == 0){
@@ -1028,13 +1029,42 @@ count_no_lib ++;
 												}
 												if(skip_previous == 1)
 													skip_previous = 0;
-												ks_heapadjust(heap, 0, n, heap);
+												ks_heapadjust(heap, 0, n_ava_heap, heap);
                                         }
                                         else if(j == 0){
-                                                heap->pos = HEAP_EMPTY;
-                                                free(heap->b->data);
-                                                free(heap->b);
-                                                heap->b = 0;
+                                                n_ava_heap --;
+                                                //int n_ava_heap = n-1;
+                                                int jj = 1;
+                                                while(n_ava_heap > 0 && jj == 0){
+                                                    heap1_t tmp = heap[0];
+                                                    heap[0] = heap[n_ava_heap];
+                                                    heap[n_ava_heap] = tmp;
+                                                    ks_heapadjust(heap, 0, n_ava_heap, heap);
+
+                                                    jj = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
+                                                    if(jj == 0)
+                                                        n_ava_heap --;
+                                                    else if(jj > 0){
+                                                        
+                                                        heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
+                                                        heap -> idx = idx++;
+                                                        b = heap->b;
+                                                        if(b->core.tid < 0){
+                                               		    skip_previous = 1;
+													continue;
+												}
+												if(skip_previous == 1)
+													skip_previous = 0;
+												ks_heapadjust(heap, 0, n_ava_heap, heap);
+                                                    }       
+
+                                                }
+                                                if(n_ava_heap == 0){
+                                                    heap->pos = HEAP_EMPTY;
+                                                    free(heap->b->data);
+                                                    free(heap->b);
+                                                    heap->b = 0;
+                                                }
                                         }
                                         else
                                                 cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
