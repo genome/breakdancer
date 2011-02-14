@@ -1,3 +1,7 @@
+#include "breakdancer/AlnParser.h"
+#include "breakdancer/Poisson.h"
+#include "breakdancer/samtools.h"
+
 #include <iostream>
 #include <fstream>
 #include <strstream>
@@ -18,9 +22,6 @@
 #include "bam.h"
 #include "ksort.h"
 #include "khash.h"
-#include "AlnParser.h"
-#include "Poisson.h"
-#include "samtools.h"
 
 using namespace std;
 
