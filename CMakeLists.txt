@@ -22,7 +22,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS "-Wall -ansi -pedantic")
+    set(CMAKE_CXX_FLAGS "-Wno-long-long -Wall -ansi -pedantic")
 endif ()
 
 find_package(Boost COMPONENTS program_options filesystem system REQUIRED)
