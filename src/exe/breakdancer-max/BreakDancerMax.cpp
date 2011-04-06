@@ -1332,21 +1332,6 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
 						cout << "wrong, the subtraction is negative";
 					else if(diff >= 0){
 						read_count_FR_map[k][lib_] = diff;//(*nread_FR_it).second - read_count_ROI_map[k][lib_];
-						////map<string, vector<int> > nread_ROI_debug_ = read_count_ROI_debug[k][lib_];
-						/*////for(map<string, vector<int> >::iterator nread_ROI_debug_it = nread_ROI_debug_.begin(); nread_ROI_debug_it != nread_ROI_debug_.end(); nread_ROI_debug_it ++){
-						 vector<int> vector1 = (*nread_ROI_debug_it).second;
-						 
-						 /*for(vector<int>::iterator it = vector1.begin(); it != vector1.end(); it++){
-						 
-						 for(vector<int>::iterator it1 = nread_FR_debug[lib_][(*nread_ROI_debug_it).first].begin(); it1 != nread_FR_debug[lib_][(*nread_ROI_debug_it).first].end(); it1++){
-						 if((*it1) == (*it))
-						 nread_FR_debug[lib_][(*nread_ROI_debug_it).first].erase(it1);
-						 }
-						 }*/
-						/*////if(nread_FR_debug[lib_][(*nread_ROI_debug_it).first].size() == 0)
-						 nread_FR_debug[lib_].erase((*nread_ROI_debug_it).first);
-						 }
-						 read_count_FR_debug[k][lib_] = nread_FR_debug[lib_];////*/
 					}
 					//else
 					//	cout << "lib only exist in ROI rather than FR";

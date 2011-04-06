@@ -79,7 +79,7 @@ struct __bam_index_t {
 #define MAX_BIN 37450 // =(8^6-1)/7+1
 static inline int reg2bins(uint32_t beg, uint32_t end, uint16_t list[MAX_BIN])
 {
-	int i = 0, k;
+	uint32_t i = 0, k;
 	--end;
 	list[i++] = 0;
 	for (k =    1 + (beg>>26); k <=    1 + (end>>26); ++k) list[i++] = k;
@@ -114,7 +114,7 @@ pair64_t * get_chunk_coordinates(const bam_index_t *idx, int tid, int beg, int e
 	off = (pair64_t*)calloc(n_off, 16);
 	for (i = n_off = 0; i < n_bins; ++i) {
 		if ((k = kh_get(i, index, bins[i])) != kh_end(index)) {
-			int j;
+			uint32_t j;
 			bam_binlist_t *p = &kh_value(index, k);
 			for (j = 0; j < p->n; ++j)
 				if (p->list[j].v > min_off) off[n_off++] = p->list[j];
