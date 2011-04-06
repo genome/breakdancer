@@ -1,4 +1,5 @@
 #include "BreakDancerMax.h"
+#include "version.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -57,9 +58,10 @@ int main(int argc, char *argv[])
 				return 1;
 		}
 	}
-	if(optind == argc){
-		fprintf(stderr, "\n");
-        fprintf(stderr, "breakdancer_max <analysis.config>\n\n");
+    if(optind == argc){
+
+        fprintf(stderr, "\nbreakdancer-max version %s (commit %s)\n\n", __g_prog_version, __g_commit_hash);
+        fprintf(stderr, "Usage: breakdancer-max <analysis.config>\n\n");
         fprintf(stderr, "Options: \n");
         fprintf(stderr, "       -o STRING       operate on a single chromosome [all chromosome]\n");
         fprintf(stderr, "       -s INT          minimum length of a region [%d]\n", min_len);         
@@ -81,9 +83,9 @@ int main(int argc, char *argv[])
         fprintf(stderr, "       -y INT          output score filter [%d]\n", score_threshold);
         //fprintf(stderr, "    -C INT    change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
         //fprintf(stderr, "Version: %s\n", version);
-		fprintf(stderr, "\n");
-		return 1;
-	}
+        fprintf(stderr, "\n");
+        return 1;
+    }
 	/*char dump_BED_[dump_BED.size()+1];
 	 strcpy(dump_BED_, dump_BED.c_str());
 	 

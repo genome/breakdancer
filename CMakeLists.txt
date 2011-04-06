@@ -9,7 +9,7 @@ include(VersionHelper)
 include(ProjectHelper)
 
 configure_file(version/version.h.in version/version.h @ONLY)
-include_directories(version)
+include_directories(${PROJECT_BINARY_DIR}/version)
 
 # TODO: replace with FindSamtools.cmake
 set(SAMTOOLS_INC /gsc/pkg/bio/samtools/samtools-0.1.6)
