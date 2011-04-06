@@ -60,6 +60,7 @@ foreach my $fbam(@ARGV){
     %libs=%clibs;
   }
 
+  my $ppos = 0;
   stderr_log('Processing bam: ', $fbam);
   my $samtools_pid = open(my $bam, "samtools view -h $fbam |")
     || die "unable to open $fbam\n";
