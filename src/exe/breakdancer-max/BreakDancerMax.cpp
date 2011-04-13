@@ -2476,7 +2476,7 @@ string get_string_qual(uint8_t *pt, int32_t length){
 	string seq;
 	seq.reserve(length);
 	for(int i = 0; i < length ; i++){
-		seq[i] += char(pt[i] + 33);
+		seq += char(pt[i] + 33);
 	}
 	return seq;
 }
