@@ -18,11 +18,11 @@ include_directories(${SAMTOOLS_INC})
 link_directories(${SAMTOOLS_LIB})
 
 if (CMAKE_COMPILER_IS_GNUCC)
-    set(CMAKE_C_FLAGS "-std=c99 -Wall -ansi -pedantic")
+    set(CMAKE_C_FLAGS "-std=c99")
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS "-Wno-long-long -Wall -ansi -pedantic")
+    set(CMAKE_CXX_FLAGS "-Wno-long-long")
 endif ()
 
 find_package(Boost COMPONENTS program_options filesystem system REQUIRED)
