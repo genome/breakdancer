@@ -8,8 +8,38 @@ vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, strin
 	string ori;
 	string readgroup;
 	vector<string> return_;
-	if(! format.compare("sam")){
+	//string platform = platform;
+	//string platform;
+	// strcmp = 0 -> two strings are the same
+/*	if(! compare(format, "maq")){
+ 		while (line >> t.readname >> t.chr >> t.pos >> t.ori >> t.dist >> tmp1 >> tmp2 >> t.flag >> tmp3 >> tmp4 >> tmp5 >> tmp6 >> t.readlen >> t.seq >> t.basequal){
+ 			if(alt != ""){
+ 				t.qual = tmp1;
+ 			}
+ 		}
+	}*/ // do not do maq now
+if(b->core.pos == 14006454){
+	int a = 0;
+}
+	/*else */if(! format.compare("sam")){
+//		string flag;
+//		string mchr;
+//		int mpos;
+//		while (line >> t.readname >> flag >> t.chr >> t.pos >> t.qual >> tmp1 >> mchr >> mpos >> t.dist >> t.seq >> t.basequal){
+			
 		uint32_t flag = b->core.flag;
+		// convert to string
+		//string str_flag;
+		//stringstream ss_flag;
+		//ss_flag << flag;
+		//ss_flag >> str_flag;
+		// convert b->core.mtid to string
+		/*std::string str_mtid;
+		std::stringstream ss_mtid;
+		ss_mtid << b->core.mtid;
+		ss_mtid >> str_mtid;*/
+		//string str_mtid(mtid);
+		
 		ori = (flag&0x0010 /*|| str_flag.find("r") != string::npos*/)?"-":"+";
 		b->core.flag = 0;
 		
@@ -79,7 +109,7 @@ vector<string> AlnParser(bam1_t *b, string format, string alt, map<string, strin
 					else{
 						if(ori.compare(ori2) == 0)
 							b->core.flag = (ori2.compare("+") == 0)?1:8;
-						else if((b->core.mpos > b->core.pos && (ori.compare("-")) == 0) || (b->core.pos > b->core.mpos && (ori.compare("+") == 0)))
+						else if(b->core.mpos > b->core.pos && (ori.compare("-") == 0) || b->core.pos > b->core.mpos && (ori.compare("+") == 0))
 							b->core.flag = 4;
 						else
 							b->core.flag = 2;
