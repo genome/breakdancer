@@ -11,11 +11,8 @@ include(ProjectHelper)
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(${PROJECT_BINARY_DIR}/version)
 
-# TODO: replace with FindSamtools.cmake
-set(SAMTOOLS_INC /gsc/pkg/bio/samtools/samtools-0.1.6)
-set(SAMTOOLS_LIB /gsc/pkg/bio/samtools/samtools-0.1.6)
-include_directories(${SAMTOOLS_INC})
-link_directories(${SAMTOOLS_LIB})
+find_package(Samtools 0.1.6 REQUIRED)
+include_directories(${Samtools_INCLUDE_DIRS})
 
 if (CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS "-std=c99 -Wall -ansi -pedantic")
