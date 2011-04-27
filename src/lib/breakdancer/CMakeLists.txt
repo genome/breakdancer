@@ -9,4 +9,4 @@ set(SOURCES
 )
 
 add_library(breakdancer ${SOURCES})
-target_link_libraries(breakdancer bam z m)
+target_link_libraries(breakdancer ${Samtools_LIBRARIES} z m)
