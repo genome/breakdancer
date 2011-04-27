@@ -20,7 +20,6 @@ set(CPACK_SYSTEM_NAME "Linux-${ARCH}")
 set(CPACK_TOPLEVEL_TAG "Linux-${ARCH}")
 set(CPACK_DEBIAN_PACKAGE_SECTION science)
 set(CPACK_DEBIAN_PACKAGE_PRIORITY optional)
-# breakdancer1.0 was a bad version, we always want to replace it
 set(CPACK_DEBIAN_PACKAGE_REPLACES "breakdancer1.0")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.4), libgcc1 (>= 1:4.1.1-21), libstdc++6 (>= 4.2.1-4)")
 if (CMAKE_BUILD_TYPE MATCHES package)
