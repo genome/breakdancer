@@ -61,6 +61,7 @@ foreach my $fbam(@ARGV){
   }
 
   my $ppos = 0;
+  my $lastchr = "";
   stderr_log('Processing bam: ', $fbam);
   my $samtools_pid = open(my $bam, "samtools view -h $fbam |")
     || die "unable to open $fbam\n";
@@ -105,6 +106,9 @@ foreach my $fbam(@ARGV){
       }
 
       my $t=$AP->in($_,'sam',\%RGplatform,$opts{m});
+      $lastchr = $t->{chr} unless defined $lastchr;
+      $ppos = 0 if $t->{chr} ne $lastchr;
+      $lastchr = $t->{chr};
       die "Please sort bam by position\n" if($t->{pos}<$ppos);
       $ppos=$t->{pos};
       my $lib=($t->{readgroup})?$RGlib{$t->{readgroup}}:'NA';  #when multiple libraries are in a BAM file
