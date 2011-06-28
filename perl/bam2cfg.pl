@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 #Create a BreakDancer configuration file from a set of bam files
 
 use strict;
