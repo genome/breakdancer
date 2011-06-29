@@ -11,6 +11,6 @@ menu:
 module_details:
     name: 'BreakDancer'
     pkg_name: breakdancer
-    icon: res/images/genome_default_48.png
+    icon: res/images/genome_breakdancer_48.png
 
 download_link: install.html
