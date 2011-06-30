@@ -14,3 +14,4 @@ module_details:
     icon: res/images/genome_breakdancer_48.png
 
 download_link: install.html
+github_url: https://github.com/genome/breakdancer
