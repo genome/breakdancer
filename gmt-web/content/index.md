@@ -25,4 +25,4 @@ Please join the [Breakdancer Mailing List](https://lists.sourceforge.net/lists/l
 How to Cite
 ===========
 
-We appreciate your citing the Breakdancer paper published in [Nature Methods](http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html) if youmake use of this tool or related methods.
+We appreciate your citing the Breakdancer paper published in [Nature Methods](http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html) if you make use of this tool or related methods.
