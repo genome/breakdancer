@@ -1,4 +1,4 @@
-#!/gsc/bin/perl
+#!/usr/bin/env perl
 #Create a BreakDancer configuration file from a set of bam files
 
 use strict;
@@ -11,8 +11,10 @@ use lib "$FindBin::Bin";
 #use lib '/gscuser/kchen/1000genomes/analysis/scripts/';
 use AlnParser;
 
+$| = 1; # enable AUTOFLUSH modE
+
 my %opts = (q=>35, n=>10000, v=>1, c=>4, b=>50, s=>50);
-getopts('q:n:c:b:p:hmf:gC', \%opts);
+getopts('q:n:c:b:p:hmf:gCv:', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
@@ -57,8 +59,14 @@ foreach my $fbam(@ARGV){
     %RGlib=%cRGlib;
     %libs=%clibs;
   }
-  open(BAM,"samtools view -h $fbam |") || die "unable to open $fbam\n";
-  while(<BAM>){
+
+  my $ppos = 0;
+  my $lastchr = "";
+  stderr_log('Processing bam: ', $fbam);
+  my $samtools_pid = open(my $bam, "samtools view -h $fbam |")
+    || die "unable to open $fbam\n";
+
+  while(<$bam>){
     chomp;
     if(/^\@RG/){  #getting RG=>LIB mapping from the bam header
       my ($id)=($_=~/ID\:(\S+)/);
@@ -79,6 +87,7 @@ foreach my $fbam(@ARGV){
       my @selected_libs=keys %insert_stat;
       if($#libas<0){ 
 	if($#selected_libs>=0){
+          stderr_log('selected_libs is : ', scalar @selected_libs);
 	  last;
 	}
 	else{
@@ -90,10 +99,18 @@ foreach my $fbam(@ARGV){
       if(!defined $expected_max || $expected_max<=0){
 	$expected_max=3*($#libas+1)*$opts{n};
       }
-      last if($recordcounter>$expected_max);
+
+      if ($recordcounter > $expected_max) {
+         stderr_log('$recordcounter > $expected_max: ', $recordcounter, " > ", $expected_max);
+         last;
+      }
 
       my $t=$AP->in($_,'sam',\%RGplatform,$opts{m});
-
+      $lastchr = $t->{chr} unless defined $lastchr;
+      $ppos = 0 if $t->{chr} ne $lastchr;
+      $lastchr = $t->{chr};
+      die "Please sort bam by position\n" if($t->{pos}<$ppos);
+      $ppos=$t->{pos};
       my $lib=($t->{readgroup})?$RGlib{$t->{readgroup}}:'NA';  #when multiple libraries are in a BAM file
       next unless(defined $lib && $libs{$lib});
       $readlen_stat{$lib}=Statistics::Descriptive::Full->new() if(!defined $readlen_stat{$lib});
@@ -120,7 +137,9 @@ foreach my $fbam(@ARGV){
       }
     }
   }
-  close(BAM);
+
+  stderr_log('Closing BAM file');
+  close_samtools($bam, $samtools_pid);
 
   my %stdms;
   my %stdps;
@@ -142,7 +161,10 @@ foreach my $fbam(@ARGV){
     $std=$insertsize->standard_deviation();
     next if($mean<$opts{s});
     my $cv=$std/$mean;
-    next if($cv>=$opts{v});
+    if($cv>=$opts{v}){
+      print STDERR "Coefficient of variation $cv in library $lib is larger than the cutoff $opts{v}, poor quality data, excluding from further analysis.\n";
+      next;
+    }
 
     my $num=$insertsize->count();
     next if($num<100);
@@ -747,3 +769,31 @@ else {
 }
 }
 
+
+sub close_samtools {
+    my ($fh, $pid) = @_;
+
+    #kill samtools view nicely
+    stderr_log("Send TERM signal for $pid");
+    kill('TERM', $pid);
+    sleep 2;
+
+    if (kill(0 , $pid)) {
+        stderr_log("samtools pid process $pid is still there...");
+        stderr_log("invoking kill -9 on $pid ...");
+        kill(9, $pid) or die "[$0] [err] Trouble killing samtools pid: $pid !\n";
+    }
+    else {
+        stderr_log("samtools pid process $pid is now gone");
+    }
+
+    stderr_log('Closing samtools process : ', $pid);
+    close $fh;
+
+    return 1;
+}
+
+sub stderr_log {
+    my @msg = @_;
+    print STDERR '[', scalar localtime, " $0] ", @msg, "\n";
+}

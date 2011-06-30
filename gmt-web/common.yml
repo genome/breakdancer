@@ -1,0 +1,16 @@
+---
+layout: sub
+menu: 
+    - text: Overview
+      href: index.html
+    - text: Example Pipeline
+      href: example_pipeline.html
+    - text: Full Instructions
+      href: breakdancer.html
+
+module_details:
+    name: 'BreakDancer'
+    pkg_name: breakdancer
+    icon: res/images/genome_breakdancer_48.png
+
+download_link: install.html
