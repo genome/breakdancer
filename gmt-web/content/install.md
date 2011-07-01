@@ -12,7 +12,7 @@ wget -q -O - http://apt.genome.wustl.edu/ubuntu/files/install.sh | sudo bash
 To install BreakDancer, run:
 
 <p class='terminal' markdown='1'>
-sudo genome install breakdancer{{ page.version_suffix }}
+sudo gmt install breakdancer{{ page.version_suffix }}
 </p>
 
 Behind the Scenes:
