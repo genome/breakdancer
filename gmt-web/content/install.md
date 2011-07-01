@@ -39,7 +39,7 @@ Running BreakDancer
 
 To run BreakDancer, first use *bam2cfg.pl* to prepare the required per-invocation config file.  See the usage docs for params.
 <p class='terminal' markdown='1'>
-/usr/lib/breakdancer-max{{ page.version_suffix }}/bam2cfg.pl ...
+/usr/lib/breakdancer-max{{ page.version_suffix }}/bam2cfg.pl <bam files> <options>
 </p>
 
 Then run BreakDancer on the config
