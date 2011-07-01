@@ -12,7 +12,7 @@ wget -q -O - http://apt.genome.wustl.edu/ubuntu/files/install.sh | sudo bash
 To install BreakDancer, run:
 
 <p class='terminal' markdown='1'>
-genome install breakdancer{{ page.version_suffix }}
+sudo genome install breakdancer{{ page.version_suffix }}
 </p>
 
 Behind the Scenes:
@@ -38,7 +38,6 @@ Running BreakDancer
 ===================
 
 To run BreakDancer, first use *bam2cfg.pl* to prepare the required per-invocation config file.  See the usage docs for params.
-me Modeling System uses the native apt package manager, and links to an apt repository served from apt.genome.wustl.edu for systematic updates.
 <p class='terminal' markdown='1'>
 /usr/lib/breakdancer-max{{ page.version_suffix }}/bam2cfg.pl ...
 </p>
