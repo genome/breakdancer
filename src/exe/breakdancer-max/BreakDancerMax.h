@@ -1,5 +1,4 @@
 #include "breakdancer/AlnParser.h"
-#include "breakdancer/Poisson.h"
 #include "breakdancer/samtools.h"
 
 #include <iostream>

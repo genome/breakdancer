@@ -14,6 +14,9 @@ include_directories(${PROJECT_BINARY_DIR}/version)
 find_package(Samtools 0.1.6 REQUIRED)
 include_directories(${Samtools_INCLUDE_DIRS})
 
+find_package(Boost REQUIRED)
+include_directories(${Boost_INCLUDE_DIRS})
+
 if (CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS "-std=c99 -Wall -ansi -pedantic")
 endif ()

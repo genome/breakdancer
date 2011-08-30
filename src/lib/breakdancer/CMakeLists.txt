@@ -3,8 +3,6 @@ project(breakdancer)
 set(SOURCES
     AlnParser.cpp
     AlnParser.h
-    Poisson.cpp
-    Poisson.h
     samtools.h
 )
 

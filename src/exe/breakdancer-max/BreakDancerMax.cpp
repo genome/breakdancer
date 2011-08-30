@@ -2,6 +2,10 @@
 #include "version.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <boost/math/distributions/poisson.hpp>
+
+using boost::math::cdf;
+using boost::math::poisson_distribution;
 
 using namespace std;
 
@@ -2191,7 +2195,9 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
         // debug
         //int db_x_rc = x_readcounts[type][lib];
         lambda = float(total_region_size)* (float(x_readcounts[type][lib])/float(reference_len));
-        logpvalue += LogPoissonTailProb(float(rlibrary_readcount[lib]),lambda);
+        poisson_distribution<float> poisson(lambda);
+        logpvalue += 1-cdf(poisson, float(rlibrary_readcount[lib]));
+        //logpvalue += LogPoissonTailProb(float(rlibrary_readcount[lib]),lambda);
     }
 	
     /*if(fisher && logpvalue < 0){
