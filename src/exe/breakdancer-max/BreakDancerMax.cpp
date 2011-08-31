@@ -2195,6 +2195,7 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
         // debug
         //int db_x_rc = x_readcounts[type][lib];
         lambda = float(total_region_size)* (float(x_readcounts[type][lib])/float(reference_len));
+        lambda = max(1.0e-10f, lambda);
         poisson_distribution<float> poisson(lambda);
         logpvalue += 1-cdf(poisson, float(rlibrary_readcount[lib]));
         //logpvalue += LogPoissonTailProb(float(rlibrary_readcount[lib]),lambda);
