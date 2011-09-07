@@ -2189,7 +2189,7 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
     int total_region_size = PutativeRegion(rnode, reg_name);
 	
     float lambda;
-    float logpvalue = 0;
+    float logpvalue = 1;
     for(map<string,int>::iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
         string lib = (*ii_rlibrary_readcount).first;
         // debug
