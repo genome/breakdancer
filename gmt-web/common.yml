@@ -3,6 +3,8 @@ layout: sub
 menu: 
     - text: Overview
       href: index.html
+    - text: Install
+      href: install.html
     - text: Example Pipeline
       href: example_pipeline.html
     - text: Full Instructions
