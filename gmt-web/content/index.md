@@ -15,7 +15,7 @@ Using BreakDancer
 
 You can easily install a binary distribution of BreakDancer on your Ubuntu 8.04 or later system in a few moments using these simple [installation instrutions](install.html).
 
-Once the package is installed, please review the [documentation ](documentation.html) for detailed instructions.
+Once the package is installed, please review the [usage instructions](breakdancer.html) for detailed instructions.
 
 Getting Help
 ============

@@ -3,15 +3,16 @@ layout: sub
 menu: 
     - text: Overview
       href: index.html
-    - text: Documentation
-      href: documentation.html
-    - text: Install
+    - text: Install 
       href: install.html
+    - text: Example Pipeline
+      href: example_pipeline.html
+    - text: Full Instructions
+      href: breakdancer.html
 
 module_details:
     name: 'BreakDancer'
     pkg_name: breakdancer
-    icon_16: res/images/genome_breakdancer_16.png
     icon: res/images/genome_breakdancer_48.png
 
 download_link: install.html
