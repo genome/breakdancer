@@ -15,7 +15,7 @@ Using BreakDancer
 
 You can easily install a binary distribution of BreakDancer on your Ubuntu 8.04 or later system in a few moments using these simple [installation instrutions](install.html).
 
-Once the package is installed, please review the [usage instructions](breakdancer.html) for detailed instructions.
+Once the package is installed, please review the [documentation ](documentation.html) for detailed instructions.
 
 Getting Help
 ============
@@ -25,4 +25,4 @@ Please join the [Breakdancer Mailing List](https://lists.sourceforge.net/lists/l
 How to Cite
 ===========
 
-We appreciate your citing the Breakdancer paper published in [Nature Methods](http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html) if youmake use of this tool or related methods.
+We appreciate your citing the Breakdancer paper published in [Nature Methods](http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html) if you make use of this tool or related methods.
