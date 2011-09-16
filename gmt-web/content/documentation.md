@@ -18,6 +18,8 @@ The -d option dumps CTX supporting read pairs into fastq files (in this case BRC
 
 This step normally takes 12 hours or so for three bam files, 8 hours or so for two bam files for cpp version, around three days for perl version.
 
+* * *
+
 # bam2cfg
 
 ## NAME
