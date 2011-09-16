@@ -1,6 +1,6 @@
 # EXAMPLE PIPELINE
 
-Please review the [full usage instructions](breakdancer.html) for detailed information about the *bam2cfg.pl* and *breakdancer-max* commands.
+Please see below for detailed information about the *bam2cfg.pl* and *breakdancer-max* commands.
 
 ## STEP 1
 Create a configuration file using bam2cfg.pl:
