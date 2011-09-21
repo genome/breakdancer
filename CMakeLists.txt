@@ -14,7 +14,7 @@ include_directories(${PROJECT_BINARY_DIR}/version)
 find_package(Samtools 0.1.6 REQUIRED)
 include_directories(${Samtools_INCLUDE_DIRS})
 
-find_package(Boost REQUIRED)
+find_package(Boost 1.35 REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -24,9 +24,6 @@ endif ()
 if (CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS "-Wno-long-long -Wall -ansi -pedantic")
 endif ()
-
-find_package(Boost COMPONENTS program_options filesystem system REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
 
 # make sure to pick up headers from library dirs
 include_directories("src/lib")
