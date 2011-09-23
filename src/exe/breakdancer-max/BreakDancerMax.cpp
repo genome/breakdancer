@@ -2189,7 +2189,7 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
     int total_region_size = PutativeRegion(rnode, reg_name);
 	
     float lambda;
-    float logpvalue = 1;
+    float logpvalue = 0;
     for(map<string,int>::iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
         string lib = (*ii_rlibrary_readcount).first;
         // debug
@@ -2197,8 +2197,7 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
         lambda = float(total_region_size)* (float(x_readcounts[type][lib])/float(reference_len));
         lambda = max(1.0e-10f, lambda);
         poisson_distribution<float> poisson(lambda);
-        logpvalue *= 1-cdf(poisson, float(rlibrary_readcount[lib]));
-        //logpvalue += LogPoissonTailProb(float(rlibrary_readcount[lib]),lambda);
+        logpvalue += log(1-cdf(poisson, float(rlibrary_readcount[lib])));
     }
 	
     /*if(fisher && logpvalue < 0){
@@ -2206,7 +2205,7 @@ float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, 
 	 float fisherP = 1 - // Math::CDF::pchisq(-2*logpvalue, 2*(rlibrary_readcount.size()));
 	 logpvalue = (fisherP > ZERO)?log(fisherP):LZERO;
 	 }*/
-    return log(logpvalue);
+    return logpvalue;
 }
 
 // putative region
