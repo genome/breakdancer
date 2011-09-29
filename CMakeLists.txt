@@ -17,6 +17,7 @@ include(ProjectHelper)
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(${PROJECT_BINARY_DIR}/version)
 
+set(SAMTOOLS_ADDITIONAL_HEADERS sam.h)
 find_package(Samtools 0.1.6 REQUIRED)
 include_directories(${Samtools_INCLUDE_DIRS})
 
