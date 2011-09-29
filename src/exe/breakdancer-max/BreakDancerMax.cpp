@@ -3,11 +3,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <boost/math/distributions/poisson.hpp>
+#include <boost/math/distributions/chi_squared.hpp>
+
+#ifndef SCORE_FLOAT_TYPE
+# define SCORE_FLOAT_TYPE double
+#endif
 
 using boost::math::cdf;
+using boost::math::complement;
 using boost::math::poisson_distribution;
+using boost::math::chi_squared;
 
 using namespace std;
+typedef SCORE_FLOAT_TYPE real_type;
+real_type _max_kahan_err = 0.0;
+
+real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<int, vector<int> > &reg_name);
 
 string version ("BreakDancerMax-1.1r112");
 string options ("");
@@ -1055,6 +1066,8 @@ int main(int argc, char *argv[])
 	 cout <<"no library: "<< count_no_lib <<endl;*/
 	//cout <<"no library: "<< count_no_lib <<endl;
 	free(fn_list); free(fn_ref); free(fn_rg);
+
+    cerr << "Max Kahan error: " << _max_kahan_err << "\n";
 	
  	return 0;
 }
@@ -1944,8 +1957,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
 							
 							
                             int flag_int = atoi(flag.c_str());
-                            float LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag_int), x_readcounts, reference_len, fisher, reg_name);
-                            float PhredQ_tmp = -10*LogPvalue/log(10);
+                            real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag_int), x_readcounts, reference_len, fisher, reg_name);
+                            real_type PhredQ_tmp = -10*LogPvalue/log(10);
                             int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
                             //float AF = float(type[flag])/float(type[flag]+normal_rp);
                             float AF = 1 - copy_number_sum;
@@ -2184,27 +2197,39 @@ float standard_deviation(vector<int> &stat, float mean){
 }	
 
 // compute the probability score
-float ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<int, vector<int> > &reg_name) {
+real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<int, vector<int> > &reg_name) {
     // rnode, rlibrary_readcount, type
     int total_region_size = PutativeRegion(rnode, reg_name);
 	
-    float lambda;
-    float logpvalue = 0;
+    real_type lambda;
+    real_type logpvalue = 0.0;
+    real_type err = 0.0;
     for(map<string,int>::iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
         string lib = (*ii_rlibrary_readcount).first;
         // debug
         //int db_x_rc = x_readcounts[type][lib];
-        lambda = float(total_region_size)* (float(x_readcounts[type][lib])/float(reference_len));
-        lambda = max(1.0e-10f, lambda);
-        poisson_distribution<float> poisson(lambda);
-        logpvalue += log(1-cdf(poisson, float(rlibrary_readcount[lib])));
+        lambda = real_type(total_region_size)* (real_type(x_readcounts[type][lib])/real_type(reference_len));
+        lambda = max(real_type(1.0e-10), lambda);
+        poisson_distribution<real_type> poisson(lambda);
+        real_type tmp_a = log(cdf(complement(poisson, rlibrary_readcount[lib]))) - err;
+        real_type tmp_b = logpvalue + tmp_a;
+        err = (tmp_b - logpvalue) - tmp_a;
+        _max_kahan_err = max(_max_kahan_err, err);
+        logpvalue = tmp_b;
     }
 	
-    /*if(fisher && logpvalue < 0){
-	 // Fisher's Method
-	 float fisherP = 1 - // Math::CDF::pchisq(-2*logpvalue, 2*(rlibrary_readcount.size()));
-	 logpvalue = (fisherP > ZERO)?log(fisherP):LZERO;
-	 }*/
+    if(fisher && logpvalue < 0) {
+        // Fisher's Method
+        chi_squared chisq(2*rlibrary_readcount.size());
+        try {
+            real_type fisherP = cdf(complement(chisq, -2*logpvalue));
+            logpvalue = fisherP > ZERO ? log(fisherP) : LZERO;
+        } catch (const std::exception& e) {
+            cerr << "chi squared problem: N=" << 2*rlibrary_readcount.size()
+                << ", log(p)=" << logpvalue << ", -2*log(p) = " << -2*logpvalue << "\n";
+        }
+    }
+
     return logpvalue;
 }
 

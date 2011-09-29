@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 2.8)
 
 project(breakdancer)
 
+if(NOT BD_SCORE_FLOAT_TYPE)
+    set(BD_SCORE_FLOAT_TYPE double)
+endif()
+message("Score floating point type: ${BD_SCORE_FLOAT_TYPE}")
+add_definitions("-DSCORE_FLOAT_TYPE=${BD_SCORE_FLOAT_TYPE}")
+
 set(CMAKE_INSTALL_PREFIX "/usr")
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build-common/cmake")
 include(TestHelper)
