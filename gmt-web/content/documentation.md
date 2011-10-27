@@ -1,3 +1,16 @@
+# Running BreakDancer
+=======================
+To run BreakDancer, first use bam2cfg.pl to prepare the required per-invocation config file. See the below for parameter descriptions.
+
+<p class='terminal' markdown='1'>
+/usr/lib/breakdancer-max1.2/bam2cfg.pl bam_files breakdancer_options
+</p>
+Then run BreakDancer on the config
+
+<p class='terminal' markdown='1'>
+breakdancer-max config_file.cfg
+</p>
+
 # EXAMPLE PIPELINE
 
 Please see below for detailed information about the *bam2cfg.pl* and *breakdancer-max* commands.
@@ -7,12 +20,16 @@ Create a configuration file using bam2cfg.pl:
 
 The precompiled Debian package will install this in /usr/lib/breakdancer-max{{page.version_suffix}} along with a few required Perl modules.
 
-	/usr/lib/breakdancer-max{{page.version_suffix}}/bam2cfg.pl -g -h tumor.bam normal.bam > BRC6.cfg
+<p class='terminal' markdown='1'>
+/usr/lib/breakdancer-max{{page.version_suffix}}/bam2cfg.pl -g -h tumor.bam normal.bam > BRC6.cfg
+</p>
 
 ## STEP 2
 Detect inter-chromosomal translocations:
 
-	breakdancer_max -t -q 10 -d BRC6.ctx BRC6.cfg > BRC6.ctx
+<p class='terminal' markdown='1'>
+breakdancer_max -t -q 10 -d BRC6.ctx BRC6.cfg > BRC6.ctx
+</p>
 
 The -d option dumps CTX supporting read pairs into fastq files (in this case BRC6.ctx) by library.
 
@@ -78,7 +95,8 @@ BreakDancerMax - SV detection
 
 ## SYNOPSIS
 
-	breakdancer-max [options] config_file
+
+breakdancer-max [options] config_file
 
 ## OPTIONS
 <dl>
