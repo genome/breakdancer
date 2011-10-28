@@ -95,9 +95,7 @@ BreakDancerMax - SV detection
 
 ## SYNOPSIS
 
-<p class='terminal' markdown='1'>
 breakdancer-max [options] config_file
-</p>
 
 ## OPTIONS
 <dl>
