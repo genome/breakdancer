@@ -15,6 +15,8 @@ breakdancer-max config_file.cfg
 
 # EXAMPLE PIPELINE
 
+***
+
 Please see below for detailed information about the *bam2cfg.pl* and *breakdancer-max* commands.
 
 ## STEP 1
@@ -37,9 +39,9 @@ The -d option dumps CTX supporting read pairs into fastq files (in this case BRC
 
 This step normally takes 12 hours or so for three bam files, 8 hours or so for two bam files for cpp version, around three days for perl version.
 
-* * *
-
 # bam2cfg
+
+***
 
 ## NAME
 bam2cfg - create a configuration file for BreakDancer
@@ -88,9 +90,9 @@ View png files for the insert size distribution. You should usually see a normal
 <dd>Plot insert size histogram for each BAM library</dd>
 </dl>
 
-* * *
-
 # BreakDancerMax
+
+***
 
 ## NAME
 BreakDancerMax - SV detection
