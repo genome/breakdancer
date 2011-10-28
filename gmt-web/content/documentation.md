@@ -1,5 +1,7 @@
 # Running BreakDancer
-=======================
+
+***
+
 To run BreakDancer, first use bam2cfg.pl to prepare the required per-invocation config file. See the below for parameter descriptions.
 
 <p class='terminal' markdown='1'>
