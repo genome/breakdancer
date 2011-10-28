@@ -95,8 +95,9 @@ BreakDancerMax - SV detection
 
 ## SYNOPSIS
 
-
+<p class='terminal' markdown='1'>
 breakdancer-max [options] config_file
+</p>
 
 ## OPTIONS
 <dl>
@@ -167,21 +168,25 @@ If your map files are in the sam/bam format, you can use the bam2cfg.pl in the r
 
 An example manual configuration file is like this 
 
-	map:1.map mean:219 std:18 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b 
-	map:2.map mean:220 std:19 readlen:36.00 sample:tB exe:maq-0.6.8 mapview -b 
-	map:3.map mean:219 std:18 readlen:36.00 sample:nA exe:maq-0.7.1 mapview -b 
-	map:4.map mean:219 std:18 readlen:36.00 sample:nB exe:maq-0.7.1 mapview -b 
+<p class='terminal' markdown='1'>
+map:1.map mean:219 std:18 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b 
+map:2.map mean:220 std:19 readlen:36.00 sample:tB exe:maq-0.6.8 mapview -b 
+map:3.map mean:219 std:18 readlen:36.00 sample:nA exe:maq-0.7.1 mapview -b 
+map:4.map mean:219 std:18 readlen:36.00 sample:nB exe:maq-0.7.1 mapview -b 
+</p>
 
 An example configuration file produced by bam2cfg.pl look like this: 
 
-	readgroup:2825107881 platform:illumina map:tumor.bam readlen:75.00 lib:demolib1
-	num:10001 lower:86.83 upper:443.91 mean:315.09 std:43.92 exe:samtools view 
-	readgroup:2843249908 platform:illumina map:tumor.bam readlen:75.00 lib:demolib1
-	num:10001 lower:86.83 upper:443.91 mean:315.09 std:43.92 exe:samtools view 
-	readgroup:2843255910 platform:illumina map:normal.bam readlen:75.00 lib:demolib2
-	num:10001 lower:95.36 upper:443.31 mean:311.68 std:42.86 exe:samtools view 
-	readgroup:2843255906 platform:illumina map:normal.bam readlen:75.00 lib:demolib2
-	num:10001 lower:95.36 upper:443.31 mean:311.68 std:42.86 exe:samtools view 
+<p class='terminal' markdown='1'>
+readgroup:2825107881 platform:illumina map:tumor.bam readlen:75.00 lib:demolib1
+num:10001 lower:86.83 upper:443.91 mean:315.09 std:43.92 exe:samtools view 
+readgroup:2843249908 platform:illumina map:tumor.bam readlen:75.00 lib:demolib1
+num:10001 lower:86.83 upper:443.91 mean:315.09 std:43.92 exe:samtools view 
+readgroup:2843255910 platform:illumina map:normal.bam readlen:75.00 lib:demolib2
+num:10001 lower:95.36 upper:443.31 mean:311.68 std:42.86 exe:samtools view 
+readgroup:2843255906 platform:illumina map:normal.bam readlen:75.00 lib:demolib2
+num:10001 lower:95.36 upper:443.31 mean:311.68 std:42.86 exe:samtools view 
+</p>
 
 Each row must contain at least 6 key:value pairs (separated by colon) that specify:
 
@@ -196,7 +201,10 @@ Listing multiple map files in a single configuration file would automatically en
 
 ### SEPARATION THRESHOLDS
 In addition to the above 6 keys: map, mean, std, readlen, sample, and exe, BreakDancerMax allows users to explicitly specify the separation thresholds using the keys: upper and lower. For example:
-	map:1.map upper:300 lower:100 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b
+
+<p class='terminal' markdown='1'>
+map:1.map upper:300 lower:100 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b
+</p>
 
 This will instruct BreakDancerMax to detect deletions using read pairs that are at least 300 bp apart (outer distance) and detect insertions using read pairs that are at most 100 bp apart.
 
