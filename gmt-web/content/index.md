@@ -1,4 +1,4 @@
-BreakDancer
+#BreakDancer
 
 ***
 
@@ -8,7 +8,7 @@ BreakDancerMax predicts five types of structural variants: insertions, deletions
 
 Please read our paper for a detailed description of the algorithm.
 
-Using BreakDancer
+#Using BreakDancer
 
 ***
 
@@ -16,13 +16,13 @@ You can easily install a binary distribution of BreakDancer on your Ubuntu 8.04 
 
 Once the package is installed, please review the [documentation ](documentation.html) for detailed instructions.
 
-Getting Help
+#Getting Help
 
 ***
 
 Please join the [Breakdancer Mailing List](https://lists.sourceforge.net/lists/listinfo/breakdancer-help), or peruse the [archives](http://sourceforge.net/mailarchive/forum.php?forum_name=breakdancer-help) to see if your question may have already been answered.
 
-How to Cite
+#How to Cite
 
 ***
 
