@@ -10,6 +10,7 @@ menu:
 
 module_details:
     name: 'BreakDancer'
+    exe_name: breakdancer-max
     pkg_name: breakdancer
     icon_16: res/images/genome_breakdancer_16.png
     icon: res/images/genome_breakdancer_48.png
