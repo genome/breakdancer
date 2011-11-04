@@ -1,4 +1,21 @@
+# Running BreakDancer
+
+***
+
+To run BreakDancer, first use bam2cfg.pl to prepare the required per-invocation config file. See the below for parameter descriptions.
+
+<p class='terminal' markdown='1'>
+/usr/lib/breakdancer-max1.2/bam2cfg.pl bam_files breakdancer_options
+</p>
+Then run BreakDancer on the config
+
+<p class='terminal' markdown='1'>
+breakdancer-max config_file.cfg
+</p>
+
 # EXAMPLE PIPELINE
+
+***
 
 Please see below for detailed information about the *bam2cfg.pl* and *breakdancer-max* commands.
 
@@ -7,20 +24,24 @@ Create a configuration file using bam2cfg.pl:
 
 The precompiled Debian package will install this in /usr/lib/breakdancer-max{{page.version_suffix}} along with a few required Perl modules.
 
-	/usr/lib/breakdancer-max{{page.version_suffix}}/bam2cfg.pl -g -h tumor.bam normal.bam > BRC6.cfg
+<p class='terminal' markdown='1'>
+/usr/lib/breakdancer-max{{page.version_suffix}}/bam2cfg.pl -g -h tumor.bam normal.bam > BRC6.cfg
+</p>
 
 ## STEP 2
 Detect inter-chromosomal translocations:
 
-	breakdancer_max -t -q 10 -d BRC6.ctx BRC6.cfg > BRC6.ctx
+<p class='terminal' markdown='1'>
+breakdancer_max -t -q 10 -d BRC6.ctx BRC6.cfg > BRC6.ctx
+</p>
 
 The -d option dumps CTX supporting read pairs into fastq files (in this case BRC6.ctx) by library.
 
 This step normally takes 12 hours or so for three bam files, 8 hours or so for two bam files for cpp version, around three days for perl version.
 
-* * *
-
 # bam2cfg
+
+***
 
 ## NAME
 bam2cfg - create a configuration file for BreakDancer
@@ -69,16 +90,16 @@ View png files for the insert size distribution. You should usually see a normal
 <dd>Plot insert size histogram for each BAM library</dd>
 </dl>
 
-* * *
-
 # BreakDancerMax
+
+***
 
 ## NAME
 BreakDancerMax - SV detection
 
 ## SYNOPSIS
 
-	breakdancer-max [options] config_file
+breakdancer-max [options] config_file
 
 ## OPTIONS
 <dl>
@@ -149,21 +170,25 @@ If your map files are in the sam/bam format, you can use the bam2cfg.pl in the r
 
 An example manual configuration file is like this 
 
-	map:1.map mean:219 std:18 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b 
-	map:2.map mean:220 std:19 readlen:36.00 sample:tB exe:maq-0.6.8 mapview -b 
-	map:3.map mean:219 std:18 readlen:36.00 sample:nA exe:maq-0.7.1 mapview -b 
-	map:4.map mean:219 std:18 readlen:36.00 sample:nB exe:maq-0.7.1 mapview -b 
+<p class='terminal' markdown='1'>
+map:1.map mean:219 std:18 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b 
+map:2.map mean:220 std:19 readlen:36.00 sample:tB exe:maq-0.6.8 mapview -b 
+map:3.map mean:219 std:18 readlen:36.00 sample:nA exe:maq-0.7.1 mapview -b 
+map:4.map mean:219 std:18 readlen:36.00 sample:nB exe:maq-0.7.1 mapview -b 
+</p>
 
 An example configuration file produced by bam2cfg.pl look like this: 
 
-	readgroup:2825107881 platform:illumina map:tumor.bam readlen:75.00 lib:demolib1
-	num:10001 lower:86.83 upper:443.91 mean:315.09 std:43.92 exe:samtools view 
-	readgroup:2843249908 platform:illumina map:tumor.bam readlen:75.00 lib:demolib1
-	num:10001 lower:86.83 upper:443.91 mean:315.09 std:43.92 exe:samtools view 
-	readgroup:2843255910 platform:illumina map:normal.bam readlen:75.00 lib:demolib2
-	num:10001 lower:95.36 upper:443.31 mean:311.68 std:42.86 exe:samtools view 
-	readgroup:2843255906 platform:illumina map:normal.bam readlen:75.00 lib:demolib2
-	num:10001 lower:95.36 upper:443.31 mean:311.68 std:42.86 exe:samtools view 
+<p class='terminal' markdown='1'>
+readgroup:2825107881 platform:illumina map:tumor.bam readlen:75.00 lib:demolib1
+num:10001 lower:86.83 upper:443.91 mean:315.09 std:43.92 exe:samtools view 
+readgroup:2843249908 platform:illumina map:tumor.bam readlen:75.00 lib:demolib1
+num:10001 lower:86.83 upper:443.91 mean:315.09 std:43.92 exe:samtools view 
+readgroup:2843255910 platform:illumina map:normal.bam readlen:75.00 lib:demolib2
+num:10001 lower:95.36 upper:443.31 mean:311.68 std:42.86 exe:samtools view 
+readgroup:2843255906 platform:illumina map:normal.bam readlen:75.00 lib:demolib2
+num:10001 lower:95.36 upper:443.31 mean:311.68 std:42.86 exe:samtools view 
+</p>
 
 Each row must contain at least 6 key:value pairs (separated by colon) that specify:
 
@@ -178,7 +203,10 @@ Listing multiple map files in a single configuration file would automatically en
 
 ### SEPARATION THRESHOLDS
 In addition to the above 6 keys: map, mean, std, readlen, sample, and exe, BreakDancerMax allows users to explicitly specify the separation thresholds using the keys: upper and lower. For example:
-	map:1.map upper:300 lower:100 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b
+
+<p class='terminal' markdown='1'>
+map:1.map upper:300 lower:100 readlen:36.00 sample:tA exe:maq-0.6.8 mapview -b
+</p>
 
 This will instruct BreakDancerMax to detect deletions using read pairs that are at least 300 bp apart (outer distance) and detect insertions using read pairs that are at most 100 bp apart.
 
