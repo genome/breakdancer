@@ -17,5 +17,7 @@ module_details:
     gmt_pkg_name: breakdancer
     debian_pkg_name: breakdancer
 
+
 download_link: install.html
 github_url: https://github.com/genome/breakdancer
+include_suffix: true
