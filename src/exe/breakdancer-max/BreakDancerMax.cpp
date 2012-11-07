@@ -1990,9 +1990,8 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
                                     }
                                 }
                                 cout << endl;
-								
-								
-								
+							                  
+                                size_t cnt = 0;
                                 if(!prefix_fastq.empty()){ // print out supporting read pairs
                                     map<string,int> pairing;
                                     for(vector<vector<string> >::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
@@ -2004,17 +2003,29 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
                                         fh.open(fh_tmp_str.c_str(), ofstream::app);
                                         pairing[y[0]] = 1;
                                         string str_tmp = "@" + y[0] + "\n" + y[9] + "\n" + "+\n" + y[10] + "\n";
+                                        cnt++;
                                         fh << str_tmp;
+                                        if (!fh) {
+                                            cerr << "error writing to " << fh_tmp_str << "!";
+                                            exit(1);
+                                        }
                                         fh.close();
                                         //sprintf(fh,"@%s\n",y[0]);
                                         //sprintf(fh,"%s\n",y[9]);
                                         //sprintf(fh,"+\n%s\n",y[10]);
                                     }
                                 }
+                                cerr << cnt << " fastq entries\n";
+
+
 								
                                 if(!dump_BED.empty()){	// print out SV and supporting reads in BED format
                                     ofstream fh_BED;
                                     fh_BED.open(dump_BED.c_str(), ofstream::app);
+                                    if (!fh_BED) {
+                                        cerr << "error opening file " << dump_BED << "!";
+                                        exit(1);
+                                    }
 									
                                     string trackname(in->header->target_name[sv_chr1]);
                                     trackname = trackname.append("_").append(itos(sv_pos1)).append("_").append(SVT).append("_").append(itos(diffspans[flag]));
@@ -2035,8 +2046,16 @@ void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_
                                         //fh_BED << "chr" << in->header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t1\t" << y[0] << "\t" << y[3] << "\t" << y[4] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";//sprintf(fh_BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y[0],y[3],y[4],y[2],aln_end,color);
                                         int aln_score = atoi(y[6].c_str()) * 10;
                                         fh_BED << "chr" << in->header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t" << y[0] << "|" << y[8] << "\t" << aln_score << "\t" << y[3] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n"; 
+                                        if (!fh_BED) {
+                                            cerr << "error writing to " << dump_BED << "!";
+                                            exit(1);
+                                        }
                                     }
                                     fh_BED.close();
+                                    if (!fh_BED) {
+                                        cerr << "error writing to " << dump_BED << "!";
+                                        exit(1);
+                                    }
                                 }
                             }
                         }
