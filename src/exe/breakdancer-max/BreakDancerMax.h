@@ -36,38 +36,35 @@ struct BreakDancerData {
     {
     }
 
-	int begins; // global (chr)
-	int beginc; // global
-	int lasts; // global (chr, should be int in samtools)
-	int lastc; // global
-	map<string, uint32_t> nread_ROI; // global
-	map<int, map<string, uint32_t> > read_count_ROI_map; // global
-	map<string, uint32_t> nread_FR;	// global
-	map<int, map<string, uint32_t> > read_count_FR_map; // global
+    int begins; // global (chr)
+    int beginc; // global
+    int lasts; // global (chr, should be int in samtools)
+    int lastc; // global
+    map<string, uint32_t> nread_ROI; // global
+    map<int, map<string, uint32_t> > read_count_ROI_map; // global
+    map<string, uint32_t> nread_FR;    // global
+    map<int, map<string, uint32_t> > read_count_FR_map; // global
 };
 
 struct AnalysisData {
-	map<string, uint32_t > possible_fake_data;
-	map<int, vector<vector<string> > > regs;//global in analysis
-	map<string, vector<int> > read;// global in analysis
-	map<int,vector<int> > reg_name;// global in analysis
-	vector<vector<string> > reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
-	vector<vector<string> >::const_iterator it_reg_seq; // global
+    map<string, uint32_t > possible_fake_data;
+    map<int, vector<vector<string> > > regs;//global in analysis
+    map<string, vector<int> > read;// global in analysis
+    map<int,vector<int> > reg_name;// global in analysis
+    vector<vector<string> > reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
+    vector<vector<string> >::const_iterator it_reg_seq; // global
 };
-	
+    
 
 /*template <class T>
 T from_string(const std::string& s,
                  std::ios_base& (*f)(std::ios_base&))*/
 void do_break_func(
+    BreakDancerData& bdancer,
     vector<vector<string> > const& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
     map<int, vector<vector<string> > > &regs,
-    int begins,
-    int beginc,
-    int lasts,
-    int lastc,
     int *idx_buff,
     int buffer_size,
     int *nnormal_reads,
@@ -94,10 +91,6 @@ void do_break_func(
     samfile_t *in,
     int seq_coverage_lim,
     uint32_t *ntotal_nucleotides,
-    map<string,uint32_t> &nread_ROI,
-    map<int, map<string,uint32_t> > &read_count_ROI_map,
-    map<string, uint32_t> &nread_FR,
-    map<int, map<string, uint32_t> > &read_count_FR_map,
     map<string, float> &read_density,
     int CN_lib,
     map<string, string> libmaps,
@@ -107,9 +100,74 @@ void do_break_func(
     );
 
 
-void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string,float> &uppercutoff, map<string,float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int *max_readlen, string ori, samfile_t *in, int seq_coverage_lim, uint32_t *ntotal_nucleotides, map<string, uint32_t> &nread_ROI, map<int, map<string, uint32_t> > &read_count_ROI_map, map<string, uint32_t> &nread_FR, map<int, map<string, uint32_t> > &read_count_FR_map, map<string, float> &read_density, map<string, uint32_t> &possible_fake_data, int CN_bam, map<string, string> libmaps, vector<string> maps, int print_AF, int score_threshold);
+void Analysis (
+    BreakDancerData& bdancer,
+    string lib,
+    bam1_t *b,
+    vector<vector<string> > &reg_seq,
+    map<int, vector<int> > &reg_name,
+    map<string, vector<int> > &read,
+    map<int, vector<vector<string> > > &regs,
+    int *idx_buff,
+    int buffer_size,
+    int *nnormal_reads,
+    int min_len,
+    int *normal_switch,
+    int *reg_idx,
+    int transchr_rearrange,
+    int min_map_qual,
+    int Illumina_long_insert,
+    string prefix_fastq,
+    map<uint32_t, map<string, int> > &x_readcounts,
+    uint32_t reference_len,
+    int fisher,
+    map<string, string> &ReadsOut,
+    map<string, float> &mean_insertsize,
+    map<string, string> &SVtype,
+    map<string, int> &mapQual,
+    map<string, float> &uppercutoff,
+    map<string, float> &lowercutoff,
+    int max_sd,
+    int d,
+    int min_read_pair,
+    string dump_BED,
+    int *max_readlen,
+    string ori,
+    samfile_t *in,
+    int seq_coverage_lim,
+    uint32_t *ntotal_nucleotides,
+    map<string, float> &read_density,
+    map<string, uint32_t> &possible_fake_data,
+    int CN_lib,
+    map<string, string> libmaps,
+    vector<string> maps,
+    int print_AF,
+    int score_threshold
+    );
 
-void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, int min_read_pair, string dump_BED, int max_readlen, string prefix_fastq, map<string,string> &ReadsOut, map<string,string> &SVtype, map<string,float> &mean_insertsize, samfile_t *in, map<int, map<string, uint32_t> > &read_count_ROI_map, map<int, map<string, uint32_t> > &read_count_FR_map, map<string, float> &read_density, int CN_bam, vector<string> maps, int print_AF, int score_threshold, map<string, string> libmaps);
+void buildConnection(
+    BreakDancerData& bdancer,
+    map<string, vector<int> > &read,
+    map<int, vector<int> > &reg_name,
+    map<int, vector<vector<string> > > &regs,
+    map<uint32_t, map<string,int> > &x_readcounts,
+    uint32_t reference_len,
+    int fisher,
+    int min_read_pair,
+    string dump_BED,
+    int max_readlen,
+    string prefix_fastq,
+    map<string, string> &ReadsOut,
+    map<string, string> &SVtype,
+    map<string, float> &mean_insertsize,
+    samfile_t *in,
+    map<string, float> &read_density,
+    int CN_lib,
+    vector<string> maps, // FIXME: should be constref
+    int print_AF,
+    int score_threshold,
+    map<string, string> libmaps // FIXME: should be constref
+);
 
 void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, string chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform, string platform);
 

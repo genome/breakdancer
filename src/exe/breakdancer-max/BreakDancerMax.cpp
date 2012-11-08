@@ -626,14 +626,8 @@ int main(int argc, char *argv[]) {
     cout << "\n";
 
 
-    int begins = -1;// global (chr)
-    int beginc = -1;// global
-    int lasts = -1;// global (chr, should be int in samtools)
-    int lastc = -1; // global
-    map<string, uint32_t> nread_ROI; // global
-    map<int, map<string, uint32_t> > read_count_ROI_map; // global
-    map<string, uint32_t> nread_FR;    // global
-    map<int, map<string, uint32_t> > read_count_FR_map; // global
+    BreakDancerData bdancer;
+
     map<string, uint32_t > possible_fake_data;
     map<int, vector<vector<string> > > regs;//global in analysis
     map<string, vector<int> > read;// global in analysis
@@ -685,19 +679,59 @@ int main(int argc, char *argv[]) {
                 string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 
                 if(!library.empty()){
-                    Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/, CN_lib, libmaps, maps, print_AF, score_threshold);
+                    Analysis (
+                        bdancer,
+                        library,
+                        b,
+                        reg_seq,
+                        reg_name,
+                        read,
+                        regs,
+                        &idx_buff,
+                        buffer_size,
+                        &nnormal_reads,
+                        min_len,
+                        &normal_switch,
+                        &reg_idx,
+                        transchr_rearrange,
+                        min_map_qual,
+                        Illumina_long_insert,
+                        prefix_fastq,
+                        x_readcounts,
+                        reference_len,
+                        fisher,
+                        ReadsOut,
+                        mean_insertsize,
+                        SVtype,
+                        mapQual,
+                        uppercutoff,
+                        lowercutoff,
+                        max_sd,
+                        d,
+                        min_read_pair,
+                        dump_BED,
+                        &max_readlen,
+                        ori,
+                        in,
+                        seq_coverage_lim,
+                        &ntotal_nucleotides,
+                        read_density,
+                        possible_fake_data,
+                        CN_lib,
+                        libmaps,
+                        maps,
+                        print_AF,
+                        score_threshold
+                    );
                 }
             }
             if(reg_seq.size() != 0){
                 do_break_func(
+                    bdancer,
                     reg_seq,
                     reg_name,
                     read,
                     regs,
-                    begins,
-                    beginc,
-                    lasts,
-                    lastc,
                     &idx_buff,
                     buffer_size,
                     &nnormal_reads,
@@ -724,10 +758,6 @@ int main(int argc, char *argv[]) {
                     in,
                     seq_coverage_lim,
                     &ntotal_nucleotides,
-                    nread_ROI,
-                    read_count_ROI_map,
-                    nread_FR,
-                    read_count_FR_map,
                     read_density,
                     CN_lib,
                     libmaps,
@@ -737,7 +767,29 @@ int main(int argc, char *argv[]) {
                 );
             }
 
-            buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in, read_count_ROI_map, read_count_FR_map, read_density, CN_lib, maps, print_AF, score_threshold, libmaps);
+            buildConnection(
+                bdancer,
+                read,
+                reg_name,
+                regs,
+                x_readcounts,
+                reference_len,
+                fisher,
+                min_read_pair,
+                dump_BED,
+                max_readlen,
+                prefix_fastq,
+                ReadsOut,
+                SVtype,
+                mean_insertsize,
+                in,
+                read_density,
+                CN_lib,
+                maps,
+                print_AF,
+                score_threshold,
+                libmaps
+            );
             bam_destroy1(b);
             samclose(in);
         }
@@ -778,7 +830,50 @@ int main(int argc, char *argv[]) {
                     string readgroup = aln_return[0];
                     string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                     if(!library.empty()){
-                        Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in, seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/, CN_lib, libmaps, maps, print_AF, score_threshold);
+                        Analysis (
+                            bdancer,
+                            library,
+                            b,
+                            reg_seq,
+                            reg_name,
+                            read,
+                            regs,
+                            &idx_buff,
+                            buffer_size,
+                            &nnormal_reads,
+                            min_len,
+                            &normal_switch,
+                            &reg_idx,
+                            transchr_rearrange,
+                            min_map_qual,
+                            Illumina_long_insert,
+                            prefix_fastq,
+                            x_readcounts,
+                            reference_len,
+                            fisher,
+                            ReadsOut,
+                            mean_insertsize,
+                            SVtype,
+                            mapQual,
+                            uppercutoff,
+                            lowercutoff,
+                            max_sd,
+                            d,
+                            min_read_pair,
+                            dump_BED,
+                            &max_readlen,
+                            ori,
+                            in,
+                            seq_coverage_lim,
+                            &ntotal_nucleotides,
+                            read_density,
+                            possible_fake_data,
+                            CN_lib,
+                            libmaps,
+                            maps,
+                            print_AF,
+                            score_threshold
+                        );
                     }
                     /*else{
                      if(b->core.pos >= 43803315 && b->core.pos <= 103860201){
@@ -790,14 +885,11 @@ int main(int argc, char *argv[]) {
             }
             if(reg_seq.size() != 0){
                 do_break_func(
+                    bdancer,
                     reg_seq,
                     reg_name,
                     read,
                     regs,
-                    begins,
-                    beginc,
-                    lasts,
-                    lastc,
                     &idx_buff,
                     buffer_size,
                     &nnormal_reads,
@@ -824,10 +916,6 @@ int main(int argc, char *argv[]) {
                     in,
                     seq_coverage_lim,
                     &ntotal_nucleotides,
-                    nread_ROI,
-                    read_count_ROI_map,
-                    nread_FR,
-                    read_count_FR_map,
                     read_density,
                     CN_lib,
                     libmaps,
@@ -836,7 +924,29 @@ int main(int argc, char *argv[]) {
                     score_threshold
                 );
             }
-            buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in, read_count_ROI_map, read_count_FR_map, read_density, CN_lib, maps, print_AF, score_threshold, libmaps);//, read_count_ROI_debug, read_count_FR_debug);
+            buildConnection(
+                bdancer,
+                read,
+                reg_name,
+                regs,
+                x_readcounts,
+                reference_len,
+                fisher,
+                min_read_pair,
+                dump_BED,
+                max_readlen,
+                prefix_fastq,
+                ReadsOut,
+                SVtype,
+                mean_insertsize,
+                in,
+                read_density,
+                CN_lib,
+                maps,
+                print_AF,
+                score_threshold,
+                libmaps
+            );
             bam_destroy1(b);
             samclose(in);
         }
@@ -876,7 +986,50 @@ int main(int argc, char *argv[]) {
                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                         //continue;
                         if(!library.empty()){
-                            Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[heap->i], seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake,*/ possible_fake_data/*, possible_fake_data_debug*/, CN_lib, libmaps, maps, print_AF, score_threshold);
+                            Analysis(
+                                bdancer,
+                                library,
+                                b,
+                                reg_seq,
+                                reg_name,
+                                read,
+                                regs,
+                                &idx_buff,
+                                buffer_size,
+                                &nnormal_reads,
+                                min_len,
+                                &normal_switch,
+                                &reg_idx,
+                                transchr_rearrange,
+                                min_map_qual,
+                                Illumina_long_insert,
+                                prefix_fastq,
+                                x_readcounts,
+                                reference_len,
+                                fisher,
+                                ReadsOut,
+                                mean_insertsize,
+                                SVtype,
+                                mapQual,
+                                uppercutoff,
+                                lowercutoff,
+                                max_sd,
+                                d,
+                                min_read_pair,
+                                dump_BED,
+                                &max_readlen,
+                                ori,
+                                in[heap->i],
+                                seq_coverage_lim,
+                                &ntotal_nucleotides,
+                                read_density,
+                                possible_fake_data,
+                                CN_lib,
+                                libmaps,
+                                maps,
+                                print_AF,
+                                score_threshold
+                            );
                         }
                         /*else{
                          if(b->core.pos >= 43803315 && b->core.pos <= 103860201){
@@ -920,14 +1073,11 @@ int main(int argc, char *argv[]) {
             //cout << "build connection:" << endl;
             if(reg_seq.size() != 0){
                 do_break_func(
+                    bdancer,
                     reg_seq,
                     reg_name,
                     read,
                     regs,
-                    begins,
-                    beginc,
-                    lasts,
-                    lastc,
                     &idx_buff,
                     buffer_size,
                     &nnormal_reads,
@@ -954,10 +1104,6 @@ int main(int argc, char *argv[]) {
                     in[0],
                     seq_coverage_lim,
                     &ntotal_nucleotides,
-                    nread_ROI,
-                    read_count_ROI_map,
-                    nread_FR,
-                    read_count_FR_map,
                     read_density,
                     CN_lib,
                     libmaps,
@@ -966,7 +1112,29 @@ int main(int argc, char *argv[]) {
                     score_threshold
                     );
             }
-            buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0], read_count_ROI_map, read_count_FR_map, read_density, CN_lib, maps, print_AF, score_threshold, libmaps);//, read_count_ROI_debug, read_count_FR_debug);
+            buildConnection(
+                bdancer,
+                read,
+                reg_name,
+                regs,
+                x_readcounts,
+                reference_len,
+                fisher,
+                min_read_pair,
+                dump_BED,
+                max_readlen,
+                prefix_fastq,
+                ReadsOut,
+                SVtype,
+                mean_insertsize,
+                in[0],
+                read_density,
+                CN_lib,
+                maps,
+                print_AF,
+                score_threshold,
+                libmaps
+            );
         }
 
         //############### find the designated chromosome and put all of them together for all bam files #############
@@ -1052,7 +1220,50 @@ int main(int argc, char *argv[]) {
                             //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                             //continue;
                             if(!library.empty()){
-                                Analysis (library, b, reg_seq, reg_name, read, regs, &begins, &beginc, &lasts, &lastc, &idx_buff, buffer_size, &nnormal_reads, min_len, &normal_switch, &reg_idx, transchr_rearrange, min_map_qual, Illumina_long_insert, prefix_fastq, x_readcounts, reference_len, fisher, ReadsOut, mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, max_sd, d, min_read_pair, dump_BED, &max_readlen, ori, in[0], seq_coverage_lim, &ntotal_nucleotides, nread_ROI, read_count_ROI_map, nread_FR, read_count_FR_map, read_density, /*nread_ROI_debug, read_count_ROI_debug, nread_FR_debug, read_count_FR_debug, &possible_fake, */possible_fake_data/*, possible_fake_data_debug*/, CN_lib, libmaps, maps, print_AF, score_threshold);
+                                Analysis(
+                                    bdancer,
+                                    library,
+                                    b,
+                                    reg_seq,
+                                    reg_name,
+                                    read,
+                                    regs,
+                                    &idx_buff,
+                                    buffer_size,
+                                    &nnormal_reads,
+                                    min_len,
+                                    &normal_switch,
+                                    &reg_idx,
+                                    transchr_rearrange,
+                                    min_map_qual,
+                                    Illumina_long_insert,
+                                    prefix_fastq,
+                                    x_readcounts,
+                                    reference_len,
+                                    fisher,
+                                    ReadsOut,
+                                    mean_insertsize,
+                                    SVtype,
+                                    mapQual,
+                                    uppercutoff,
+                                    lowercutoff,
+                                    max_sd,
+                                    d,
+                                    min_read_pair,
+                                    dump_BED,
+                                    &max_readlen,
+                                    ori,
+                                    in[0],
+                                    seq_coverage_lim,
+                                    &ntotal_nucleotides,
+                                    read_density,
+                                    possible_fake_data,
+                                    CN_lib,
+                                    libmaps,
+                                    maps,
+                                    print_AF,
+                                    score_threshold
+                                );
                             }
                         }
                     }
@@ -1111,14 +1322,11 @@ int main(int argc, char *argv[]) {
             }
             if(reg_seq.size() != 0){
                 do_break_func(
+                    bdancer,
                     reg_seq,
                     reg_name,
                     read,
                     regs,
-                    begins,
-                    beginc,
-                    lasts,
-                    lastc,
                     &idx_buff,
                     buffer_size,
                     &nnormal_reads,
@@ -1145,10 +1353,6 @@ int main(int argc, char *argv[]) {
                     in[0],
                     seq_coverage_lim,
                     &ntotal_nucleotides,
-                    nread_ROI,
-                    read_count_ROI_map,
-                    nread_FR,
-                    read_count_FR_map,
                     read_density,
                     CN_lib,
                     libmaps,
@@ -1157,7 +1361,29 @@ int main(int argc, char *argv[]) {
                     score_threshold
                     );
             }
-            buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in[0], read_count_ROI_map, read_count_FR_map, read_density, CN_lib, maps, print_AF, score_threshold, libmaps);
+            buildConnection(
+                bdancer,
+                read,
+                reg_name,
+                regs,
+                x_readcounts,
+                reference_len,
+                fisher,
+                min_read_pair,
+                dump_BED,
+                max_readlen,
+                prefix_fastq,
+                ReadsOut,
+                SVtype,
+                mean_insertsize,
+                in[0],
+                read_density,
+                CN_lib,
+                maps,
+                print_AF,
+                score_threshold,
+                libmaps
+            );
 
             delete []tid;
             delete []beg;
@@ -1187,14 +1413,11 @@ int main(int argc, char *argv[]) {
 
 // to take the rest of the reads and trying to pair up
 void do_break_func(
+    BreakDancerData& bdancer,
     vector<vector<string> > const& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
     map<int, vector<vector<string> > > &regs,
-    int begins,
-    int beginc,
-    int lasts,
-    int lastc,
     int *idx_buff,
     int buffer_size,
     int *nnormal_reads,
@@ -1221,11 +1444,7 @@ void do_break_func(
     samfile_t *in,
     int seq_coverage_lim,
     uint32_t *ntotal_nucleotides,
-    map<string,uint32_t> &nread_ROI,
-    map<int, map<string,uint32_t> > &read_count_ROI_map,
-    map<string, uint32_t> &nread_FR,
-    map<int, map<string, uint32_t> > &read_count_FR_map,
-    map<string, float> &read_density,
+    map<string, float>& read_density,
     int CN_lib,
     map<string, string> libmaps,
     vector<string> maps,
@@ -1233,6 +1452,11 @@ void do_break_func(
     int score_threshold
     )
 {
+
+    int& begins = bdancer.begins;
+    int& beginc = bdancer.beginc;
+    int& lastc = bdancer.lastc;
+
     float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
     if(lastc - beginc > min_len && seq_coverage < seq_coverage_lim){ // skip short/unreliable flnaking supporting regions
         // register reliable region and supporting reads across gaps
@@ -1253,7 +1477,29 @@ void do_break_func(
         (*idx_buff)++;
         if(*idx_buff > buffer_size){
             //cout << "build connection:" << endl;
-            buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, *max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in, read_count_ROI_map, read_count_FR_map, read_density, CN_lib, maps, print_AF, score_threshold, libmaps);//, read_count_ROI_debug, read_count_FR_debug);
+            buildConnection(
+                bdancer,
+                read,
+                reg_name,
+                regs,
+                x_readcounts,
+                reference_len,
+                fisher,
+                min_read_pair,
+                dump_BED,
+                *max_readlen,
+                prefix_fastq,
+                ReadsOut,
+                SVtype,
+                mean_insertsize,
+                in,
+                read_density,
+                CN_lib,
+                maps,
+                print_AF,
+                score_threshold,
+                libmaps
+            );
             *idx_buff = 0;
         }
     }
@@ -1271,7 +1517,62 @@ void do_break_func(
 }
 
 // for each read, check if it is time to break and pair up the reads
-void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,vector<int> > &reg_name, map<string,vector<int> > &read, map<int, vector<vector<string> > > &regs, int *begins, int *beginc, int *lasts, int *lastc, int *idx_buff, int buffer_size, int *nnormal_reads, int min_len, int *normal_switch, int *reg_idx, int transchr_rearrange, int min_map_qual, int Illumina_long_insert, string prefix_fastq, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<string,string> &ReadsOut, map<string,float> &mean_insertsize, map<string, string> &SVtype, map<string, int> &mapQual, map<string, float> &uppercutoff, map<string, float> &lowercutoff, int max_sd, int d, int min_read_pair, string dump_BED, int *max_readlen, string ori, samfile_t *in, int seq_coverage_lim, uint32_t *ntotal_nucleotides, map<string, uint32_t> &nread_ROI, map<int, map<string, uint32_t> > &read_count_ROI_map, map<string, uint32_t> &nread_FR, map<int, map<string, uint32_t> > &read_count_FR_map, map<string, float> &read_density,/* map<string, map<string, vector<int> > > &nread_ROI_debug, map<int, map<string, map<string, vector<int> > > > &read_count_ROI_debug, map<string, map<string, vector<int> > > &nread_FR_debug, map<int, map<string, map<string, vector<int> > > > &read_count_FR_debug, int *possible_fake,*/ map<string, uint32_t> &possible_fake_data/*, map<string, map<string, vector<int> > > & possible_fake_data_debug*/, int CN_lib, map<string, string> libmaps, vector<string> maps, int print_AF, int score_threshold){
+void Analysis (
+    BreakDancerData& bdancer,
+    string lib,
+    bam1_t *b,
+    vector<vector<string> > &reg_seq,
+    map<int, vector<int> > &reg_name,
+    map<string, vector<int> > &read,
+    map<int, vector<vector<string> > > &regs,
+    int *idx_buff,
+    int buffer_size,
+    int *nnormal_reads,
+    int min_len,
+    int *normal_switch,
+    int *reg_idx,
+    int transchr_rearrange,
+    int min_map_qual,
+    int Illumina_long_insert,
+    string prefix_fastq,
+    map<uint32_t, map<string, int> > &x_readcounts,
+    uint32_t reference_len,
+    int fisher,
+    map<string, string> &ReadsOut,
+    map<string, float> &mean_insertsize,
+    map<string, string> &SVtype,
+    map<string, int> &mapQual,
+    map<string, float> &uppercutoff,
+    map<string, float> &lowercutoff,
+    int max_sd,
+    int d,
+    int min_read_pair,
+    string dump_BED,
+    int *max_readlen,
+    string ori,
+    samfile_t *in,
+    int seq_coverage_lim,
+    uint32_t *ntotal_nucleotides,
+    map<string, float> &read_density,
+    map<string, uint32_t> &possible_fake_data,
+    int CN_lib,
+    map<string, string> libmaps,
+    vector<string> maps,
+    int print_AF,
+    int score_threshold
+    )
+{
+    // for now, we can just set up references to the data struct so we
+    // don't have to modify too much code
+    int& begins = bdancer.begins;
+    int& beginc = bdancer.beginc;
+    int& lasts = bdancer.lasts;
+    int& lastc = bdancer.lastc;
+    map<string, uint32_t>& nread_ROI = bdancer.nread_ROI;
+    map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
+    map<string, uint32_t>& nread_FR = bdancer.nread_FR;
+    map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
+
 
     string bam_name = libmaps[lib];
     //main analysis code
@@ -1372,16 +1673,16 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
         *ntotal_nucleotides += b->core.l_qseq;
         *max_readlen = (*max_readlen < b->core.l_qseq) ? b->core.l_qseq : *max_readlen;
     }
-    int do_break = (int(b->core.tid) != *lasts || int(b->core.pos) - *lastc > d)?1:0;
+    int do_break = (int(b->core.tid) != lasts || int(b->core.pos) - lastc > d)?1:0;
 
     if(do_break){ // breakpoint in the assembly
-        float seq_coverage = *ntotal_nucleotides/(*lastc - *beginc + 1 + *max_readlen);
-        if(*lastc - *beginc > min_len && seq_coverage < seq_coverage_lim){ // skip short/unreliable flnaking supporting regions
+        float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
+        if(lastc - beginc > min_len && seq_coverage < seq_coverage_lim){ // skip short/unreliable flnaking supporting regions
             // register reliable region and supporting reads across gaps
             int k = (*reg_idx) ++;
-            reg_name[k].push_back(*begins);
-            reg_name[k].push_back(*beginc);
-            reg_name[k].push_back(*lastc);
+            reg_name[k].push_back(begins);
+            reg_name[k].push_back(beginc);
+            reg_name[k].push_back(lastc);
             reg_name[k].push_back(*nnormal_reads);
 
             // never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
@@ -1427,7 +1728,29 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
             regs[k] = p;
             (*idx_buff)++;
             if(*idx_buff > buffer_size){
-                buildConnection(read, reg_name, regs, x_readcounts, reference_len, fisher, min_read_pair, dump_BED, *max_readlen, prefix_fastq, ReadsOut, SVtype, mean_insertsize, in, read_count_ROI_map, read_count_FR_map, read_density, CN_lib, maps, print_AF, score_threshold, libmaps);//, read_count_ROI_debug, read_count_FR_debug);
+                buildConnection(
+                    bdancer,
+                    read,
+                    reg_name,
+                    regs,
+                    x_readcounts,
+                    reference_len,
+                    fisher,
+                    min_read_pair,
+                    dump_BED,
+                    *max_readlen,
+                    prefix_fastq,
+                    ReadsOut,
+                    SVtype,
+                    mean_insertsize,
+                    in,
+                    read_density,
+                    CN_lib,
+                    maps,
+                    print_AF,
+                    score_threshold,
+                    libmaps
+                );
                 *idx_buff = 0;
             }
         }
@@ -1460,8 +1783,8 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
                 }
             }
         }
-        *begins = int(b->core.tid);
-        *beginc = int(b->core.pos);
+        begins = int(b->core.tid);
+        beginc = int(b->core.pos);
         reg_seq.clear();
         *normal_switch = 0;
         *nnormal_reads = 0;
@@ -1517,13 +1840,39 @@ void Analysis (string lib, bam1_t *b, vector<vector<string> > &reg_seq, map<int,
     }
     if(reg_seq.size() == 1)
         *normal_switch = 1;
-    *lasts = int(b->core.tid);
-    *lastc = int(b->core.pos);
+    lasts = int(b->core.tid);
+    lastc = int(b->core.pos);
     nread_ROI.clear();
 }
 
 // pair up reads and print out results (SV estimation)
-void buildConnection(map<string,vector<int> > &read, map<int,vector<int> > &reg_name, map<int,vector<vector<string> > > &regs, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, int min_read_pair, string dump_BED, int max_readlen, string prefix_fastq, map<string,string> &ReadsOut, map<string,string> &SVtype, map<string,float> &mean_insertsize, samfile_t *in, map<int, map<string, uint32_t> > &read_count_ROI_map, map<int, map<string, uint32_t> > &read_count_FR_map, map<string, float> &read_density, int CN_lib, vector<string> maps, int print_AF, int score_threshold, map<string, string> libmaps){//, map<int, map<string, map<string, int> > > &read_count_ROI_debug, map<int, map<string, map<string, int> > > &read_count_FR_debug){
+void buildConnection(
+    BreakDancerData& bdancer,
+    map<string, vector<int> > &read,
+    map<int, vector<int> > &reg_name,
+    map<int, vector<vector<string> > > &regs,
+    map<uint32_t, map<string,int> > &x_readcounts,
+    uint32_t reference_len,
+    int fisher,
+    int min_read_pair,
+    string dump_BED,
+    int max_readlen,
+    string prefix_fastq,
+    map<string, string> &ReadsOut,
+    map<string, string> &SVtype,
+    map<string, float> &mean_insertsize,
+    samfile_t *in,
+    map<string, float> &read_density,
+    int CN_lib,
+    vector<string> maps, // FIXME: should be constref
+    int print_AF,
+    int score_threshold,
+    map<string, string> libmaps // FIXME: should be constref
+    )
+{
+    map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
+    map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
+
     // build connections
     // find paired regions that are supported by paired reads
     // warn("-- link regions\n");
