@@ -15,119 +15,96 @@ using boost::math::poisson_distribution;
 using boost::math::chi_squared;
 
 using namespace std;
+
 typedef SCORE_FLOAT_TYPE real_type;
 real_type _max_kahan_err = 0.0;
 
-real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<int, vector<int> > &reg_name);
+real_type ComputeProbScore(
+    vector<int> &rnode,
+    map<string,int> &rlibrary_readcount,
+    uint32_t type,
+    map<uint32_t,
+    map<string,int> > &x_readcounts,
+    uint32_t reference_len,
+    int fisher,
+    map<int,
+    vector<int> > &reg_name
+);
 
-string version ("BreakDancerMax-1.1r112");
-string options ("");
+namespace {
+    Options parseArguments(int argc, char** argv) {
+        int c;
+        Options opts;
+        while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:ep:tfd:g:lCahy:")) >= 0) {
+            switch(c) {
+                case 'o': opts.chr = optarg; break;
+                case 's': opts.min_len = atoi(optarg); break;
+                case 'c': opts.cut_sd = atoi(optarg); break;
+                case 'm': opts.max_sd = atoi(optarg); break;
+                case 'q': opts.min_map_qual = atoi(optarg); break;
+                case 'r': opts.min_read_pair = atoi(optarg); break;
+                case 'x': opts.seq_coverage_lim = atoi(optarg); break;
+                case 'b': opts.buffer_size = atoi(optarg); break;
+                case 'e': opts.learn_par = 1; break;
+                case 'p': opts.prior_prob = atof(optarg); break;
+                case 't': opts.transchr_rearrange = 1; break;
+                case 'f': opts.fisher = 1; break;
+                case 'd': opts.prefix_fastq = optarg; break;
+                case 'g': opts.dump_BED = optarg; break;
+                case 'l': opts.Illumina_long_insert = true; break;
+                //case 'C': opts.Illumina_to_SOLiD = true; break;
+                case 'a': opts.CN_lib = true; break;
+                case 'h': opts.print_AF = true; break;
+                case 'y': opts.score_threshold = atoi(optarg); break;
+                default: fprintf(stderr, "Unrecognized option '-%c'.\n", c);
+                    exit(1);
+            }
+        }
+
+        // FIXME: instead of printing out defaults, this will print any partial options
+        // specified. Let's try to get clearance to use boost::program_options or something
+        // more reasonable.
+        if(optind == argc) {
+            fprintf(stderr, "\nbreakdancer-max version %s (commit %s)\n\n", __g_prog_version, __g_commit_hash);
+            fprintf(stderr, "Usage: breakdancer-max <analysis.config>\n\n");
+            fprintf(stderr, "Options: \n");
+            fprintf(stderr, "       -o STRING       operate on a single chromosome [all chromosome]\n");
+            fprintf(stderr, "       -s INT          minimum length of a region [%d]\n", opts.min_len);
+            fprintf(stderr, "       -c INT          cutoff in unit of standard deviation [%d]\n", opts.cut_sd);
+            fprintf(stderr, "       -m INT          maximum SV size [%d]\n", opts.max_sd);
+            fprintf(stderr, "       -q INT          minimum alternative mapping quality [%d]\n", opts.min_map_qual);
+            fprintf(stderr, "       -r INT          minimum number of read pairs required to establish a connection [%d]\n", opts.min_read_pair);
+            fprintf(stderr, "       -x INT          maximum threshold of haploid sequence coverage for regions to be ignored [%d]\n", opts.seq_coverage_lim);
+            fprintf(stderr, "       -b INT          buffer size for building connection [%d]\n", opts.buffer_size);
+            //fprintf(stderr, "    -e INT    learn parameters from data before applying to SV detection [%d]\n", opts.learn_par);
+            //fprintf(stderr, "    -p FLOAT    prior probability of SV [%f]\n", prior_prob);
+            fprintf(stderr, "       -t              only detect transchromosomal rearrangement, by default off\n");
+            //fprintf(stderr, "    -f INT    use Fisher's method to combine P values from multiple library [%d]\n", opts.fisher);
+            fprintf(stderr, "       -d STRING       prefix of fastq files that SV supporting reads will be saved by library\n");
+            fprintf(stderr, "       -g STRING       dump SVs and supporting reads in BED format for GBrowse\n");
+            fprintf(stderr, "       -l              analyze Illumina long insert (mate-pair) library\n");
+            fprintf(stderr, "       -a              print out copy number and support reads per library rather than per bam, by default off\n");
+            fprintf(stderr, "       -h              print out Allele Frequency column, by default off\n");
+            fprintf(stderr, "       -y INT          output score filter [%d]\n", opts.score_threshold);
+            //fprintf(stderr, "    -C INT    change system default from Illumina to SOLiD [%d]\n", opts.Illumina_to_SOLiD);
+            //fprintf(stderr, "Version: %s\n", version);
+            fprintf(stderr, "\n");
+            exit(1);
+        }
+
+        opts.platform = opts.Illumina_to_SOLiD ? "solid" : "illumina";
+
+        return opts;
+    }
+}
 
 // main function
 int main(int argc, char *argv[]) {
-    int c;
-    string chr("0"); // chromosome
-    int min_len = 7;
-    int cut_sd = 3;
-    int max_sd = 1000000000;
-    int min_map_qual = 35;
-    int min_read_pair = 2;
-    int buffer_size = 100;//temporarily for debug
-    int learn_par = 0;//bool
-    float prior_prob = 0.001;
-    int transchr_rearrange = 0;//bool
-    int fisher = 0;//bool
-    int Illumina_long_insert = 0;// bool
-    int Illumina_to_SOLiD = 0;// bool
-    int seq_coverage_lim = 1000;
-    int CN_lib = 0;//bool
-    int print_AF = 0;//bool
-    int score_threshold = 30;// for output
-    string bam_file;
-    string prefix_fastq;
-    string dump_BED;
-
-    while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:ep:tfd:g:lCahy:")) >= 0){
-        switch(c) {
-            case 'o': chr = optarg; break;
-            case 's': min_len = atoi(optarg); break;
-            case 'c': cut_sd = atoi(optarg); break;
-            case 'm': max_sd = atoi(optarg); break;
-            case 'q': min_map_qual = atoi(optarg); break;
-            case 'r': min_read_pair = atoi(optarg); break;
-            case 'x': seq_coverage_lim = atoi(optarg); break;
-            case 'b': buffer_size = atoi(optarg); break;
-            case 'e': learn_par = 1; break;
-            case 'p': prior_prob = atof(optarg); break;
-            case 't': transchr_rearrange = 1; break;
-            case 'f': fisher = 1; break;
-            case 'd': prefix_fastq = optarg; break;
-            case 'g': dump_BED = optarg; break;
-            case 'l': Illumina_long_insert = 1; break;
-                //case 'C': Illumina_to_SOLiD = 1; break;
-            case 'a': CN_lib = 1; break;
-            case 'h': print_AF = 1; break;
-            case 'y': score_threshold = atoi(optarg); break;
-            default: fprintf(stderr, "Unrecognized option '-%c'.\n", c);
-                return 1;
-        }
-    }
-    if(optind == argc){
-
-        fprintf(stderr, "\nbreakdancer-max version %s (commit %s)\n\n", __g_prog_version, __g_commit_hash);
-        fprintf(stderr, "Usage: breakdancer-max <analysis.config>\n\n");
-        fprintf(stderr, "Options: \n");
-        fprintf(stderr, "       -o STRING       operate on a single chromosome [all chromosome]\n");
-        fprintf(stderr, "       -s INT          minimum length of a region [%d]\n", min_len);
-        fprintf(stderr, "       -c INT          cutoff in unit of standard deviation [%d]\n", cut_sd);
-        fprintf(stderr, "       -m INT          maximum SV size [%d]\n", max_sd);
-        fprintf(stderr, "       -q INT          minimum alternative mapping quality [%d]\n", min_map_qual);
-        fprintf(stderr, "       -r INT          minimum number of read pairs required to establish a connection [%d]\n", min_read_pair);
-        fprintf(stderr, "       -x INT          maximum threshold of haploid sequence coverage for regions to be ignored [%d]\n", seq_coverage_lim);
-        fprintf(stderr, "       -b INT          buffer size for building connection [%d]\n", buffer_size);
-        //fprintf(stderr, "    -e INT    learn parameters from data before applying to SV detection [%d]\n", learn_par);
-        //fprintf(stderr, "    -p FLOAT    prior probability of SV [%f]\n", prior_prob);
-        fprintf(stderr, "       -t              only detect transchromosomal rearrangement, by default off\n");
-        //fprintf(stderr, "    -f INT    use Fisher's method to combine P values from multiple library [%d]\n", fisher);
-        fprintf(stderr, "       -d STRING       prefix of fastq files that SV supporting reads will be saved by library\n");
-        fprintf(stderr, "       -g STRING       dump SVs and supporting reads in BED format for GBrowse\n");
-        fprintf(stderr, "       -l              analyze Illumina long insert (mate-pair) library\n");
-        fprintf(stderr, "       -a              print out copy number and support reads per library rather than per bam, by default off\n");
-        fprintf(stderr, "       -h              print out Allele Frequency column, by default off\n");
-        fprintf(stderr, "       -y INT          output score filter [%d]\n", score_threshold);
-        //fprintf(stderr, "    -C INT    change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
-        //fprintf(stderr, "Version: %s\n", version);
-        fprintf(stderr, "\n");
-        return 1;
-    }
-
-    string platform = Illumina_to_SOLiD?"solid":"illumina";
-    char options_[500];
-
-    sprintf(options_,"-s %d -c %d -m %d -q %d -r %d -b %d -e %d -p %f -t %d -f %d -l %d -a %d -h %d -y %d",
-        min_len,
-        cut_sd,
-        max_sd,
-        min_map_qual,
-        min_read_pair,
-        buffer_size,
-        learn_par,
-        prior_prob,
-        transchr_rearrange,
-        fisher,
-        Illumina_long_insert,
-        CN_lib,
-        print_AF,
-        score_threshold);
-
-    options = options_;
-    options += " -d " + prefix_fastq;
-    options += " -g " + dump_BED;
-    options += " -o " + chr;
+    Options opts = parseArguments(argc, argv);
 
     // define the map SVtype
     map<string, string> SVtype;
-    if(Illumina_long_insert == 1){
+    if(opts.Illumina_long_insert) {
         SVtype["1"] = "INV";
         SVtype["3"] = "INS";
         SVtype["4"] = "DEL";
@@ -143,17 +120,6 @@ int main(int argc, char *argv[]) {
         SVtype["32"] = "CTX";
     }
 
-    if(!dump_BED.empty()){
-        ofstream fh_BED;
-        fh_BED.open(dump_BED.c_str());
-        fh_BED.close();
-    }
-
-    if(!prefix_fastq.empty()){
-        ofstream fh_fastq;
-        fh_fastq.open(prefix_fastq.c_str());
-        fh_fastq.close();
-    }
     // AP; no AP
     map<string,string> exes;
     map<string,string> fmaps;
@@ -207,26 +173,25 @@ int main(int argc, char *argv[]) {
             readgroup_library[readgroup] = lib;
 
             string platform = get_from_line(line,"platform",1);
-            if(Illumina_to_SOLiD == 1)
+            if(opts.Illumina_to_SOLiD)
                 readgroup_platform[readgroup] = "solid";
             else
                 readgroup_platform[readgroup] = "illumina";
             readgroup_platform[readgroup] = platform;
 
             string exe = get_from_line(line,"exe",0);
-            if(prefix_fastq != ""){
+            if(!opts.prefix_fastq.empty()) {
                 //ofstream ReadsOut[lib.append("1")](prefix_fastq.append(lib).append(".1.fastq"), ios::out | ios::app | ios::binary);
-                ReadsOut[lib + "1"] = prefix_fastq + "." + lib + ".1.fastq";
+                ReadsOut[lib + "1"] = opts.prefix_fastq + "." + lib + ".1.fastq";
                 ofstream ReadsOutTmp;
                 ReadsOutTmp.open(ReadsOut[lib+"1"].c_str());
                 if(!ReadsOutTmp.is_open())
-                    cout << "unable to open " << prefix_fastq << "." << lib << ".1.fastq, check write permission\n";
-                //ofstream ReadsOut[lib.append("2")](prefix_fastq.append(lib).append(".2.fastq"), ios::out | ios::app | ios::binary);
+                    cout << "unable to open " << opts.prefix_fastq << "." << lib << ".1.fastq, check write permission\n";
                 ReadsOutTmp.close();
-                ReadsOut[lib + "2"] = prefix_fastq + "." + lib + ".2.fastq";
+                ReadsOut[lib + "2"] = opts.prefix_fastq + "." + lib + ".2.fastq";
                 ReadsOutTmp.open(ReadsOut[lib+"2"].c_str());
                 if(!ReadsOutTmp.is_open())
-                    cout << "unable to open " << prefix_fastq << "." << lib << ".2.fastq, check write permission\n";
+                    cout << "unable to open " << opts.prefix_fastq << "." << lib << ".2.fastq, check write permission\n";
                 ReadsOutTmp.close();
             }
 
@@ -241,8 +206,8 @@ int main(int argc, char *argv[]) {
                 mean = atof(mean_.c_str());
                 std = atof(std_.c_str());
                 if(!upper_.compare("NA") || !lower_.compare("NA")){
-                    upper = mean + std*float(cut_sd);
-                    lower = mean - std*float(cut_sd);
+                    upper = mean + std*float(opts.cut_sd);
+                    lower = mean - std*float(opts.cut_sd);
                     lower = lower > 0 ? lower : 0;//atof(lower_.c_str()) > 0 ? atof(lower_.c_str()):0; this is not related with lower_
                 }
                 else{
@@ -287,22 +252,22 @@ int main(int argc, char *argv[]) {
     map<string,string>::const_iterator ii;
     for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii)
     {
-         string exe = exes[(*ii).first];
-         cmds[exe] = 0;
-         if(exe.find("maq")!=string::npos)
-               format.insert(format.end(),1,"maq");
-         else
-               format.insert(format.end(),1,"sam");
-     }
-
-     if(learn_par == 1){
-         EstimatePriorParameters(fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, chr, cut_sd, min_map_qual, readgroup_platform, platform);
+        string exe = exes[(*ii).first];
+        cmds[exe] = 0;
+        if(exe.find("maq")!=string::npos)
+            format.insert(format.end(),1,"maq");
+        else
+            format.insert(format.end(),1,"sam");
     }
 
-     uint32_t reference_len = 1;
-     map<string, int> nreads;
+    if(opts.learn_par == 1){
+        EstimatePriorParameters(opts, fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, readgroup_platform);
+    }
+
+    uint32_t reference_len = 1;
+    map<string, int> nreads;
     map<string, int> nreads_;    // only to compute density per bam
-     int defined_all_readgroups = 1;
+    int defined_all_readgroups = 1;
 
     samfile_t *in = 0;
     char in_mode[5] = "", *fn_list = 0, *fn_ref = 0, *fn_rg = 0;
@@ -328,7 +293,7 @@ int main(int argc, char *argv[]) {
         string bam_name = (*ii).first;
 
 
-        if(chr.compare("0") == 0){
+        if(opts.chr == "0") {
             // no chromosome defined
             // convert the entire bam file
             if ((in = samopen(bam_name.c_str(), in_mode, fn_list)) == 0) {
@@ -343,7 +308,7 @@ int main(int argc, char *argv[]) {
             int r;
             while ((r = samread(in, b)) >= 0) {
                 int same_tid = (b->core.tid == b->core.mtid)? 1:0;
-                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
 
                 string ori = aln_return[1];
                 string readgroup = aln_return[0];
@@ -368,12 +333,12 @@ int main(int argc, char *argv[]) {
                 if(lib.length() == 0)
                     continue;
 
-                if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >=18){
+                if(b->core.qual > opts.min_map_qual && b->core.flag < 32 && b->core.flag >=18){
                     if(nreads.find(lib) == nreads.end())
                         nreads[lib] = 1;
                     else
                         nreads[lib] ++;
-                    if(CN_lib == 0){
+                    if(opts.CN_lib){
                         if(nreads_.find(libmaps[lib]) == nreads_.end())
                             nreads_[libmaps[lib]] = 1;
                         else
@@ -386,15 +351,15 @@ int main(int argc, char *argv[]) {
                         continue;
                 }
                 else{
-                    if(b->core.qual <= min_map_qual)
+                    if(b->core.qual <= opts.min_map_qual)
                         continue;
                 }
                 if(b->core.flag == 0)
                     continue;
-                if((transchr_rearrange && b->core.flag < 32) || b->core.flag >= 64)
+                if((opts.transchr_rearrange && b->core.flag < 32) || b->core.flag >= 64)
                     continue;
 
-                if(Illumina_long_insert){
+                if(opts.Illumina_long_insert){
                     if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
                         b->core.flag = 4;
                     if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
@@ -436,25 +401,20 @@ int main(int argc, char *argv[]) {
 
             // chromosome defined
             int tid, beg, end, n_off;
-            string chr_str = chr;
             pair64_t *off;
-            //bamFile fp;
-            off = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, &n_off);
+            off = ReadBamChr_prep(opts.chr, bam_name, &tid, &beg, &end, in, &n_off);
             if(off[0].u == uint64_t(-1) && off[0].v == uint64_t(-1)){
                 return 0;
             }
-            //bamFile fp = in->x.bam;
             uint64_t curr_off;
             int i, n_seeks;
             n_seeks = 0; i = -1; curr_off = 0;
 
             while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
-                //char *mtid;
-                //mtid = in->header->target_name[b->core.tid];
                 if(b->core.tid < 0 || b->core.tid != tid || b->core.pos >= end)
                     continue;
                 int same_tid = b->core.tid == b->core.mtid? 1:0;
-                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                 string ori = aln_return[1];
                 string readgroup = aln_return[0];
 
@@ -462,8 +422,6 @@ int main(int argc, char *argv[]) {
                 string p_chr_str(p_chr);
                 if(tmp_p_chr.compare(p_chr_str) == 0)
                     ref_len += b->core.pos - p_pos;
-                //if(strcmp(in->header->target_name[b->core.tid], p_chr) == 0)
-                //    ref_len += b->core.pos - p_pos;
                 p_pos = b->core.pos;
                 p_chr = in->header->target_name[b->core.tid];
                 string lib;
@@ -476,12 +434,12 @@ int main(int argc, char *argv[]) {
                 if(lib.length() == 0)
                     continue;
 
-                if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
+                if(b->core.qual > opts.min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
                     if(nreads.find(lib) == nreads.end())
                         nreads[lib] = 1;
                     else
                         nreads[lib] ++;
-                    if(CN_lib == 0){
+                    if(opts.CN_lib == 0){
                         if(nreads_.find(libmaps[lib]) == nreads_.end())
                             nreads_[libmaps[lib]] = 1;
                         else
@@ -494,15 +452,15 @@ int main(int argc, char *argv[]) {
                         continue;
                 }
                 else{
-                    if(b->core.qual <= min_map_qual)
+                    if(b->core.qual <= opts.min_map_qual)
                         continue;
                 }
                 if(b->core.flag == 0)
                     continue;
-                if((transchr_rearrange && b->core.flag < 32) || b->core.flag >= 64)
+                if((opts.transchr_rearrange && b->core.flag < 32) || b->core.flag >= 64)
                     continue;
 
-                if(Illumina_long_insert){
+                if(opts.Illumina_long_insert){
                     if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
                         b->core.flag = 4;
                     if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
@@ -550,9 +508,11 @@ int main(int argc, char *argv[]) {
     float total_phy_cov = 0;
     float total_seq_cov = 0;
 
-    cout << "#Software: " << version << endl;
+    cout << "#Software: " << __g_prog_version << endl;
     cout << "#Command: ";
-    for(int i=0;i<argc;i++){cout << argv[i] << " ";}
+    for(int i=0;i<argc;i++) {
+        cout << argv[i] << " ";
+    }
     cout << endl;
     cout << "#Library Statistics:" << endl;
     map<string,int>::const_iterator nreads_ii;
@@ -564,7 +524,7 @@ int main(int argc, char *argv[]) {
         total_seq_cov += sequence_coverage;
 
         // compute read_density
-        if(CN_lib == 1){
+        if(opts.CN_lib == 1){
             if(nreads.find(lib) != nreads.end())
                 read_density[lib] = float(nreads[lib])/float(reference_len);
             else{
@@ -611,9 +571,9 @@ int main(int argc, char *argv[]) {
     }
 
     printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib");
-    if(print_AF == 1)
+    if(opts.print_AF == 1)
         printf("\tAllele_frequency");
-    if(CN_lib == 0){
+    if(opts.CN_lib == 0){
         for(vector<string>::const_iterator it_map = maps.begin(); it_map != maps.end(); it_map++){
             size_t tmp = (*it_map).rfind("/");
             if(tmp!=string::npos)
@@ -651,7 +611,7 @@ int main(int argc, char *argv[]) {
     }
     //################# node index here ###################
     else if(n == 1){
-        if(chr.compare("0") == 0){
+        if(opts.chr == "0") {
             samfile_t *in;
             if ((in = samopen(maps[0].c_str(), in_mode, fn_list)) == 0) {
                 fprintf(stderr, "[main_samview] fail to open file for reading.\n");
@@ -666,14 +626,8 @@ int main(int argc, char *argv[]) {
             while ((r = samread(in, b)) >= 0) {
                 if(b->core.tid < 0)
                     continue;
-                //char *mtid;
-                //mtid = in->header->target_name[b->core.mtid];
-                /*if(b->core.pos == 14690951){
-                 int k = 0;
-                 k++;
-                 }*/
                 int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                 string readgroup = aln_return[0];
                 string ori = aln_return[1];
                 string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -688,40 +642,40 @@ int main(int argc, char *argv[]) {
                         read,
                         regs,
                         &idx_buff,
-                        buffer_size,
+                        opts.buffer_size,
                         &nnormal_reads,
-                        min_len,
+                        opts.min_len,
                         &normal_switch,
                         &reg_idx,
-                        transchr_rearrange,
-                        min_map_qual,
-                        Illumina_long_insert,
-                        prefix_fastq,
+                        opts.transchr_rearrange,
+                        opts.min_map_qual,
+                        opts.Illumina_long_insert,
+                        opts.prefix_fastq,
                         x_readcounts,
                         reference_len,
-                        fisher,
+                        opts.fisher,
                         ReadsOut,
                         mean_insertsize,
                         SVtype,
                         mapQual,
                         uppercutoff,
                         lowercutoff,
-                        max_sd,
+                        opts.max_sd,
                         d,
-                        min_read_pair,
-                        dump_BED,
+                        opts.min_read_pair,
+                        opts.dump_BED,
                         &max_readlen,
                         ori,
                         in,
-                        seq_coverage_lim,
+                        opts.seq_coverage_lim,
                         &ntotal_nucleotides,
                         read_density,
                         possible_fake_data,
-                        CN_lib,
+                        opts.CN_lib,
                         libmaps,
                         maps,
-                        print_AF,
-                        score_threshold
+                        opts.print_AF,
+                        opts.score_threshold
                     );
                 }
             }
@@ -733,37 +687,37 @@ int main(int argc, char *argv[]) {
                     read,
                     regs,
                     &idx_buff,
-                    buffer_size,
+                    opts.buffer_size,
                     &nnormal_reads,
-                    min_len,
+                    opts.min_len,
                     &reg_idx,
-                    transchr_rearrange,
-                    min_map_qual,
-                    Illumina_long_insert,
-                    prefix_fastq,
+                    opts.transchr_rearrange,
+                    opts.min_map_qual,
+                    opts.Illumina_long_insert,
+                    opts.prefix_fastq,
                     x_readcounts,
                     reference_len,
-                    fisher,
+                    opts.fisher,
                     ReadsOut,
                     mean_insertsize,
                     SVtype,
                     mapQual,
                     uppercutoff,
                     lowercutoff,
-                    max_sd,
+                    opts.max_sd,
                     d,
-                    min_read_pair,
-                    dump_BED,
+                    opts.min_read_pair,
+                    opts.dump_BED,
                     &max_readlen,
                     in,
-                    seq_coverage_lim,
+                    opts.seq_coverage_lim,
                     &ntotal_nucleotides,
                     read_density,
-                    CN_lib,
+                    opts.CN_lib,
                     libmaps,
                     maps,
-                    print_AF,
-                    score_threshold
+                    opts.print_AF,
+                    opts.score_threshold
                 );
             }
 
@@ -774,20 +728,20 @@ int main(int argc, char *argv[]) {
                 regs,
                 x_readcounts,
                 reference_len,
-                fisher,
-                min_read_pair,
-                dump_BED,
+                opts.fisher,
+                opts.min_read_pair,
+                opts.dump_BED,
                 max_readlen,
-                prefix_fastq,
+                opts.prefix_fastq,
                 ReadsOut,
                 SVtype,
                 mean_insertsize,
                 in,
                 read_density,
-                CN_lib,
+                opts.CN_lib,
                 maps,
-                print_AF,
-                score_threshold,
+                opts.print_AF,
+                opts.score_threshold,
                 libmaps
             );
             bam_destroy1(b);
@@ -797,8 +751,6 @@ int main(int argc, char *argv[]) {
             // totally different from the perl version; use customized samtools instead
             samfile_t *in;
             int tid, beg, end, n_off;
-
-            string chr_str = chr;
 
             pair64_t *off;
             uint64_t curr_off = 0;
@@ -814,7 +766,7 @@ int main(int argc, char *argv[]) {
             bamFile fp;
             fp = in->x.bam;
 
-            off = ReadBamChr_prep(chr_str, maps[0], &tid, &beg, &end, in, &n_off);
+            off = ReadBamChr_prep(opts.chr, maps[0], &tid, &beg, &end, in, &n_off);
 
             bam1_t *b = bam_init1();
             for(;;){
@@ -825,7 +777,7 @@ int main(int argc, char *argv[]) {
                     continue;
                 if(b->core.tid == tid && b->core.pos < end){
                     int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                    vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+                    vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                     string ori = aln_return[1];
                     string readgroup = aln_return[0];
                     string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -839,40 +791,40 @@ int main(int argc, char *argv[]) {
                             read,
                             regs,
                             &idx_buff,
-                            buffer_size,
+                            opts.buffer_size,
                             &nnormal_reads,
-                            min_len,
+                            opts.min_len,
                             &normal_switch,
                             &reg_idx,
-                            transchr_rearrange,
-                            min_map_qual,
-                            Illumina_long_insert,
-                            prefix_fastq,
+                            opts.transchr_rearrange,
+                            opts.min_map_qual,
+                            opts.Illumina_long_insert,
+                            opts.prefix_fastq,
                             x_readcounts,
                             reference_len,
-                            fisher,
+                            opts.fisher,
                             ReadsOut,
                             mean_insertsize,
                             SVtype,
                             mapQual,
                             uppercutoff,
                             lowercutoff,
-                            max_sd,
+                            opts.max_sd,
                             d,
-                            min_read_pair,
-                            dump_BED,
+                            opts.min_read_pair,
+                            opts.dump_BED,
                             &max_readlen,
                             ori,
                             in,
-                            seq_coverage_lim,
+                            opts.seq_coverage_lim,
                             &ntotal_nucleotides,
                             read_density,
                             possible_fake_data,
-                            CN_lib,
+                            opts.CN_lib,
                             libmaps,
                             maps,
-                            print_AF,
-                            score_threshold
+                            opts.print_AF,
+                            opts.score_threshold
                         );
                     }
                     /*else{
@@ -891,37 +843,37 @@ int main(int argc, char *argv[]) {
                     read,
                     regs,
                     &idx_buff,
-                    buffer_size,
+                    opts.buffer_size,
                     &nnormal_reads,
-                    min_len,
+                    opts.min_len,
                     &reg_idx,
-                    transchr_rearrange,
-                    min_map_qual,
-                    Illumina_long_insert,
-                    prefix_fastq,
+                    opts.transchr_rearrange,
+                    opts.min_map_qual,
+                    opts.Illumina_long_insert,
+                    opts.prefix_fastq,
                     x_readcounts,
                     reference_len,
-                    fisher,
+                    opts.fisher,
                     ReadsOut,
                     mean_insertsize,
                     SVtype,
                     mapQual,
                     uppercutoff,
                     lowercutoff,
-                    max_sd,
+                    opts.max_sd,
                     d,
-                    min_read_pair,
-                    dump_BED,
+                    opts.min_read_pair,
+                    opts.dump_BED,
                     &max_readlen,
                     in,
-                    seq_coverage_lim,
+                    opts.seq_coverage_lim,
                     &ntotal_nucleotides,
                     read_density,
-                    CN_lib,
+                    opts.CN_lib,
                     libmaps,
                     maps,
-                    print_AF,
-                    score_threshold
+                    opts.print_AF,
+                    opts.score_threshold
                 );
             }
             buildConnection(
@@ -931,20 +883,20 @@ int main(int argc, char *argv[]) {
                 regs,
                 x_readcounts,
                 reference_len,
-                fisher,
-                min_read_pair,
-                dump_BED,
+                opts.fisher,
+                opts.min_read_pair,
+                opts.dump_BED,
                 max_readlen,
-                prefix_fastq,
+                opts.prefix_fastq,
                 ReadsOut,
                 SVtype,
                 mean_insertsize,
                 in,
                 read_density,
-                CN_lib,
+                opts.CN_lib,
                 maps,
-                print_AF,
-                score_threshold,
+                opts.print_AF,
+                opts.score_threshold,
                 libmaps
             );
             bam_destroy1(b);
@@ -966,7 +918,7 @@ int main(int argc, char *argv[]) {
         in = new samfile_t *[n];
         uint64_t idx = 0;
 
-        if(chr.compare("0") == 0 ) {
+        if(opts.chr == "0") {
              // open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu) samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - maq mapmerge
                // dig into merge samtools code and utilize what we needed
 
@@ -979,7 +931,7 @@ int main(int argc, char *argv[]) {
                         //char *mtid;
                         //mtid = in->header->target_name[b->core.tid];
                         int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                         string ori = aln_return[1];
                         string readgroup = aln_return[0];
                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -995,40 +947,40 @@ int main(int argc, char *argv[]) {
                                 read,
                                 regs,
                                 &idx_buff,
-                                buffer_size,
+                                opts.buffer_size,
                                 &nnormal_reads,
-                                min_len,
+                                opts.min_len,
                                 &normal_switch,
                                 &reg_idx,
-                                transchr_rearrange,
-                                min_map_qual,
-                                Illumina_long_insert,
-                                prefix_fastq,
+                                opts.transchr_rearrange,
+                                opts.min_map_qual,
+                                opts.Illumina_long_insert,
+                                opts.prefix_fastq,
                                 x_readcounts,
                                 reference_len,
-                                fisher,
+                                opts.fisher,
                                 ReadsOut,
                                 mean_insertsize,
                                 SVtype,
                                 mapQual,
                                 uppercutoff,
                                 lowercutoff,
-                                max_sd,
+                                opts.max_sd,
                                 d,
-                                min_read_pair,
-                                dump_BED,
+                                opts.min_read_pair,
+                                opts.dump_BED,
                                 &max_readlen,
                                 ori,
                                 in[heap->i],
-                                seq_coverage_lim,
+                                opts.seq_coverage_lim,
                                 &ntotal_nucleotides,
                                 read_density,
                                 possible_fake_data,
-                                CN_lib,
+                                opts.CN_lib,
                                 libmaps,
                                 maps,
-                                print_AF,
-                                score_threshold
+                                opts.print_AF,
+                                opts.score_threshold
                             );
                         }
                         /*else{
@@ -1079,37 +1031,37 @@ int main(int argc, char *argv[]) {
                     read,
                     regs,
                     &idx_buff,
-                    buffer_size,
+                    opts.buffer_size,
                     &nnormal_reads,
-                    min_len,
+                    opts.min_len,
                     &reg_idx,
-                    transchr_rearrange,
-                    min_map_qual,
-                    Illumina_long_insert,
-                    prefix_fastq,
+                    opts.transchr_rearrange,
+                    opts.min_map_qual,
+                    opts.Illumina_long_insert,
+                    opts.prefix_fastq,
                     x_readcounts,
                     reference_len,
-                    fisher,
+                    opts.fisher,
                     ReadsOut,
                     mean_insertsize,
                     SVtype,
                     mapQual,
                     uppercutoff,
                     lowercutoff,
-                    max_sd,
+                    opts.max_sd,
                     d,
-                    min_read_pair,
-                    dump_BED,
+                    opts.min_read_pair,
+                    opts.dump_BED,
                     &max_readlen,
                     in[0],
-                    seq_coverage_lim,
+                    opts.seq_coverage_lim,
                     &ntotal_nucleotides,
                     read_density,
-                    CN_lib,
+                    opts.CN_lib,
                     libmaps,
                     maps,
-                    print_AF,
-                    score_threshold
+                    opts.print_AF,
+                    opts.score_threshold
                     );
             }
             buildConnection(
@@ -1119,20 +1071,20 @@ int main(int argc, char *argv[]) {
                 regs,
                 x_readcounts,
                 reference_len,
-                fisher,
-                min_read_pair,
-                dump_BED,
+                opts.fisher,
+                opts.min_read_pair,
+                opts.dump_BED,
                 max_readlen,
-                prefix_fastq,
+                opts.prefix_fastq,
                 ReadsOut,
                 SVtype,
                 mean_insertsize,
                 in[0],
                 read_density,
-                CN_lib,
+                opts.CN_lib,
                 maps,
-                print_AF,
-                score_threshold,
+                opts.print_AF,
+                opts.score_threshold,
                 libmaps
             );
         }
@@ -1149,8 +1101,6 @@ int main(int argc, char *argv[]) {
             //samfile_t **in;
             //in = new samfile_t *[n];
 
-
-            string chr_str = chr;//itos(chr);
 
             pair64_t **off;
             off = new pair64_t *[n];
@@ -1180,7 +1130,7 @@ int main(int argc, char *argv[]) {
                     return 0;
                 }
                 fp[i] = in[i]->x.bam;
-                off[i] = ReadBamChr_prep(chr_str, big_bam[i], &tid[i], &beg[i], &end[i], in[i], &n_off[i]);
+                off[i] = ReadBamChr_prep(opts.chr, big_bam[i], &tid[i], &beg[i], &end[i], in[i], &n_off[i]);
                 if(fp[i] == 0){
                     cout << "[bam_merge_core] fail to open file " << big_bam[i] << "\n";
                     for(int j = 0; j < i; ++j)
@@ -1203,7 +1153,6 @@ int main(int argc, char *argv[]) {
             ks_heapmake(heap, n, heap);
             int merge_tmp = 1;
 
-            //int merge_tmp = MergeBamsChr_prep(big_bam, n, fp, heap, chr_str, tid, beg, end, in, off, n_off, &idx);
             if(merge_tmp){
                 bam1_t *b = heap->b;
                 int skip_previous = 0;
@@ -1213,7 +1162,7 @@ int main(int argc, char *argv[]) {
                     if(skip_previous == 0){
                         if( b->core.tid == tid[heap->i] && b->core.pos < end[heap->i] ){
                             int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, platform);
+                            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                             string ori = aln_return[1];
                             string readgroup = aln_return[0];
                             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -1229,40 +1178,40 @@ int main(int argc, char *argv[]) {
                                     read,
                                     regs,
                                     &idx_buff,
-                                    buffer_size,
+                                    opts.buffer_size,
                                     &nnormal_reads,
-                                    min_len,
+                                    opts.min_len,
                                     &normal_switch,
                                     &reg_idx,
-                                    transchr_rearrange,
-                                    min_map_qual,
-                                    Illumina_long_insert,
-                                    prefix_fastq,
+                                    opts.transchr_rearrange,
+                                    opts.min_map_qual,
+                                    opts.Illumina_long_insert,
+                                    opts.prefix_fastq,
                                     x_readcounts,
                                     reference_len,
-                                    fisher,
+                                    opts.fisher,
                                     ReadsOut,
                                     mean_insertsize,
                                     SVtype,
                                     mapQual,
                                     uppercutoff,
                                     lowercutoff,
-                                    max_sd,
+                                    opts.max_sd,
                                     d,
-                                    min_read_pair,
-                                    dump_BED,
+                                    opts.min_read_pair,
+                                    opts.dump_BED,
                                     &max_readlen,
                                     ori,
                                     in[0],
-                                    seq_coverage_lim,
+                                    opts.seq_coverage_lim,
                                     &ntotal_nucleotides,
                                     read_density,
                                     possible_fake_data,
-                                    CN_lib,
+                                    opts.CN_lib,
                                     libmaps,
                                     maps,
-                                    print_AF,
-                                    score_threshold
+                                    opts.print_AF,
+                                    opts.score_threshold
                                 );
                             }
                         }
@@ -1328,37 +1277,37 @@ int main(int argc, char *argv[]) {
                     read,
                     regs,
                     &idx_buff,
-                    buffer_size,
+                    opts.buffer_size,
                     &nnormal_reads,
-                    min_len,
+                    opts.min_len,
                     &reg_idx,
-                    transchr_rearrange,
-                    min_map_qual,
-                    Illumina_long_insert,
-                    prefix_fastq,
+                    opts.transchr_rearrange,
+                    opts.min_map_qual,
+                    opts.Illumina_long_insert,
+                    opts.prefix_fastq,
                     x_readcounts,
                     reference_len,
-                    fisher,
+                    opts.fisher,
                     ReadsOut,
                     mean_insertsize,
                     SVtype,
                     mapQual,
                     uppercutoff,
                     lowercutoff,
-                    max_sd,
+                    opts.max_sd,
                     d,
-                    min_read_pair,
-                    dump_BED,
+                    opts.min_read_pair,
+                    opts.dump_BED,
                     &max_readlen,
                     in[0],
-                    seq_coverage_lim,
+                    opts.seq_coverage_lim,
                     &ntotal_nucleotides,
                     read_density,
-                    CN_lib,
+                    opts.CN_lib,
                     libmaps,
                     maps,
-                    print_AF,
-                    score_threshold
+                    opts.print_AF,
+                    opts.score_threshold
                     );
             }
             buildConnection(
@@ -1368,20 +1317,20 @@ int main(int argc, char *argv[]) {
                 regs,
                 x_readcounts,
                 reference_len,
-                fisher,
-                min_read_pair,
-                dump_BED,
+                opts.fisher,
+                opts.min_read_pair,
+                opts.dump_BED,
                 max_readlen,
-                prefix_fastq,
+                opts.prefix_fastq,
                 ReadsOut,
                 SVtype,
                 mean_insertsize,
                 in[0],
                 read_density,
-                CN_lib,
+                opts.CN_lib,
                 maps,
-                print_AF,
-                score_threshold,
+                opts.print_AF,
+                opts.score_threshold,
                 libmaps
             );
 
@@ -1408,7 +1357,7 @@ int main(int argc, char *argv[]) {
 
     cerr << "Max Kahan error: " << _max_kahan_err << "\n";
 
-     return 0;
+    return 0;
 }
 
 // to take the rest of the reads and trying to pair up
@@ -2231,10 +2180,8 @@ void buildConnection(
                             sv_pos1 = sv_pos1 + 1;
                             sv_pos2 = sv_pos2 + 1;
 
-                            //cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
                             if(PhredQ > score_threshold){
                                 cout << in->header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << in->header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag];// << endl;
-                                //printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
                                 if(print_AF == 1)
                                     cout <<  "\t" << AF;
                                 if(CN_lib == 0 && flag.compare("32")!=0){
@@ -2349,7 +2296,18 @@ void buildConnection(
 }
 
 // estimate prior parameters (not being used now)
-void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, string chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform, string platform){
+void EstimatePriorParameters(
+    Options const& opts,
+    map<string,string> &fmaps,
+    map<string,string> &readgroup_library,
+    map<string, float> &mean_insertsize,
+    map<string, float> &std_insertsize,
+    map<string,float> &uppercutoff,
+    map<string,float> &lowercutoff,
+    map<string,float> &readlens,
+    map<string, string> &readgroup_platform
+    )
+{
     map<string,float> es_means;
     map<string,float> es_stds;
     map<string,float> es_readlens;
@@ -2379,10 +2337,9 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
         // read the bam file by a chromosome
         //samfile_t *in;
         int tid, beg, end, n_off;
-        string chr_str = chr;
         pair64_t *off;
         //bamFile fp;
-        off = ReadBamChr_prep(chr_str, bam_name, &tid, &beg, &end, in, &n_off);
+        off = ReadBamChr_prep(opts.chr, bam_name, &tid, &beg, &end, in, &n_off);
         //bamFile fp = in->x.bam;
         uint64_t curr_off;
         int i, n_seeks;
@@ -2393,7 +2350,7 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
             //char *mtid;
             //mtid = in->header->target_name[b->core.tid];
             int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
-            vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, platform);
+            vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, opts.platform);
             string ori = aln_return[1];
             string readgroup = aln_return[0];
 
@@ -2401,13 +2358,13 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
             string lib = readgroup.empty()?(*ii).second:readgroup_library[readgroup];// when multiple libraries are in a BAM file
             if(lib.empty())
                 continue;
-            string chr_cmp(in->header->target_name[b->core.tid]);
-            if(chr.compare("0") && chr_cmp.compare(chr))// analyze 1 chromosome
+            // analyze 1 chromosome
+            if(opts.chr != "0" && opts.chr != in->header->target_name[b->core.tid])
                 continue;
             //if(readlen_stat.find(lib) == readlen_stat.end())    // don't need to issue a new stat
             //readlen_stat[lib] = ; // Statistics::Descriptive::Sparse->new() // don't need to issue a new stat
             readlen_stat[lib].push_back(b->core.isize);
-            if(b->core.qual <= min_map_qual)    // skip low quality mapped reads
+            if(b->core.qual <= opts.min_map_qual)    // skip low quality mapped reads
                 continue;
             if((b->core.flag != 18 && b->core.flag != 20) || b->core.isize <= 0)
                 continue;
@@ -2423,8 +2380,8 @@ void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &read
         //double mean = res/insert_stat[lib].size();
         float mean_insert = mean(insert_stat[lib]);
         float std_insert = standard_deviation(insert_stat[lib],mean_insert);
-        float uppercutoff = mean_insert + std_insert*cut_sd;
-        float lowercutoff = mean_insert - std_insert*cut_sd;
+        float uppercutoff = mean_insert + std_insert*opts.cut_sd;
+        float lowercutoff = mean_insert - std_insert*opts.cut_sd;
         es_readlens[lib] = mean(readlen_stat[lib]);
         es_means[lib] = mean_insert;
         es_stds[lib] = std_insert;

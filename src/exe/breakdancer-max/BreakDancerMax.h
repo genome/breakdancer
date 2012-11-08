@@ -27,6 +27,51 @@ using namespace std;
 #define LZERO -99
 #define ZERO exp(LZERO)
 
+struct Options {
+    Options()
+        : chr("0")
+        , min_len(7)
+        , cut_sd(3)
+        , max_sd(1000000000)
+        , min_map_qual(35)
+        , min_read_pair(2)
+        , seq_coverage_lim(1000)
+        , buffer_size(100)
+        , learn_par(0)
+        , prior_prob(0.001)
+        , transchr_rearrange(0)
+        , fisher(0)
+        , Illumina_long_insert(false)
+        , Illumina_to_SOLiD(false)
+        , CN_lib(false)
+        , print_AF(false)
+        , score_threshold(30)
+    {
+    }
+
+    string chr;
+    int min_len;
+    int cut_sd;
+    int max_sd;
+    int min_map_qual;
+    int min_read_pair;
+    int seq_coverage_lim;
+    int buffer_size;
+    int learn_par;
+    float prior_prob;
+    int transchr_rearrange;
+    int fisher;
+    bool Illumina_long_insert;
+    bool Illumina_to_SOLiD;
+    bool CN_lib;
+    bool print_AF;
+    int score_threshold;
+    string bam_file;
+    string prefix_fastq;
+    string dump_BED;
+    string platform;
+};
+
 struct BreakDancerData {
     BreakDancerData()
         : begins(-1)
@@ -169,7 +214,17 @@ void buildConnection(
     map<string, string> libmaps // FIXME: should be constref
 );
 
-void EstimatePriorParameters(map<string,string> &fmaps, map<string,string> &readgroup_library, map<string, float> &mean_insertsize, map<string, float> &std_insertsize, map<string,float> &uppercutoff, map<string,float> &lowercutoff, map<string,float> &readlens, string chr, int cut_sd, int min_map_qual, map<string, string> &readgroup_platform, string platform);
+void EstimatePriorParameters(
+    Options const& opts,
+    map<string,string> &fmaps,
+    map<string,string> &readgroup_library,
+    map<string, float> &mean_insertsize,
+    map<string, float> &std_insertsize,
+    map<string,float> &uppercutoff,
+    map<string,float> &lowercutoff,
+    map<string,float> &readlens,
+    map<string, string> &readgroup_platform
+);
 
 float mean(vector<int> &stat);
 
