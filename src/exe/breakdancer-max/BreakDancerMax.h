@@ -57,7 +57,7 @@ struct AnalysisData {
 	
 
 /*template <class T>
-T from_string(const std::string& s, 
+T from_string(const std::string& s,
                  std::ios_base& (*f)(std::ios_base&))*/
 void do_break_func(
     vector<vector<string> > const& reg_seq,
