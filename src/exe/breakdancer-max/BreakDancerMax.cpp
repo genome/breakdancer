@@ -45,10 +45,10 @@ namespace {
                 case 'r': opts.min_read_pair = atoi(optarg); break;
                 case 'x': opts.seq_coverage_lim = atoi(optarg); break;
                 case 'b': opts.buffer_size = atoi(optarg); break;
-                case 'e': opts.learn_par = 1; break;
+                case 'e': opts.learn_par = true; break;
                 case 'p': opts.prior_prob = atof(optarg); break;
-                case 't': opts.transchr_rearrange = 1; break;
-                case 'f': opts.fisher = 1; break;
+                case 't': opts.transchr_rearrange = true; break;
+                case 'f': opts.fisher = true; break;
                 case 'd': opts.prefix_fastq = optarg; break;
                 case 'g': opts.dump_BED = optarg; break;
                 case 'l': opts.Illumina_long_insert = true; break;
@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
             format.insert(format.end(),1,"sam");
     }
 
-    if(opts.learn_par == 1){
+    if(opts.learn_par) {
         EstimatePriorParameters(opts, fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, readgroup_platform);
     }
 
@@ -633,7 +633,8 @@ int main(int argc, char *argv[]) {
                 string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 
                 if(!library.empty()){
-                    Analysis (
+                    Analysis(
+                        opts,
                         bdancer,
                         library,
                         b,
@@ -642,45 +643,32 @@ int main(int argc, char *argv[]) {
                         read,
                         regs,
                         &idx_buff,
-                        opts.buffer_size,
                         &nnormal_reads,
-                        opts.min_len,
                         &normal_switch,
                         &reg_idx,
-                        opts.transchr_rearrange,
-                        opts.min_map_qual,
-                        opts.Illumina_long_insert,
-                        opts.prefix_fastq,
                         x_readcounts,
                         reference_len,
-                        opts.fisher,
                         ReadsOut,
                         mean_insertsize,
                         SVtype,
                         mapQual,
                         uppercutoff,
                         lowercutoff,
-                        opts.max_sd,
                         d,
-                        opts.min_read_pair,
-                        opts.dump_BED,
                         &max_readlen,
                         ori,
                         in,
-                        opts.seq_coverage_lim,
                         &ntotal_nucleotides,
                         read_density,
                         possible_fake_data,
-                        opts.CN_lib,
                         libmaps,
-                        maps,
-                        opts.print_AF,
-                        opts.score_threshold
+                        maps
                     );
                 }
             }
             if(reg_seq.size() != 0){
                 do_break_func(
+                    opts,
                     bdancer,
                     reg_seq,
                     reg_name,
@@ -782,7 +770,8 @@ int main(int argc, char *argv[]) {
                     string readgroup = aln_return[0];
                     string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                     if(!library.empty()){
-                        Analysis (
+                        Analysis(
+                            opts,
                             bdancer,
                             library,
                             b,
@@ -791,40 +780,26 @@ int main(int argc, char *argv[]) {
                             read,
                             regs,
                             &idx_buff,
-                            opts.buffer_size,
                             &nnormal_reads,
-                            opts.min_len,
                             &normal_switch,
                             &reg_idx,
-                            opts.transchr_rearrange,
-                            opts.min_map_qual,
-                            opts.Illumina_long_insert,
-                            opts.prefix_fastq,
                             x_readcounts,
                             reference_len,
-                            opts.fisher,
                             ReadsOut,
                             mean_insertsize,
                             SVtype,
                             mapQual,
                             uppercutoff,
                             lowercutoff,
-                            opts.max_sd,
                             d,
-                            opts.min_read_pair,
-                            opts.dump_BED,
                             &max_readlen,
                             ori,
                             in,
-                            opts.seq_coverage_lim,
                             &ntotal_nucleotides,
                             read_density,
                             possible_fake_data,
-                            opts.CN_lib,
                             libmaps,
-                            maps,
-                            opts.print_AF,
-                            opts.score_threshold
+                            maps
                         );
                     }
                     /*else{
@@ -837,6 +812,7 @@ int main(int argc, char *argv[]) {
             }
             if(reg_seq.size() != 0){
                 do_break_func(
+                    opts,
                     bdancer,
                     reg_seq,
                     reg_name,
@@ -939,6 +915,7 @@ int main(int argc, char *argv[]) {
                         //continue;
                         if(!library.empty()){
                             Analysis(
+                                opts,
                                 bdancer,
                                 library,
                                 b,
@@ -947,40 +924,26 @@ int main(int argc, char *argv[]) {
                                 read,
                                 regs,
                                 &idx_buff,
-                                opts.buffer_size,
                                 &nnormal_reads,
-                                opts.min_len,
                                 &normal_switch,
                                 &reg_idx,
-                                opts.transchr_rearrange,
-                                opts.min_map_qual,
-                                opts.Illumina_long_insert,
-                                opts.prefix_fastq,
                                 x_readcounts,
                                 reference_len,
-                                opts.fisher,
                                 ReadsOut,
                                 mean_insertsize,
                                 SVtype,
                                 mapQual,
                                 uppercutoff,
                                 lowercutoff,
-                                opts.max_sd,
                                 d,
-                                opts.min_read_pair,
-                                opts.dump_BED,
                                 &max_readlen,
                                 ori,
                                 in[heap->i],
-                                opts.seq_coverage_lim,
                                 &ntotal_nucleotides,
                                 read_density,
                                 possible_fake_data,
-                                opts.CN_lib,
                                 libmaps,
-                                maps,
-                                opts.print_AF,
-                                opts.score_threshold
+                                maps
                             );
                         }
                         /*else{
@@ -1025,6 +988,7 @@ int main(int argc, char *argv[]) {
             //cout << "build connection:" << endl;
             if(reg_seq.size() != 0){
                 do_break_func(
+                    opts,
                     bdancer,
                     reg_seq,
                     reg_name,
@@ -1170,6 +1134,7 @@ int main(int argc, char *argv[]) {
                             //continue;
                             if(!library.empty()){
                                 Analysis(
+                                    opts,
                                     bdancer,
                                     library,
                                     b,
@@ -1178,40 +1143,26 @@ int main(int argc, char *argv[]) {
                                     read,
                                     regs,
                                     &idx_buff,
-                                    opts.buffer_size,
                                     &nnormal_reads,
-                                    opts.min_len,
                                     &normal_switch,
                                     &reg_idx,
-                                    opts.transchr_rearrange,
-                                    opts.min_map_qual,
-                                    opts.Illumina_long_insert,
-                                    opts.prefix_fastq,
                                     x_readcounts,
                                     reference_len,
-                                    opts.fisher,
                                     ReadsOut,
                                     mean_insertsize,
                                     SVtype,
                                     mapQual,
                                     uppercutoff,
                                     lowercutoff,
-                                    opts.max_sd,
                                     d,
-                                    opts.min_read_pair,
-                                    opts.dump_BED,
                                     &max_readlen,
                                     ori,
                                     in[0],
-                                    opts.seq_coverage_lim,
                                     &ntotal_nucleotides,
                                     read_density,
                                     possible_fake_data,
-                                    opts.CN_lib,
                                     libmaps,
-                                    maps,
-                                    opts.print_AF,
-                                    opts.score_threshold
+                                    maps
                                 );
                             }
                         }
@@ -1271,6 +1222,7 @@ int main(int argc, char *argv[]) {
             }
             if(reg_seq.size() != 0){
                 do_break_func(
+                    opts,
                     bdancer,
                     reg_seq,
                     reg_name,
@@ -1362,6 +1314,7 @@ int main(int argc, char *argv[]) {
 
 // to take the rest of the reads and trying to pair up
 void do_break_func(
+    Options const& opts,
     BreakDancerData& bdancer,
     vector<vector<string> > const& reg_seq,
     map<int, vector<int> >& reg_name,
@@ -1467,6 +1420,7 @@ void do_break_func(
 
 // for each read, check if it is time to break and pair up the reads
 void Analysis (
+    Options const& opts,
     BreakDancerData& bdancer,
     string lib,
     bam1_t *b,
@@ -1475,44 +1429,45 @@ void Analysis (
     map<string, vector<int> > &read,
     map<int, vector<vector<string> > > &regs,
     int *idx_buff,
-    int buffer_size,
     int *nnormal_reads,
-    int min_len,
     int *normal_switch,
     int *reg_idx,
-    int transchr_rearrange,
-    int min_map_qual,
-    int Illumina_long_insert,
-    string prefix_fastq,
     map<uint32_t, map<string, int> > &x_readcounts,
     uint32_t reference_len,
-    int fisher,
     map<string, string> &ReadsOut,
     map<string, float> &mean_insertsize,
     map<string, string> &SVtype,
     map<string, int> &mapQual,
     map<string, float> &uppercutoff,
     map<string, float> &lowercutoff,
-    int max_sd,
     int d,
-    int min_read_pair,
-    string dump_BED,
     int *max_readlen,
     string ori,
     samfile_t *in,
-    int seq_coverage_lim,
     uint32_t *ntotal_nucleotides,
     map<string, float> &read_density,
     map<string, uint32_t> &possible_fake_data,
-    int CN_lib,
     map<string, string> libmaps,
-    vector<string> maps,
-    int print_AF,
-    int score_threshold
+    vector<string> maps
     )
 {
     // for now, we can just set up references to the data struct so we
     // don't have to modify too much code
+    int buffer_size = opts.buffer_size;
+    int min_len = opts.min_len;
+    bool transchr_rearrange = opts.transchr_rearrange;
+    int min_map_qual = opts.min_map_qual;
+    int Illumina_long_insert = opts.Illumina_long_insert;
+    string const& prefix_fastq = opts.prefix_fastq;
+    bool fisher = opts.fisher;
+    int max_sd = opts.max_sd;
+    int min_read_pair = opts.min_read_pair;
+    string const& dump_BED = opts.dump_BED;
+    int seq_coverage_lim = opts.seq_coverage_lim;
+    bool CN_lib = opts.CN_lib;
+    bool print_AF = opts.print_AF;
+    int score_threshold = opts.score_threshold;
+
     int& begins = bdancer.begins;
     int& beginc = bdancer.beginc;
     int& lasts = bdancer.lasts;

@@ -37,10 +37,10 @@ struct Options {
         , min_read_pair(2)
         , seq_coverage_lim(1000)
         , buffer_size(100)
-        , learn_par(0)
+        , learn_par(false)
         , prior_prob(0.001)
-        , transchr_rearrange(0)
-        , fisher(0)
+        , transchr_rearrange(false)
+        , fisher(false)
         , Illumina_long_insert(false)
         , Illumina_to_SOLiD(false)
         , CN_lib(false)
@@ -57,10 +57,10 @@ struct Options {
     int min_read_pair;
     int seq_coverage_lim;
     int buffer_size;
-    int learn_par;
+    bool learn_par;
     float prior_prob;
-    int transchr_rearrange;
-    int fisher;
+    bool transchr_rearrange;
+    bool fisher;
     bool Illumina_long_insert;
     bool Illumina_to_SOLiD;
     bool CN_lib;
@@ -105,6 +105,7 @@ struct AnalysisData {
 T from_string(const std::string& s,
                  std::ios_base& (*f)(std::ios_base&))*/
 void do_break_func(
+    Options const& opts,
     BreakDancerData& bdancer,
     vector<vector<string> > const& reg_seq,
     map<int, vector<int> >& reg_name,
@@ -146,6 +147,7 @@ void do_break_func(
 
 
 void Analysis (
+    Options const& opts,
     BreakDancerData& bdancer,
     string lib,
     bam1_t *b,
@@ -154,40 +156,26 @@ void Analysis (
     map<string, vector<int> > &read,
     map<int, vector<vector<string> > > &regs,
     int *idx_buff,
-    int buffer_size,
     int *nnormal_reads,
-    int min_len,
     int *normal_switch,
     int *reg_idx,
-    int transchr_rearrange,
-    int min_map_qual,
-    int Illumina_long_insert,
-    string prefix_fastq,
     map<uint32_t, map<string, int> > &x_readcounts,
     uint32_t reference_len,
-    int fisher,
     map<string, string> &ReadsOut,
     map<string, float> &mean_insertsize,
     map<string, string> &SVtype,
     map<string, int> &mapQual,
     map<string, float> &uppercutoff,
     map<string, float> &lowercutoff,
-    int max_sd,
     int d,
-    int min_read_pair,
-    string dump_BED,
     int *max_readlen,
     string ori,
     samfile_t *in,
-    int seq_coverage_lim,
     uint32_t *ntotal_nucleotides,
     map<string, float> &read_density,
     map<string, uint32_t> &possible_fake_data,
-    int CN_lib,
     map<string, string> libmaps,
-    vector<string> maps,
-    int print_AF,
-    int score_threshold
+    vector<string> maps
     );
 
 void buildConnection(
