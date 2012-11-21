@@ -16,6 +16,8 @@ include(TestHelper)
 include(VersionHelper)
 include(ProjectHelper)
 
+set(EXE_VERSION_SUFFIX ${FULL_VERSION})
+
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(${PROJECT_BINARY_DIR}/version)
 
