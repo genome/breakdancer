@@ -111,7 +111,7 @@ foreach my $fbam(@ARGV){
       $lastchr = $t->{chr};
       die "Please sort bam by position\n" if($t->{pos}<$ppos);
       $ppos=$t->{pos};
-      my $lib=($t->{readgroup})?$RGlib{$t->{readgroup}}:'NA';  #when multiple libraries are in a BAM file
+      my $lib=defined($t->{readgroup})?$RGlib{$t->{readgroup}}:'NA';  #when multiple libraries are in a BAM file
       next unless(defined $lib && $libs{$lib});
       $readlen_stat{$lib}=Statistics::Descriptive::Full->new() if(!defined $readlen_stat{$lib});
       $readlen_stat{$lib}->add_data($t->{readlen});
