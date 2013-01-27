@@ -14,7 +14,7 @@ use AlnParser;
 $| = 1; # enable AUTOFLUSH modE
 
 my %opts = (q=>35, n=>10000, v=>1, c=>4, b=>50, s=>50);
-getopts('q:n:c:b:p:hmf:gCv:', \%opts);
+getopts('q:n:c:b:p:s:hmf:gCv:', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
