@@ -132,9 +132,9 @@ int main(int argc, char *argv[]) {
     map<string,int> mapQual;// global
     int max_readlen = 0;
     map<uint32_t, map<string,int> > x_readcounts;
-    map<string,string> readgroup_library;
+    map<string, map<string,string> > fmap_readgroup_library;
     // define the readgroup_platform map
-    map<string, string> readgroup_platform;
+    map<string, map<string, string> > fmap_readgroup_platform;
     map<string,string> ReadsOut;
     int d = 1e8;// global
 
@@ -170,14 +170,14 @@ int main(int argc, char *argv[]) {
             string readgroup = get_from_line(line,"group",1);
             if(readgroup.compare("NA")==0)
                 readgroup = lib;
-            readgroup_library[readgroup] = lib;
+            fmap_readgroup_library[fmap][readgroup] = lib;
 
             string platform = get_from_line(line,"platform",1);
             if(opts.Illumina_to_SOLiD)
-                readgroup_platform[readgroup] = "solid";
+                fmap_readgroup_platform[fmap][readgroup] = "solid";
             else
-                readgroup_platform[readgroup] = "illumina";
-            readgroup_platform[readgroup] = platform;
+                fmap_readgroup_platform[fmap][readgroup] = "illumina";
+            fmap_readgroup_platform[fmap][readgroup] = platform;
 
             string exe = get_from_line(line,"exe",0);
             if(!opts.prefix_fastq.empty()) {
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]) {
     }
 
     if(opts.learn_par) {
-        EstimatePriorParameters(opts, fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, readgroup_platform);
+        EstimatePriorParameters(opts, fmaps, fmap_readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, fmap_readgroup_platform);
     }
 
     uint32_t reference_len = 1;
@@ -308,7 +308,7 @@ int main(int argc, char *argv[]) {
             int r;
             while ((r = samread(in, b)) >= 0) {
                 int same_tid = (b->core.tid == b->core.mtid)? 1:0;
-                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+                vector<string> aln_return = AlnParser(b, format_, alt, fmap_readgroup_platform[bam_name], same_tid, opts.platform);
 
                 string ori = aln_return[1];
                 string readgroup = aln_return[0];
@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
                 p_chr = in->header->target_name[b->core.tid];
                 string lib;
                 if(!(readgroup.empty()))
-                    lib = readgroup_library[readgroup];
+                    lib = fmap_readgroup_library[bam_name][readgroup];
                 else{
                     defined_all_readgroups = 0;
                     lib = fmaps[(*ii).first];
@@ -414,7 +414,7 @@ int main(int argc, char *argv[]) {
                 if(b->core.tid < 0 || b->core.tid != tid || b->core.pos >= end)
                     continue;
                 int same_tid = b->core.tid == b->core.mtid? 1:0;
-                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+                vector<string> aln_return = AlnParser(b, format_, alt, fmap_readgroup_platform[bam_name], same_tid, opts.platform);
                 string ori = aln_return[1];
                 string readgroup = aln_return[0];
 
@@ -426,7 +426,7 @@ int main(int argc, char *argv[]) {
                 p_chr = in->header->target_name[b->core.tid];
                 string lib;
                 if(!(readgroup.empty()))
-                    lib = readgroup_library[readgroup];
+                    lib = fmap_readgroup_library[bam_name][readgroup];
                 else{
                     defined_all_readgroups = 0;
                     lib = fmaps[(*ii).first];
@@ -627,10 +627,10 @@ int main(int argc, char *argv[]) {
                 if(b->core.tid < 0)
                     continue;
                 int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+                vector<string> aln_return = AlnParser(b, format_, alt, fmap_readgroup_platform[maps[0]], same_tid, opts.platform);
                 string readgroup = aln_return[0];
                 string ori = aln_return[1];
-                string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+                string library = (!readgroup.empty())?fmap_readgroup_library[maps[0]][readgroup]:((*(fmaps.begin())).second);
 
                 if(!library.empty()){
                     Analysis(
@@ -765,10 +765,10 @@ int main(int argc, char *argv[]) {
                     continue;
                 if(b->core.tid == tid && b->core.pos < end){
                     int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                    vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+                    vector<string> aln_return = AlnParser(b, format_, alt, fmap_readgroup_platform[maps[0]], same_tid, opts.platform);
                     string ori = aln_return[1];
                     string readgroup = aln_return[0];
-                    string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+                    string library = (!readgroup.empty())?fmap_readgroup_library[maps[0]][readgroup]:((*(fmaps.begin())).second);
                     if(!library.empty()){
                         Analysis(
                             opts,
@@ -907,10 +907,10 @@ int main(int argc, char *argv[]) {
                         //char *mtid;
                         //mtid = in->header->target_name[b->core.tid];
                         int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+                        vector<string> aln_return = AlnParser(b, format_, alt, fmap_readgroup_platform[big_bam[heap->i]], same_tid, opts.platform);
                         string ori = aln_return[1];
                         string readgroup = aln_return[0];
-                        string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+                        string library = (!readgroup.empty())?fmap_readgroup_library[big_bam[heap->i]][readgroup]:((*(fmaps.begin())).second);
                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                         //continue;
                         if(!library.empty()){
@@ -1126,10 +1126,10 @@ int main(int argc, char *argv[]) {
                     if(skip_previous == 0){
                         if( b->core.tid == tid[heap->i] && b->core.pos < end[heap->i] ){
                             int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+                            vector<string> aln_return = AlnParser(b, format_, alt, fmap_readgroup_platform[big_bam[heap->i]], same_tid, opts.platform);
                             string ori = aln_return[1];
                             string readgroup = aln_return[0];
-                            string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+                            string library = (!readgroup.empty())?fmap_readgroup_library[big_bam[heap->i]][readgroup]:((*(fmaps.begin())).second);
                             //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                             //continue;
                             if(!library.empty()){
@@ -2313,13 +2313,13 @@ void buildConnection(
 void EstimatePriorParameters(
     Options const& opts,
     map<string,string> &fmaps,
-    map<string,string> &readgroup_library,
+    map<string, map<string,string> > &fmap_readgroup_library,
     map<string, float> &mean_insertsize,
     map<string, float> &std_insertsize,
     map<string,float> &uppercutoff,
     map<string,float> &lowercutoff,
     map<string,float> &readlens,
-    map<string, string> &readgroup_platform
+    map<string, map<string, string> > &fmap_readgroup_platform
     )
 {
     map<string,float> es_means;
@@ -2364,12 +2364,12 @@ void EstimatePriorParameters(
             //char *mtid;
             //mtid = in->header->target_name[b->core.tid];
             int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
-            vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, opts.platform);
+            vector<string> aln_return = AlnParser(b, format, alt, fmap_readgroup_platform[bam_name], same_tid, opts.platform);
             string ori = aln_return[1];
             string readgroup = aln_return[0];
 
             // analyze the bam file line by line
-            string lib = readgroup.empty()?(*ii).second:readgroup_library[readgroup];// when multiple libraries are in a BAM file
+            string lib = readgroup.empty()?(*ii).second:fmap_readgroup_library[bam_name][readgroup];// when multiple libraries are in a BAM file
             if(lib.empty())
                 continue;
             // analyze 1 chromosome
