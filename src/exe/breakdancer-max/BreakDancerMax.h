@@ -205,13 +205,13 @@ void buildConnection(
 void EstimatePriorParameters(
     Options const& opts,
     map<string,string> &fmaps,
-    map<string,string> &readgroup_library,
+    map<string, map<string,string> > &fmap_readgroup_library,
     map<string, float> &mean_insertsize,
     map<string, float> &std_insertsize,
     map<string,float> &uppercutoff,
     map<string,float> &lowercutoff,
     map<string,float> &readlens,
-    map<string, string> &readgroup_platform
+    map<string, map<string, string> > &fmap_readgroup_platform
 );
 
 float mean(vector<int> &stat);
