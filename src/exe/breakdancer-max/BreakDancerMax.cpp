@@ -9,6 +9,28 @@
 # define SCORE_FLOAT_TYPE double
 #endif
 
+/*
+# Data structure menagerie
+## Preliminary counting
++ nread -> number of reads for each library
++ x_readcounts -> number of reads of each orientation, per library
+## Analysis
++ reg_idx -> region id generating variable
++ reg_name -> vector; contains coordinates of the region and the number of normal reads within it.
++ reg_seq -> array of read information underlying a region
++ read -> hash of readnames with array of region ids. Stores which two regions are associated with a readpair
++ regs -> hash storing each region's associated reads
+## buildConnection
++ link -> hash of node ids linking two nodes and their weights
++ clink -> a copy of link
++ free_nodes -> list of nodes to remove?
++ nodepair -> additional copy of links between two nodes
++ read_pair -> hash on read name containing read information
++ nonsupportives -> array of reads. The first time a read is found, it is pushed onto here. They are deleted as mates are found in the pair. Thus, after processing a graph, all that's left is reads not supporting that node pair.
++ 
+
+*/
+
 using boost::math::cdf;
 using boost::math::complement;
 using boost::math::poisson_distribution;
@@ -1482,6 +1504,8 @@ void Analysis (
     //main analysis code
 
     // region between last and next begin
+    // Store readdepth in nread_ROI by bam name (no per library calc) or by library
+    // I believe this only counts normally mapped reads
     if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
         if(CN_lib == 1){
             if(nread_ROI.find(lib) == nread_ROI.end())
@@ -1495,7 +1519,7 @@ void Analysis (
             else
                 nread_ROI[bam_name] ++;
         }
-
+    // This stores the same counts. Not sure why.
     if(CN_lib == 1){
             if(possible_fake_data.find(lib) == possible_fake_data.end())
                 possible_fake_data[lib] = 1;
@@ -1510,6 +1534,7 @@ void Analysis (
         }
 
         // region between begin and last
+        // This stores the exact same counts yet again. Still not sure why.
         if(CN_lib == 1){
             if(nread_FR.find(lib) == nread_FR.end())
                 nread_FR[lib] = 1;
@@ -1523,12 +1548,14 @@ void Analysis (
                 nread_FR[bam_name] ++;
         }
     }
-
+    // mapQual is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
   if(mapQual.find(lib) != mapQual.end()){
       if(b->core.qual <= mapQual[lib])
           return;
   }
   else{
+      //here filter out if mapping quality is less than or equal to the min_map_qual. 
+      //Note that this doesn't make sense as a cutoff of 0 would still exclude reads with qual 0
       if(b->core.qual <= min_map_qual)
           return;
   }
@@ -1539,9 +1566,14 @@ void Analysis (
     if(b->core.flag == 0)
         return; // return fragment reads
 
+    //This is quite possibly the goofiest way to check core.flag == 32 that I know of.
+    //Perhaps there are other flags I'm not considering?
   if((transchr_rearrange && b->core.flag < 32) || b->core.flag >=64) // only care flag 32 for CTX
         return;
     // for long insert
+    // Mate pair libraries have different expected orientations so adjust
+    // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
+    // Remark based on BD options
     if(Illumina_long_insert){
         if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
             b->core.flag = 4;
@@ -1560,12 +1592,17 @@ void Analysis (
         if(b->core.flag == 20)
             b->core.flag = 4; // if it is RF orientation, then regardless of distance
     }
+    // This makes FF and RR the same thing
     if(b->core.flag == 8)
         b->core.flag = 1;
-
+    // for normally mapped pairs, ignore if TOO far apart. Interesting... Isn't this exactly what we're trying to find?
+    // For some reason doesn't apply to SmithWaterman MAQ reads. Don't think we have that info with BWA
     if(b->core.flag < 32 && abs(b->core.isize)>max_sd) // skip read pairs mapped too distantly on the same chromosome
         return;
 
+    //count reads mapped by SW, FR and RF reads, but only if normal_switch is true
+    //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
+    //I suspect this is to include those reads in the fastq dump for assembly!
     if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130){
         if(*normal_switch == 1 && b->core.isize > 0){
             (*nnormal_reads)++;
@@ -1577,20 +1614,23 @@ void Analysis (
         *ntotal_nucleotides += b->core.l_qseq;
         *max_readlen = (*max_readlen < b->core.l_qseq) ? b->core.l_qseq : *max_readlen;
     }
+    //This appears to test that you've exited a window after your first abnormal read by either reading off the chromosome or exiting the the window
+    // d appears to be 1e8 at max (seems big), 50 at minimum or the smallest mean - readlen*2 for a given library
     int do_break = (int(b->core.tid) != lasts || int(b->core.pos) - lastc > d)?1:0;
 
     if(do_break){ // breakpoint in the assembly
         float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
         if(lastc - beginc > min_len && seq_coverage < seq_coverage_lim){ // skip short/unreliable flnaking supporting regions
             // register reliable region and supporting reads across gaps
-            int k = (*reg_idx) ++;
-            reg_name[k].push_back(begins);
-            reg_name[k].push_back(beginc);
-            reg_name[k].push_back(lastc);
-            reg_name[k].push_back(*nnormal_reads);
+            int k = (*reg_idx) ++;  //assign an id to this region
+            reg_name[k].push_back(begins); //chromosome 
+            reg_name[k].push_back(beginc); //starting coord
+            reg_name[k].push_back(lastc);   //last coordinate
+            reg_name[k].push_back(*nnormal_reads); //number of normal reads
 
             // never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
             // record nread_ROI
+            // track the number of reads from each library for the region
             for(map<string, uint32_t>::const_iterator nread_ROI_it = nread_ROI.begin(); nread_ROI_it != nread_ROI.end(); nread_ROI_it ++){
                 string lib_ = (*nread_ROI_it).first;
                 if(read_count_ROI_map.find(k) == read_count_ROI_map.end()){
@@ -1605,11 +1645,15 @@ void Analysis (
             }
 
             // compute nread_FR and record it
+            // track number of FR reads from the region.
+            // From earlier, these numbers seem like they shoudl be the same unless they are being added to in multiple places
             for(map<string, uint32_t>::const_iterator nread_FR_it = nread_FR.begin(); nread_FR_it != nread_FR.end(); nread_FR_it ++){
                 string lib_ = (*nread_FR_it).first;
                 if(read_count_ROI_map[k].find(lib_) == read_count_ROI_map[k].end())
                     read_count_FR_map[k][lib_] = (*nread_FR_it).second;
                 else{
+                    // based on the variable names the ROI reads should contain ARPs as well as standard FR reads
+                    // not sure where that would happen still
                     uint32_t diff = (*nread_FR_it).second - read_count_ROI_map[k][lib_];
                     if(diff < 0)
                         cout << "wrong, the subtraction is negative";
@@ -1622,6 +1666,8 @@ void Analysis (
 
             }
 
+            // reg_seq is an array of arrays of information about the reads. The first value is the read name.
+            // This adds the region id to an array of region ids 
             vector<vector<string> > p;
             for(vector<vector<string> >::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
                 p.push_back(*it_reg_seq);
@@ -1629,9 +1675,10 @@ void Analysis (
                 read[s].push_back(k);
             }
 
-            regs[k] = p;
-            (*idx_buff)++;
+            regs[k] = p;    //store the array of reads at the region
+            (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
             if(*idx_buff > buffer_size){
+                //flush buffer by building connection
                 buildConnection(
                     bdancer,
                     read,
@@ -1662,6 +1709,8 @@ void Analysis (
           // possible fake
             // restore ROI for copy number since lastc will be cleared, but the new node has not been registered
             // possible fake is off, never gone to possible fake before, save the ROI
+            // I don't understand exactly what this is doing. It is only hitting here to store the info if flanking region is too short or the coverage is too high
+            // It appears to be used to pull in nearby neighboring regions to the last region identified if the distance between them is too short
             if(/* *possible_fake == 1 &&*/ *reg_idx >= 1){
                  for(map<string, uint32_t>::const_iterator possible_fake_data_it = possible_fake_data.begin(); possible_fake_data_it != possible_fake_data.end(); possible_fake_data_it ++){
                      string lib_ = (*possible_fake_data_it).first;
@@ -1679,6 +1728,7 @@ void Analysis (
                  }
             }
 
+            // remove any reads that are linking the last region with this new, merged in region
             if(reg_seq.size()>0){
                 for(vector<vector<string> >::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
                     string s= (*it_reg_seq)[0];
@@ -1687,6 +1737,7 @@ void Analysis (
                 }
             }
         }
+        // clear out this node
         begins = int(b->core.tid);
         beginc = int(b->core.pos);
         reg_seq.clear();
@@ -1703,6 +1754,7 @@ void Analysis (
     }
 
     // deal with the name string
+    // this drops any trailing /1 or /2 strings on the read. Probably not necessary if the BAM is well formatted (but I'm not certain).
     string qname_tmp = bam1_qname(b);
     size_t found1 = qname_tmp.rfind("/1");
     size_t found2 = qname_tmp.rfind("/2");
@@ -1715,6 +1767,7 @@ void Analysis (
     string seq = get_string(bam1_seq(b), b->core.l_qseq);
     string basequal = get_string_qual(bam1_qual(b), b->core.l_qseq);
     if(! prefix_fastq.empty() && ! seq.empty() && ! basequal.empty()){
+        //This stores all the read info as a vector of strings. WTF that can't be efficient.
         vector<string> tmp_reg_seq;
         tmp_reg_seq.push_back(qname_tmp);
         tmp_reg_seq.push_back(itos(int(b->core.tid)));
@@ -1727,7 +1780,7 @@ void Analysis (
         tmp_reg_seq.push_back(lib);
         tmp_reg_seq.push_back(seq);
         tmp_reg_seq.push_back(basequal);
-        reg_seq.push_back(tmp_reg_seq);
+        reg_seq.push_back(tmp_reg_seq); // store each read in the region_sequence buffer
     }
     else{
         vector<string> tmp_reg_seq;
@@ -1742,11 +1795,12 @@ void Analysis (
         tmp_reg_seq.push_back(lib);
         reg_seq.push_back(tmp_reg_seq);
     }
+    //If we just added the first read, flip the flag that lets us collect all reads
     if(reg_seq.size() == 1)
         *normal_switch = 1;
     lasts = int(b->core.tid);
     lastc = int(b->core.pos);
-    nread_ROI.clear();
+    nread_ROI.clear(); //Not sure why this is cleared here...
 }
 
 // pair up reads and print out results (SV estimation)
@@ -1782,6 +1836,8 @@ void buildConnection(
     //warn("-- link regions\n");
     map<int, map<int, int> > link;
     map<string,vector<int> >::iterator ii_read;
+    //read is a map of readnames, each is associated with a vector of region ids
+    // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
     for(ii_read = read.begin(); ii_read != read.end(); ii_read++){
         // test
         //string tmp_str = (*ii_read).first;
@@ -1789,6 +1845,7 @@ void buildConnection(
         if(p.size() != 2) // skip singleton read (non read pairs)
             continue;
         //cout << tmp_str << "\t" << p[0] << "\t" << p[1] << endl;			
+        //track the number of links between two nodes
         if(link.find(p[0]) != link.end() && link[p[0]].find(p[1]) != link[p[0]].end()){
             ++link[p[0]][p[1]];
             ++link[p[1]][p[0]];
@@ -1808,6 +1865,8 @@ void buildConnection(
     vector<int> s0_vec;
     //	int tmp_read_size = read.size();
     //cout << tmp_read_size << endl;	
+     
+    // Grab the first region for every link
     for(ii_clink = clink.begin(); ii_clink != clink.end(); ii_clink++){
         s0_vec.push_back((*ii_clink).first);
         //cout << ",,,,," << (*ii_clink).first << endl;		
@@ -1837,7 +1896,7 @@ void buildConnection(
                     continue;
                 if(reg_name.find(*it_tails) == reg_name.end())
                     continue;
-                vector<int> s1s;
+                vector<int> s1s; //accumulate all linked nodes for a  single node
                 for(map<int, int>::iterator ii_clink_ = clink[tail].begin(); ii_clink_ != clink[tail].end(); ii_clink_++){
                     s1s.push_back((*ii_clink_).first);
                     //cout << ",,," << (*ii_clink_).first << endl;					
@@ -1872,6 +1931,7 @@ void buildConnection(
                         snodes.push_back((*ii_nodepair).first); 
                         //cout << "," << (*ii_nodepair).first << endl;						
                     }
+                    // track node1 and node2 as nodes that could potentially be freed
                     int node1 = snodes[0];
                     int node2;
                     if(snodes.size() == 1)
@@ -1895,9 +1955,12 @@ void buildConnection(
                         vector<vector<string> > nonsupportives;
                         //debug
                         //int regs_size = regs[node].size();
+                        //NOTE regs contains an array of information about the reads supporting the region (info is stored as a string array)
                         for(vector<vector<string> >::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
                             vector<string> y = *ii_regs;
                             //cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;							
+                            //skip things where the read name is no longer in our list of read names
+                            //WHY ARE THESE CHECKS EVERYWHERE 
                             if(read.find(y[0]) == read.end())
                                 continue;
                             // initialize orient_count
@@ -1906,6 +1969,7 @@ void buildConnection(
                             else
                                 orient_count[y[3]]++;
 							
+                            //START HERE
                             if(read_pair.find(y[0]) == read_pair.end()){
                                 read_pair[y[0]] = y;
                                 nonsupportives.push_back(y);
