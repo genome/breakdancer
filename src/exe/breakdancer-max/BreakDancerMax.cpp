@@ -2269,22 +2269,7 @@ void buildConnection(
 								
 								
                                 if(!prefix_fastq.empty()){ // print out supporting read pairs
-                                    map<string,int> pairing;
-                                    for(vector<vector<string> >::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
-                                        vector<string> y = *ii_support_reads;
-                                        if(y.size() != 11 || y[5].compare(flag))
-                                            continue;
-                                        string fh_tmp_str = (pairing.find(y[0])!= pairing.end())?ReadsOut[y[8].append("1")]:ReadsOut[y[8].append("2")];
-                                        ofstream fh;
-                                        fh.open(fh_tmp_str.c_str(), ofstream::app);
-                                        pairing[y[0]] = 1;
-                                        string str_tmp = "@" + y[0] + "\n" + y[9] + "\n" + "+\n" + y[10] + "\n";
-                                        fh << str_tmp;
-                                        fh.close();
-                                        //sprintf(fh,"@%s\n",y[0]);
-                                        //sprintf(fh,"%s\n",y[9]);
-                                        //sprintf(fh,"+\n%s\n",y[10]);
-                                    }
+                                    write_fastq_for_flag(flag, support_reads, ReadsOut);
                                 }
 								
                                 if(!dump_BED.empty()){	// print out SV and supporting reads in BED format
@@ -2804,7 +2789,21 @@ string char2str(char *str_){
     return str;
 }
 
-
+void write_fastq_for_flag(const string &flag, const vector< vector<string> > &support_reads, map<string, string> &ReadsOut) {
+    map<string,int> pairing;
+    for( vector<vector<string> >::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
+        vector<string> y = *ii_support_reads;
+        if(y.size() != 11 || y[5].compare(flag))
+            continue;
+        string fh_tmp_str = (pairing.find(y[0]) != pairing.end()) ? ReadsOut[ y[8].append("1")] : ReadsOut[ y[8].append("2")];
+        ofstream fh;
+        fh.open(fh_tmp_str.c_str(), ofstream::app);
+        pairing[y[0]] = 1;
+        string str_tmp = "@" + y[0] + "\n" + y[9] + "\n" + "+\n" + y[10] + "\n";
+        fh << str_tmp;
+        fh.close();
+    }
+}
 // The following correspondence of the data structure is between perl and c in samtools. Left column: perl. Right column: cpp
 /*
  t.readname         :        bam1_qname(b)  (length: b.core.l_qname)
