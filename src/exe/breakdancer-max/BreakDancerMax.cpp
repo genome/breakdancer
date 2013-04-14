@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
+#include <assert.h>
 
 #ifndef SCORE_FLOAT_TYPE
 # define SCORE_FLOAT_TYPE double
@@ -1834,7 +1835,7 @@ void buildConnection(
     // build connections
     // find paired regions that are supported by paired reads
     //warn("-- link regions\n");
-    map<int, map<int, int> > link;
+    map<int, map<int, int> > clink;
     map<string,vector<int> >::iterator ii_read;
     //read is a map of readnames, each is associated with a vector of region ids
     // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
@@ -1842,22 +1843,22 @@ void buildConnection(
         // test
         //string tmp_str = (*ii_read).first;
         vector<int> p = (*ii_read).second;
+        assert( p.size() < 3);
         if(p.size() != 2) // skip singleton read (non read pairs)
             continue;
         //cout << tmp_str << "\t" << p[0] << "\t" << p[1] << endl;			
         //track the number of links between two nodes
-        if(link.find(p[0]) != link.end() && link[p[0]].find(p[1]) != link[p[0]].end()){
-            ++link[p[0]][p[1]];
-            ++link[p[1]][p[0]];
+        if(clink.find(p[0]) != clink.end() && clink[p[0]].find(p[1]) != clink[p[0]].end()){
+            ++clink[p[0]][p[1]];
+            ++clink[p[1]][p[0]];
         }
         else{
-            link[p[0]][p[1]] = 1;
-            link[p[1]][p[0]] = 1;
+            clink[p[0]][p[1]] = 1;
+            clink[p[1]][p[0]] = 1;
         }
         //cout << tmp_str << endl;		
         //cout << p[0] << "\t" << p[1] << "\t" << link[p[0]][p[1]] << endl;		
     }
-    map<int, map<int, int> > clink(link);
     // segregate graph, find nodes that have connections
     map<int,int> free_nodes;
     map<int, map<int, int> >::iterator ii_clink;
