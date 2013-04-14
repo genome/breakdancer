@@ -1924,6 +1924,7 @@ void buildConnection(
                     if(clink[tail].find(s1)!=clink[tail].end()){
                         clink[tail].erase(clink[tail].find(s1));	// use a link only once
                     }
+                    //NOTE it is entirely possible that tail and s1 are the same.
                     if(tail != s1){
                         if(clink[s1].find(tail)!=clink[s1].end()){
                             clink[s1].erase(clink[s1].find(tail));
@@ -1937,6 +1938,7 @@ void buildConnection(
                         snodes.push_back((*ii_nodepair).first); 
                         //cout << "," << (*ii_nodepair).first << endl;						
                     }
+                    assert(snodes.size() < 3);
                     // track node1 and node2 as nodes that could potentially be freed
                     int node1 = snodes[0];
                     int node2;
@@ -2040,26 +2042,6 @@ void buildConnection(
                                 maxscore = ptype;
                                 flag = fl;
                             }
-                            /*string sptype;
-							 float diffspan = 0;
-							 //debug
-							 //int tmp_size_tlr = type_library_readcount[fl].size();
-							 for(map<string,int>::iterator ii_type_lib_rc = type_library_readcount[fl].begin(); ii_type_lib_rc != type_library_readcount[fl].end(); ii_type_lib_rc ++){
-							 string sp = (*ii_type_lib_rc).first;
-							 //string str_num_tmp;
-							 //sprintf(str_num_tmp, "%s", (*ii_type_lib_rc).second); 
-							 if(!sptype.empty())
-							 sptype += ":" +  sp + "|" + itos((*ii_type_lib_rc).second);
-							 else
-							 sptype = sp + "|" + itos((*ii_type_lib_rc).second);
-							 //debug
-							 //int tmp_tlm = type_library_meanspan[fl][sp];
-							 //int tmp_tlr = type_library_readcount[fl][sp];
-							 //int tmp_mi = mean_insertsize[sp];
-							 diffspan += float(type_library_meanspan[fl][sp]) - float(type_library_readcount[fl][sp])*mean_insertsize[sp];
-							 }
-							 diffspans[fl] = int(diffspan/float(type[fl]) + 0.5);
-							 sptypes[fl] = sptype;*/
                         }
 						
                         if(type[flag] >= min_read_pair){
