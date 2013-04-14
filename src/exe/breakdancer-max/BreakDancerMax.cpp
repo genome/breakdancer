@@ -1882,6 +1882,7 @@ void buildConnection(
     for(vector<int>::iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){
         int s0 = *ii_s0_vec;
         //cout << ",,,,," << s0 << endl;
+        // assert( clink.find(s0) != clink.end() ); THIS ASSERT TRIPS
         if(clink.find(s0) == clink.end())
             continue;
         // construct a subgraph
@@ -1893,8 +1894,10 @@ void buildConnection(
             for(it_tails = tails.begin(); it_tails != tails.end(); it_tails ++){
                 int tail = *it_tails;
                 //cout << ",,,," << tail << endl;				
+                //assert(clink.find(*it_tails) != clink.end()); THIS ASSERT TRIPS
                 if(clink.find(*it_tails) == clink.end())
                     continue;
+                assert(reg_name.find(*it_tails) != reg_name.end());
                 if(reg_name.find(*it_tails) == reg_name.end())
                     continue;
                 vector<int> s1s; //accumulate all linked nodes for a  single node
@@ -1910,8 +1913,10 @@ void buildConnection(
                     int nlinks = clink[tail][s1];
                     if(nlinks<min_read_pair) // require sufficient number of pairs
                         continue;
+                    assert(nodepair.find(s1) == nodepair.end()); // a node only appear once in a pair
                     if(nodepair.find(s1) != nodepair.end()) // a node only appear once in a pair
                         continue;
+                    assert(reg_name.find(s1) != reg_name.end()); // a node must be defined
                     if(reg_name.find(s1) == reg_name.end()) // a node must be defined
                         continue;
                     nodepair[tail][s1] = clink[tail][s1];
