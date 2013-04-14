@@ -2789,13 +2789,13 @@ string char2str(char *str_){
     return str;
 }
 
-void write_fastq_for_flag(const string &flag, const vector< vector<string> > &support_reads, map<string, string> &ReadsOut) {
+void write_fastq_for_flag(const string &flag, const vector< vector<string> > &support_reads, const map<string, string> &ReadsOut) {
     map<string,int> pairing;
     for( vector<vector<string> >::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
         vector<string> y = *ii_support_reads;
         if(y.size() != 11 || y[5].compare(flag))
             continue;
-        string fh_tmp_str = (pairing.find(y[0]) != pairing.end()) ? ReadsOut[ y[8].append("1")] : ReadsOut[ y[8].append("2")];
+        string fh_tmp_str = (pairing.find(y[0]) != pairing.end()) ? ReadsOut.at(y[8].append("1")) : ReadsOut.at(y[8].append("2"));
         ofstream fh;
         fh.open(fh_tmp_str.c_str(), ofstream::app);
         pairing[y[0]] = 1;

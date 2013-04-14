@@ -251,5 +251,6 @@ string search_more(string line, string search,     size_t pos_begin);
 string char2str(char *str_);
 
 // refactoring functions
-void write_fastq_for_flag(const string &flag, const vector< vector<string> > &support_reads, map<string, string> &ReadsOut);
+void write_fastq_for_flag(const string &flag, const vector< vector<string> > &support_reads, const map<string, string> &ReadsOut);
+
 
