@@ -39,6 +39,9 @@ endif ()
 # make sure to pick up headers from library dirs
 include_directories("src/lib")
 
+# integration testing
+add_subdirectory(integration-test)
+
 # unit tests
 find_package(GTest)
 if(GTEST_FOUND)
