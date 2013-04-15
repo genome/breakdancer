@@ -28,7 +28,8 @@
 + nodepair -> additional copy of links between two nodes
 + read_pair -> hash on read name containing read information
 + nonsupportives -> array of reads. The first time a read is found, it is pushed onto here. They are deleted as mates are found in the pair. Thus, after processing a graph, all that's left is reads not supporting that node pair.
-+ 
++ snodes -> array of node ids from nodepair can contain the same node twice
+
 
 */
 
@@ -1950,17 +1951,17 @@ void buildConnection(
                         continue;
 					
                     int nread_pairs = 0;
-                    map<string,vector<string> > read_pair;
-                    map<string,int> type;//first one is flags
-                    map<string,map<string,int> > type_library_readcount;
-                    vector<map<string,int> > type_orient_counts;
-                    map<string,map<string,int> > type_library_meanspan;	//diff span distance;
-                    vector<vector<string> > support_reads;
+                    map<string,vector<string> > read_pair; //unpaired reads
+                    map<string,int> type; // number of readpairs per each type/flag
+                    map<string,map<string,int> > type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
+                    vector<map<string,int> > type_orient_counts; //vector of readcounts for each type/flag
+                    map<string,map<string,int> > type_library_meanspan;	//average ISIZE from BAM records
+                    vector<vector<string> > support_reads; //reads supporting the SV
                     for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
                         int node = *ii_snodes;
                         //cout << node << endl;
-                        map<string,int> orient_count;
-                        vector<vector<string> > nonsupportives;
+                        map<string,int> orient_count; // number of reads per each orientation ('+' or '-')
+                        vector<vector<string> > nonsupportives; // reads not supporting this SV
                         //debug
                         //int regs_size = regs[node].size();
                         //NOTE regs contains an array of information about the reads supporting the region (info is stored as a string array)
@@ -2019,7 +2020,8 @@ void buildConnection(
                         type_orient_counts.push_back(orient_count);
                     }
 					
-                    //clean out supportive reads
+                    //clean out supportive reads since the first read of every pair is stored in nonsupportives
+                    //seems like it would be smarter to only populate nonsupportives after we determine the supportives...
                     for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
                         int node = *ii_snodes;
                         vector<vector<string> > nonsupportives;
@@ -2039,7 +2041,7 @@ void buildConnection(
                         map<string, int> diffspans;
                         map<string, string> sptypes;
 					    string flag = choose_sv_flag(nread_pairs, type);	
-                        if(type[flag] >= min_read_pair){
+                        if(type[flag] >= min_read_pair) {
                             // print out result
                             int sv_chr1 = -1, sv_pos1 = 0, sv_chr2 = -1, sv_pos2 = 0;
                             string sv_ori1, sv_ori2;
