@@ -6,17 +6,31 @@ TGI's build-common submodule."""
 
 from integrationtest import IntegrationTest, main
 import unittest
+import subprocess
+import os
 
 class TestBreakDancer(IntegrationTest, unittest.TestCase):
 
+    def setUp(self):
+        IntegrationTest.setUp(self)
+        self.orig_path = os.path.realpath(os.getcwd())
+        self.exe_path = os.path.realpath(self.exe_path)
+        os.chdir(self.data_dir)
+
+    def tearDown(self):
+        os.chdir(self.orig_path)
+
     def test_breakdancer(self):
-        expected_file = self.inputFiles("expected_output")[0]
-        config_file = self.inputFiles("inv_del_bam_config")[0]
+        expected_file = "expected_output"
+        config_file = "inv_del_bam_config"
         output_file = self.tempFile("output")
-        params = [
-            "-o 21", " > ", output_file
-        ]
-        rv, err = self.execute(params)
+        cmdline = " ".join([self.exe_path, '-o', '21', config_file, '>', output_file])
+        print "Executing", cmdline
+        print "CWD", os.getcwd()
+        #params = [ "-o 21", " > ", output_file ]
+        #rv, err = self.execute_through_shell(params)
+        rv = subprocess.call(cmdline, shell=True)
+        print "Return value:", rv
         self.assertEqual(0, rv)
         self.assertFilesEqual(expected_file, output_file, filter_regex="#Command")
 
