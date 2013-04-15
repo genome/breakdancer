@@ -362,7 +362,7 @@ int main(int argc, char *argv[]) {
                         nreads[lib] = 1;
                     else
                         nreads[lib] ++;
-                    if(opts.CN_lib){
+                    if(opts.CN_lib == 0){
                         if(nreads_.find(libmaps[lib]) == nreads_.end())
                             nreads_[libmaps[lib]] = 1;
                         else
