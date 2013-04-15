@@ -251,6 +251,8 @@ string search_more(string line, string search,     size_t pos_begin);
 string char2str(char *str_);
 
 // refactoring functions
+// write out reads to fastq files
 void write_fastq_for_flag(const string &flag, const vector< vector<string> > &support_reads, const map<string, string> &ReadsOut);
 
-
+// choose the predominant type of read in a region
+string choose_sv_flag(const int num_readpairs, const map<string, int> reads_per_type);

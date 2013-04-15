@@ -1972,6 +1972,7 @@ void buildConnection(
                             if(read.find(y[0]) == read.end())
                                 continue;
                             // initialize orient_count
+                            // y[3] is the orientation. This is stored as a string value or - or +
                             if(orient_count.find(y[3]) == orient_count.end())
                                 orient_count[y[3]] = 1;
                             else
@@ -1985,16 +1986,19 @@ void buildConnection(
                             }
                             else{
                                 // see if initialized 'type' or not
+                                // y[5] is our bastardized "flag" describing the pair orientation
                                 if(type.find(y[5]) != type.end())
                                     type[y[5]]++;
                                 else
                                     type[y[5]] = 1;
                                 // see if initialized 'type_library_readcount' or not
+                                // as you might guess, y[8] is the lib name
                                 if(type_library_readcount.find(y[5]) != type_library_readcount.end() && type_library_readcount[y[5]].find(y[8]) != type_library_readcount[y[5]].end())
                                     type_library_readcount[y[5]][y[8]]++;
                                 else
                                     type_library_readcount[y[5]][y[8]] = 1;
 								
+                                // y[4] is the insert size (as a string of course)
                                 int y4_tmp = atoi(y[4].c_str());
                                 if(type_library_meanspan.find(y[5]) != type_library_meanspan.end() && type_library_meanspan[y[5]].find(y[8]) != type_library_meanspan[y[5]].end()){
                                     type_library_meanspan[y[5]][y[8]]+=abs(y4_tmp);
@@ -2030,20 +2034,11 @@ void buildConnection(
 					
                     //float score;//don't know if float; no usage actually
                     //int bestIndelSize;//don't know if int; no usage actually
+                    // START HERE
                     if(nread_pairs >= min_read_pair){
-                        float maxscore = 0;
-                        string flag = "0";
                         map<string, int> diffspans;
                         map<string, string> sptypes;
-                        for(map<string,int>::iterator ii_type = type.begin(); ii_type != type.end(); ii_type ++){
-                            string fl = (*ii_type).first;
-                            float ptype = float((*ii_type).second)/float(nread_pairs);
-                            if(maxscore<ptype){
-                                maxscore = ptype;
-                                flag = fl;
-                            }
-                        }
-						
+					    string flag = choose_sv_flag(nread_pairs, type);	
                         if(type[flag] >= min_read_pair){
                             // print out result
                             int sv_chr1 = -1, sv_pos1 = 0, sv_chr2 = -1, sv_pos2 = 0;
@@ -2795,15 +2790,33 @@ void write_fastq_for_flag(const string &flag, const vector< vector<string> > &su
         vector<string> y = *ii_support_reads;
         if(y.size() != 11 || y[5].compare(flag))
             continue;
+        //Paradoxically, the first read seen is put in file 2 and the second in file 1
         string fh_tmp_str = (pairing.find(y[0]) != pairing.end()) ? ReadsOut.at(y[8].append("1")) : ReadsOut.at(y[8].append("2"));
         ofstream fh;
         fh.open(fh_tmp_str.c_str(), ofstream::app);
         pairing[y[0]] = 1;
+        //Note that no transformation on read bases based on read orientation is done here
         string str_tmp = "@" + y[0] + "\n" + y[9] + "\n" + "+\n" + y[10] + "\n";
         fh << str_tmp;
         fh.close();
     }
 }
+
+string choose_sv_flag(const int num_readpairs, const map<string, int> reads_per_type) {
+    string flag = "0";
+    float max_type_pct = 0.0;
+    for(map<string,int>::const_iterator type_iter = reads_per_type.begin(); type_iter != reads_per_type.end(); ++type_iter){
+        string current_flag = (*type_iter).first;
+        float type_pct = static_cast<float>((*type_iter).second) / static_cast<float>(num_readpairs);
+        if(max_type_pct < type_pct) {
+            max_type_pct = type_pct;
+            flag = current_flag;
+        }
+    }
+    return flag;
+}
+
+
 // The following correspondence of the data structure is between perl and c in samtools. Left column: perl. Right column: cpp
 /*
  t.readname         :        bam1_qname(b)  (length: b.core.l_qname)
