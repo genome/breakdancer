@@ -2022,6 +2022,9 @@ void buildConnection(
 					
                     //clean out supportive reads since the first read of every pair is stored in nonsupportives
                     //seems like it would be smarter to only populate nonsupportives after we determine the supportives...
+                    //I think this must not be done because you don't know if the read pairs will occur on the other node or not
+                    //so you build your list for each node and then go back and clean it up after the fact
+                    //if you tracked which node each read came from then you could just reassign after the fact
                     for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
                         int node = *ii_snodes;
                         vector<vector<string> > nonsupportives;
@@ -2124,7 +2127,7 @@ void buildConnection(
                                         }
                                     }
                                 }
-                                else{
+                                else {
                                     first_node = node;
                                     sv_chr1 = chr;
                                     sv_chr2 = chr;
