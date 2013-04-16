@@ -4,6 +4,8 @@ set(SOURCES
     AlnParser.cpp
     AlnParser.h
     samtools.h
+    Region.hpp
+    Region.cpp
 )
 
 add_library(breakdancer ${SOURCES})

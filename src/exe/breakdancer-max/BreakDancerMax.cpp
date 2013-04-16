@@ -5,6 +5,7 @@
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <assert.h>
+#include "breakdancer/Region.hpp"
 
 #ifndef SCORE_FLOAT_TYPE
 # define SCORE_FLOAT_TYPE double
@@ -1398,6 +1399,9 @@ void do_break_func(
             string s = (*it_reg_seq)[0];
             read[s].push_back(k);
         }
+        
+        //this should replace both regs and reg_name
+        Region::Region new_region(begins, beginc, lastc, *nnormal_reads, reg_seq);
 
         regs[k] = p;
         (*idx_buff)++;
