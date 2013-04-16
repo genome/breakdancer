@@ -2,14 +2,14 @@
 #include <assert.h>
 
 namespace Region {
-    Region::Region(int chrom_id, int start, int end, int num_normal_reads, vector<vector<string> > const& reads)
+    Region::Region(int chrom_id, int start, int end, int num_normal_reads, vector<Read> const& reads)
         : begins(chrom_id)
           , beginc(start)
           , lastc(end)
     {
 
         //Copy over the reads.
-        for(vector<vector<string> >::const_iterator reads_it = reads.begin(); reads_it != reads.end(); ++reads_it) {
+        for(vector<Read>::const_iterator reads_it = reads.begin(); reads_it != reads.end(); ++reads_it) {
             this->reads.push_back(*reads_it);
         }
     }

@@ -6,6 +6,7 @@ set(SOURCES
     samtools.h
     Region.hpp
     Region.cpp
+    BDTypedefs.hpp
 )
 
 add_library(breakdancer ${SOURCES})
