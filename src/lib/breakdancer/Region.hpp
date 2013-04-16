@@ -8,7 +8,7 @@
 
 using namespace std;
 
-namespace Region {
+namespace region {
     class Region {
         public:
             int begins;

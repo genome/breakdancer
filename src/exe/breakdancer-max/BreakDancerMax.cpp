@@ -1401,7 +1401,7 @@ void do_break_func(
         }
         
         //this should replace both regs and reg_name
-        Region::Region new_region(begins, beginc, lastc, *nnormal_reads, reg_seq);
+        region::Region new_region(begins, beginc, lastc, *nnormal_reads, reg_seq);
 
         regs[k] = p;
         (*idx_buff)++;

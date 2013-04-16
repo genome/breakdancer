@@ -1,7 +1,7 @@
 #include "Region.hpp"
 #include <assert.h>
 
-namespace Region {
+namespace region {
     Region::Region(int chrom_id, int start, int end, int num_normal_reads, vector<Read> const& reads)
         : begins(chrom_id)
           , beginc(start)
@@ -10,6 +10,7 @@ namespace Region {
 
         //Copy over the reads.
         for(vector<Read>::const_iterator reads_it = reads.begin(); reads_it != reads.end(); ++reads_it) {
+            //Travis says: x.push_back(std::move(mystring)); will not do a copy. Might be useful.
             this->reads.push_back(*reads_it);
         }
     }
