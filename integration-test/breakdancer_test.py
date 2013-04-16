@@ -32,7 +32,7 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
         rv = subprocess.call(cmdline, shell=True)
         print "Return value:", rv
         self.assertEqual(0, rv)
-        self.assertFilesEqual(expected_file, output_file, filter_regex="#Command")
+        self.assertFilesEqual(expected_file, output_file, filter_regex="#Command|#Software")
 
 if __name__ == "__main__":
     main()
