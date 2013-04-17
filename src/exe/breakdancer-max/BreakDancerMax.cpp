@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
          cmds[exe] ++;
 
          int p_pos = 0;
-         const char *p_chr = "0";
+         const char *p_chr = 0;
         string bam_name = (*ii).first;
 
 
@@ -342,12 +342,14 @@ int main(int argc, char *argv[]) {
                     //cout << b->core.tid << "\tError: no correspondence of the chromosome to the header file!" << endl;
                     continue;
                 }
-                string tmp_p_chr(in->header->target_name[b->core.tid]);
-                string p_chr_str(p_chr);
-                if(tmp_p_chr.compare(p_chr_str) == 0)
-                    ref_len += b->core.pos - p_pos;
+                char const* new_seq_name = in->header->target_name[b->core.tid];
+                if (p_chr) {
+                    if (strcmp(p_chr, new_seq_name) == 0) {
+                        ref_len += b->core.pos - p_pos;
+                    }
+                }
                 p_pos = b->core.pos;
-                p_chr = in->header->target_name[b->core.tid];
+                p_chr = new_seq_name;
                 string lib;
                 if(!(readgroup.empty()))
                     lib = readgroup_library[readgroup];
@@ -359,15 +361,9 @@ int main(int argc, char *argv[]) {
                     continue;
 
                 if(b->core.qual > opts.min_map_qual && b->core.flag < 32 && b->core.flag >=18){
-                    if(nreads.find(lib) == nreads.end())
-                        nreads[lib] = 1;
-                    else
-                        nreads[lib] ++;
+                    ++nreads[lib];
                     if(opts.CN_lib == 0){
-                        if(nreads_.find(libmaps[lib]) == nreads_.end())
-                            nreads_[libmaps[lib]] = 1;
-                        else
-                            nreads_[libmaps[lib]] ++;
+                        nreads_[libmaps[lib]];
                     }
                 }
 
@@ -443,12 +439,14 @@ int main(int argc, char *argv[]) {
                 string ori = aln_return[1];
                 string readgroup = aln_return[0];
 
-                string tmp_p_chr(in->header->target_name[b->core.tid]);
-                string p_chr_str(p_chr);
-                if(tmp_p_chr.compare(p_chr_str) == 0)
-                    ref_len += b->core.pos - p_pos;
+                char const* new_seq_name = in->header->target_name[b->core.tid];
+                if (p_chr) {
+                    if (strcmp(p_chr, new_seq_name) == 0) {
+                        ref_len += b->core.pos - p_pos;
+                    }
+                }
                 p_pos = b->core.pos;
-                p_chr = in->header->target_name[b->core.tid];
+                p_chr = new_seq_name;
                 string lib;
                 if(!(readgroup.empty()))
                     lib = readgroup_library[readgroup];
