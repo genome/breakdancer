@@ -295,9 +295,6 @@ int main(int argc, char *argv[]) {
     int defined_all_readgroups = 1;
 
     samfile_t *in = 0;
-    char in_mode[5] = "", *fn_list = 0, *fn_ref = 0, *fn_rg = 0;
-    strcpy(in_mode, "r");
-    strcat(in_mode, "b");
     int i = 0;
     bam1_t *b = bam_init1();
     string format_ = "sam";
@@ -321,7 +318,7 @@ int main(int argc, char *argv[]) {
         if(opts.chr == "0") {
             // no chromosome defined
             // convert the entire bam file
-            if ((in = samopen(bam_name.c_str(), in_mode, fn_list)) == 0) {
+            if ((in = samopen(bam_name.c_str(), "rb", 0)) == 0) {
                 fprintf(stderr, "[main_samview] fail to open file for reading\n");
                 cout << bam_name << endl;
                 continue;
@@ -410,7 +407,7 @@ int main(int argc, char *argv[]) {
         }
         else{
 
-            if ((in = samopen(bam_name.c_str(), in_mode, fn_list)) == 0) {
+            if ((in = samopen(bam_name.c_str(), "rb", 0)) == 0) {
                 fprintf(stderr, "[main_samview] fail to open file for reading.\n");
                 return 0;
             }
@@ -636,7 +633,7 @@ int main(int argc, char *argv[]) {
     else if(n == 1){
         if(opts.chr == "0") {
             samfile_t *in;
-            if ((in = samopen(maps[0].c_str(), in_mode, fn_list)) == 0) {
+            if ((in = samopen(maps[0].c_str(), "rb", 0)) == 0) {
                 fprintf(stderr, "[main_samview] fail to open file for reading.\n");
                 return 0;
             }
@@ -766,7 +763,7 @@ int main(int argc, char *argv[]) {
             pair64_t *off;
             uint64_t curr_off = 0;
             int i = -1, n_seeks = 0;
-            if ((in = samopen(maps[0].c_str(), in_mode, fn_list)) == 0) {
+            if ((in = samopen(maps[0].c_str(), "rb", 0)) == 0) {
                 fprintf(stderr, "[main_samview] fail to open file for reading.\n");
                 return 0;
             }
@@ -1104,11 +1101,7 @@ int main(int argc, char *argv[]) {
             }
 
             for(int i = 0; i!=n; ++i){
-                char in_mode[5] = "";
-                char *fn_list = 0;
-                strcpy(in_mode, "r");
-                strcat(in_mode, "b");
-                if ((in[i] = samopen(big_bam[i].c_str(), in_mode, fn_list)) == 0) {
+                if ((in[i] = samopen(big_bam[i].c_str(), "rb", 0)) == 0) {
                     fprintf(stderr, "[main_samview] fail to open file for reading.\n");
                     return 0;
                 }
@@ -1328,7 +1321,6 @@ int main(int argc, char *argv[]) {
            big_bam = NULL;
 
     }
-    free(fn_list); free(fn_ref); free(fn_rg);
 
     cerr << "Max Kahan error: " << _max_kahan_err << "\n";
 
@@ -2373,11 +2365,7 @@ void EstimatePriorParameters(
     for(map<string,string>::const_iterator ii=fmaps.begin(); ii!=fmaps.end(); ++ii){
         string bam_name = (*ii).first;
         samfile_t *in;
-        char in_mode[5] = "";
-        char *fn_list = 0;
-        strcpy(in_mode, "r");
-        strcat(in_mode, "b");
-        if ((in = samopen(bam_name.c_str(), in_mode, fn_list)) == 0) {
+        if ((in = samopen(bam_name.c_str(), "rb", 0)) == 0) {
             fprintf(stderr, "[main_samview] fail to open file for reading.\n");
             return;
         }
@@ -2573,21 +2561,17 @@ int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t *curr_
 
 // read bam files all together, and merge them
 int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *idx){
-    char in_mode[5] = "", *fn_list = 0;
-    strcpy(in_mode, "r");
-    strcat(in_mode, "b");
     for(int i = 0; i!=n; ++i){
         heap1_t *h;
-        char *fn_;
-        fn_ = new char[fn[i].length()+1];
-        strcpy(fn_, fn[i].c_str());
 
-        if ((in[i] = samopen(fn_, in_mode, fn_list)) == 0) {
-            fprintf(stderr, "[main_samview] fail to open file for reading.\n");
+        if ((in[i] = samopen(fn[i].c_str(), "rb", 0)) == 0) {
+            fprintf(stderr, "[main_samview] fail to open file %s for reading.\n",
+                fn[i].c_str());
             continue;
         }
         if (in[i]->header == 0) {
-            fprintf(stderr, "[main_samview] fail to read the header.\n");
+            fprintf(stderr, "[main_samview] fail to read the header (%s).\n",
+                fn[i].c_str());
             continue;
         }
         h = heap + i;
@@ -2598,8 +2582,9 @@ int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *i
             h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
             h->idx = (*idx)++;
         }
-        else h->pos = HEAP_EMPTY;
-        delete []fn_;
+        else {
+            h->pos = HEAP_EMPTY;
+        }
     }
 
     ks_heapmake(heap, n, heap);

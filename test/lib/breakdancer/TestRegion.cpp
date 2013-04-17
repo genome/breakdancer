@@ -55,4 +55,3 @@ TEST_F(TestRegion, set_read_counts) {
     ASSERT_DEATH(test_region->set_read_counts(num_FR_reads, num_ROI_reads),".*Assertion.*failed.*");
 #endif
 }
-
