@@ -2595,47 +2595,11 @@ int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *i
         h->b = (bam1_t*)calloc(1,sizeof(bam1_t));
         int r;
         if ((r = samread(in[i], h->b)) >= 0) {
-            //if(bam_read1(fp[i],h->b) >= 0){
             h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
             h->idx = (*idx)++;
         }
         else h->pos = HEAP_EMPTY;
         delete []fn_;
-    }
-
-    ks_heapmake(heap, n, heap);
-    return 1;
-}
-
-// read bam files all together by one particular chromosome, and merge them
-int MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_str, int *tid, int *beg, int *end, samfile_t **in, pair64_t **off, int *n_off, uint64_t *idx){
-    for(int i = 0; i!=n; ++i){
-        heap1_t *h;
-        int tid_tmp, beg_tmp, end_tmp, n_off_tmp;
-
-        off[i] = ReadBamChr_prep(chr_str, fn[i], &tid_tmp, &beg_tmp, &end_tmp, in[i], &n_off_tmp);
-        tid[i] = tid_tmp;
-        beg[i] = beg_tmp;
-        end[i] = end_tmp;
-        n_off[i] = n_off_tmp;
-        if(fp[i] == 0){
-            cout << "[bam_merge_core] fail to open file " << fn[i] << "\n";
-            for(int j = 0; j < i; ++j)
-                bam_close(fp[j]);
-            free(fp);
-            free(heap);
-            return 0;
-        }
-        h = heap + i;
-        h->i = i;
-        h->b = (bam1_t *)calloc(1,sizeof(bam1_t));
-        if(bam_read1(fp[i],h->b) >= 0){
-            //if((r = samread(in[i], h->b)) >= 0) {
-            h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
-            h->idx = (*idx)++;
-        }
-        else h->pos = HEAP_EMPTY;
-        //fp[i] = in[i]->x.bam;
     }
 
     ks_heapmake(heap, n, heap);
@@ -2782,13 +2746,6 @@ string get_string(uint8_t *pt, int32_t length){
     for(int i = 0; i < length ; i++)
         seq += bam_nt16_rev_table[bam1_seqi(pt, i)];
     return seq;
-}
-
-// augmenting function: transfer from char to string
-string char2str(char *str_){
-    string str;
-    str.copy(str_, strlen(str_), 0);
-    return str;
 }
 
 void write_fastq_for_flag(const string &flag, const vector< vector<string> > &support_reads, const map<string, string> &ReadsOut) {

@@ -228,8 +228,6 @@ int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t *curr_
 
 int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *idx);
 
-int MergeBamsChr_prep(string *fn, int n, bamFile *fp, heap1_t *heap, string chr_str, int *tid, int *beg, int *end, samfile_t **in, pair64_t **off, int *n_off, uint64_t *idx);
-
 string get_from_line(string line,string search,int flag);
 
 string get_from_line_two(string line,string search1,string search2,int flag2);
