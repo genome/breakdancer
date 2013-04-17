@@ -360,7 +360,7 @@ int main(int argc, char *argv[]) {
                 if(b->core.qual > opts.min_map_qual && b->core.flag < 32 && b->core.flag >=18){
                     ++nreads[lib];
                     if(opts.CN_lib == 0){
-                        nreads_[libmaps[lib]];
+                        ++nreads_[libmaps[lib]];
                     }
                 }
 
