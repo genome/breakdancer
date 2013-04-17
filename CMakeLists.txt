@@ -39,6 +39,10 @@ endif ()
 # make sure to pick up headers from library dirs
 include_directories("src/lib")
 
+# libgtest requires threads, so link thread libraries everywhere
+find_package(Threads)
+link_libraries(${CMAKE_THREAD_LIBS_INIT})
+
 # unit tests
 find_package(GTest)
 if(GTEST_FOUND)
