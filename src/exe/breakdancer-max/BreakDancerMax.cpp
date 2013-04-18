@@ -1,15 +1,20 @@
 #include "BreakDancerMax.h"
+
+#include "breakdancer/Region.hpp"
+#include "breakdancer/LegacyBamReader.hpp"
+
 #include "version.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <assert.h>
-#include "breakdancer/Region.hpp"
 
 #ifndef SCORE_FLOAT_TYPE
 # define SCORE_FLOAT_TYPE double
 #endif
+
+KSORT_INIT(heap, heap1_t, heap_lt)
 
 /*
 # Data structure menagerie
@@ -2504,59 +2509,6 @@ int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name){
         total_region_size += clust_end - clust_start + 1;
     }
     return total_region_size;
-}
-
-// prepare: read bam file by a chromosome
-pair64_t * ReadBamChr_prep(string chr_str, string bam_name, int *tid, int *beg, int *end, samfile_t *in, int *n_off){
-    pair64_t *off;
-    bam_index_t *idx;
-    idx = bam_index_load(bam_name.c_str());// index
-    if(idx == 0){
-        off = (pair64_t*)calloc(1, 16);
-        off[0].u = uint64_t(-1);
-        off[0].v = uint64_t(-1);
-        cout << "Error: should do sort and index first if specifying chromosome!" << endl;
-        return off;
-    }
-    char *chr_str_;
-    chr_str_ = new char[chr_str.length()+1];
-    strcpy(chr_str_, chr_str.c_str());
-    bam_parse_region(in->header, chr_str_, tid, beg, end);// parse
-    delete []chr_str_;
-
-    // return the file handle for handle
-    //*fp = in->x.bam;
-    //bamFile fp = in->x.bam;
-    off = get_chunk_coordinates(idx, *tid, *beg, *end, n_off);
-    bam_index_destroy(idx);
-    return off;
-}
-
-// read bam file by a chromosome by one line; fp will track where we are
-int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t *curr_off, int *i, int *n_seeks, pair64_t *off, int n_off){
-
-    if (off == 0) return 0;
-
-    if (*curr_off == 0 || (*i>=0 && *curr_off >= off[*i].v)) { // then jump to the next chunk
-        if (*i == n_off - 1) return 0; // no more chunks
-        if (*i >= 0) return 0;//assert(*curr_off == off[*i].v); // otherwise bug
-        if (*i < 0 || (*i>=0 && off[*i].v != off[*i+1].u)) { // not adjacent chunks; then seek
-            if(*i + 1 >= 0){
-                bam_seek(fp, off[*i+1].u, SEEK_SET);
-                *curr_off = bam_tell(fp);
-                ++(*n_seeks);
-            }
-        }
-        ++(*i);
-    }
-    if (bam_read1(fp, b) > 0) {
-        *curr_off = bam_tell(fp);
-        if (b->core.tid != tid || b->core.pos >= end) return 0; // no need to proceed
-        else if (is_overlap(beg, end, b)) return 1;
-    }
-    else
-        return 0;
-    return 1;
 }
 
 // read bam files all together, and merge them

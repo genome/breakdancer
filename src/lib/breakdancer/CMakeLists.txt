@@ -3,10 +3,12 @@ project(breakdancer)
 set(SOURCES
     AlnParser.cpp
     AlnParser.h
-    samtools.h
-    Region.hpp
-    Region.cpp
     BDTypedefs.hpp
+    LegacyBamReader.cpp
+    LegacyBamReader.hpp
+    Region.cpp
+    Region.hpp
+    samtools.h
 )
 
 add_library(breakdancer ${SOURCES})

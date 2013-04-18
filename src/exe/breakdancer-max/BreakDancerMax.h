@@ -1,7 +1,7 @@
 #include "breakdancer/AlnParser.h"
-#include "breakdancer/samtools.h"
 #include "breakdancer/Region.hpp"
 #include "breakdancer/BDTypedefs.hpp"
+#include "breakdancer/saminternals.h"
 
 #include <iostream>
 #include <fstream>
@@ -221,10 +221,6 @@ float mean(vector<int> &stat);
 float standard_deviation(vector<int> &stat, float mean);
 
 int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name);
-
-pair64_t * ReadBamChr_prep(string chr_str, string bam_name, int *tid, int *beg, int *end, samfile_t *in, int *n_off);
-
-int ReadBamChr(bam1_t *b, bamFile fp, int tid, int beg, int end, uint64_t *curr_off, int *i, int *n_seeks, pair64_t *off, int n_off);
 
 int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *idx);
 
