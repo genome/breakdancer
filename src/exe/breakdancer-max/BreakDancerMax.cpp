@@ -1,11 +1,13 @@
 #include "BreakDancerMax.h"
 
+#include "breakdancer/BamReader.hpp"
 #include "breakdancer/Region.hpp"
 #include "breakdancer/LegacyBamReader.hpp"
 
 #include "version.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <boost/shared_ptr.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <assert.h>
@@ -13,6 +15,8 @@
 #ifndef SCORE_FLOAT_TYPE
 # define SCORE_FLOAT_TYPE double
 #endif
+
+using boost::shared_ptr;
 
 KSORT_INIT(heap, heap1_t, heap_lt)
 
@@ -420,20 +424,12 @@ int main(int argc, char *argv[]) {
                 fprintf(stderr, "[main_samview] fail to read the header.\n");
                 return 0;
             }
-            bamFile fp = in->x.bam;
 
             // chromosome defined
-            int tid, beg, end, n_off;
-            pair64_t *off;
-            off = ReadBamChr_prep(opts.chr, bam_name, &tid, &beg, &end, in, &n_off);
-            if(off[0].u == uint64_t(-1) && off[0].v == uint64_t(-1)){
-                return 0;
-            }
-            uint64_t curr_off;
-            int i, n_seeks;
-            n_seeks = 0; i = -1; curr_off = 0;
-
-            while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
+            RegionLimitedBamReader reader(bam_name, opts.chr.c_str());
+            int tid = reader.tid();
+            int end = reader.end();
+            while(reader.next(b) > 0) {
                 if(b->core.tid < 0 || b->core.tid != tid || b->core.pos >= end)
                     continue;
                 int same_tid = b->core.tid == b->core.mtid? 1:0;
@@ -761,31 +757,13 @@ int main(int argc, char *argv[]) {
             samclose(in);
         }
         else{
-            // totally different from the perl version; use customized samtools instead
-            samfile_t *in;
-            int tid, beg, end, n_off;
+            RegionLimitedBamReader reader(maps[0], opts.chr.c_str());
 
-            pair64_t *off;
-            uint64_t curr_off = 0;
-            int i = -1, n_seeks = 0;
-            if ((in = samopen(maps[0].c_str(), "rb", 0)) == 0) {
-                fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-                return 0;
-            }
-            if (in->header == 0) {
-                fprintf(stderr, "[main_samview] fail to read the header.\n");
-                return 0;
-            }
-            bamFile fp;
-            fp = in->x.bam;
-
-            off = ReadBamChr_prep(opts.chr, maps[0], &tid, &beg, &end, in, &n_off);
+            int tid = reader.tid();
+            int end = reader.end();
 
             bam1_t *b = bam_init1();
-            for(;;){
-                int j = ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off);
-                if(j <= 0)
-                    break;
+            while (reader.next(b) > 0) {
                 if(b->core.tid < 0)
                     continue;
                 if(b->core.tid == tid && b->core.pos < end){
@@ -1080,56 +1058,22 @@ int main(int argc, char *argv[]) {
 
         //############### find the designated chromosome and put all of them together for all bam files #############
         else{//#customized merge & sort
-            // totally different from the perl version; use customized samtools instead
-            int *tid, *beg, *end, *n_off;
-            tid = new int[n];
-            beg = new int[n];
-            end = new int[n];
-            n_off = new int[n];
 
-            //samfile_t **in;
-            //in = new samfile_t *[n];
-
-
-            pair64_t **off;
-            off = new pair64_t *[n];
-
-            uint64_t *curr_off;
-            curr_off = new uint64_t[n];
-            int *i, *n_seeks;
-            i = new int[n];
-            n_seeks = new int[n];
-            for(int k = 0; k < n; k++){
-                n_seeks[k] = 0;
-                i[k] = -1;
-                curr_off[k] = 0;
-            }
+            // FIXME: make this not use shared_ptr
+            // c++11 unique_ptr would be better, but we're c++98/03ing it for now
+            typedef vector<shared_ptr<RegionLimitedBamReader> > ReaderVecType;
+            ReaderVecType readers;
 
             for(int i = 0; i!=n; ++i){
-                if ((in[i] = samopen(big_bam[i].c_str(), "rb", 0)) == 0) {
-                    fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-                    return 0;
-                }
-                if (in[i]->header == 0) {
-                    fprintf(stderr, "[main_samview] fail to read the header.\n");
-                    return 0;
-                }
-                fp[i] = in[i]->x.bam;
-                off[i] = ReadBamChr_prep(opts.chr, big_bam[i], &tid[i], &beg[i], &end[i], in[i], &n_off[i]);
-                if(fp[i] == 0){
-                    cout << "[bam_merge_core] fail to open file " << big_bam[i] << "\n";
-                    for(int j = 0; j < i; ++j)
-                        bam_close(fp[j]);
-                    free(fp);
-                    free(heap);
-                    return 0;
-                }
+                shared_ptr<RegionLimitedBamReader> reader(
+                    new RegionLimitedBamReader(big_bam[i], opts.chr.c_str()));
+                readers.push_back(reader);
+
                 heap1_t *h;
                 h = heap + i;
                 h->i = i;
-                h->b = (bam1_t *)calloc(1,sizeof(bam1_t));
-                if(bam_read1(fp[i],h->b) >= 0){
-                    //if((r = samread(in[i], h->b)) >= 0) {
+                h->b = bam_init1();
+                if (readers.back()->next(h->b)) {
                     h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
                     h->idx = idx++;
                 }
@@ -1145,7 +1089,7 @@ int main(int argc, char *argv[]) {
                 while(heap->pos != HEAP_EMPTY){
 
                     if(skip_previous == 0){
-                        if( b->core.tid == tid[heap->i] && b->core.pos < end[heap->i] ){
+                        if( b->core.tid == readers[heap->i]->tid() && b->core.pos < readers[heap->i]->end() ){
                             int same_tid = b->core.tid == b->core.mtid ? 1:0;
                             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                             string ori = aln_return[1];
@@ -1178,7 +1122,7 @@ int main(int argc, char *argv[]) {
                                     d,
                                     &max_readlen,
                                     ori,
-                                    in[0],
+                                    readers[0]->samfile(),
                                     &ntotal_nucleotides,
                                     read_density,
                                     possible_fake_data,
@@ -1188,7 +1132,8 @@ int main(int argc, char *argv[]) {
                             }
                         }
                     }
-                    int j = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
+
+                    int j = readers[heap->i]->next(b);
                     if(j > 0){
                         heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
                         heap -> idx = idx++;
@@ -1201,7 +1146,7 @@ int main(int argc, char *argv[]) {
                             skip_previous = 0;
                         ks_heapadjust(heap, 0, n_ava_heap, heap);
                     }
-                    else if(j == 0){
+                    else {
                         n_ava_heap --;
                         //int n_ava_heap = n-1;
                         int jj = 0;
@@ -1210,7 +1155,8 @@ int main(int argc, char *argv[]) {
                             heap[0] = heap[n_ava_heap];
                             heap[n_ava_heap] = tmp;
                             ks_heapadjust(heap, 0, n_ava_heap, heap);
-                            jj = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
+                            jj = readers[heap->i]->next(b);
+                            //jj = ReadBamChr(b, fp[heap->i], tid[heap->i], beg[heap->i], end[heap->i], &curr_off[heap->i], &i[heap->i], &n_seeks[heap->i], off[heap->i], n_off[heap->i]);
                             if(jj == 0){
                                 n_ava_heap --;
                             }
@@ -1236,9 +1182,6 @@ int main(int argc, char *argv[]) {
                             heap->b = 0;
                         }
                     }
-                    else
-                        cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
-
                 }
             }
             if(reg_seq.size() != 0){
@@ -1298,7 +1241,7 @@ int main(int argc, char *argv[]) {
                 ReadsOut,
                 SVtype,
                 mean_insertsize,
-                in[0],
+                readers[0]->samfile(),
                 read_density,
                 opts.CN_lib,
                 maps,
@@ -1307,24 +1250,12 @@ int main(int argc, char *argv[]) {
                 libmaps
             );
 
-            delete []tid;
-            delete []beg;
-            delete []end;
-            delete []n_off;
-            delete []curr_off;
-            delete []i;
-            delete []n_seeks;
         }
         //cout << "release memory\n";
-        for(int k = 0; k!=n; k++)
-            samclose(in[k]);
-        free(in);
-          free(fp);
-          free(heap);
+        free(heap);
 
-           delete []big_bam;
-           big_bam = NULL;
-
+        delete []big_bam;
+        big_bam = NULL;
     }
 
     cerr << "Max Kahan error: " << _max_kahan_err << "\n";
@@ -2369,33 +2300,15 @@ void EstimatePriorParameters(
     bam1_t *b = bam_init1();
     for(map<string,string>::const_iterator ii=fmaps.begin(); ii!=fmaps.end(); ++ii){
         string bam_name = (*ii).first;
-        samfile_t *in;
-        if ((in = samopen(bam_name.c_str(), "rb", 0)) == 0) {
-            fprintf(stderr, "[main_samview] fail to open file for reading.\n");
-            return;
-        }
-        if (in->header == 0) {
-            fprintf(stderr, "[main_samview] fail to read the header.\n");
-            return;
-        }
-        bamFile fp = in->x.bam;
-
-        // read the bam file by a chromosome
-        //samfile_t *in;
-        int tid, beg, end, n_off;
-        pair64_t *off;
-        //bamFile fp;
-        off = ReadBamChr_prep(opts.chr, bam_name, &tid, &beg, &end, in, &n_off);
-        //bamFile fp = in->x.bam;
-        uint64_t curr_off;
-        int i, n_seeks;
-        n_seeks = 0; i = -1; curr_off = 0;
-        while(ReadBamChr(b, fp, tid, beg, end, &curr_off, &i, &n_seeks, off, n_off)){
+        RegionLimitedBamReader reader(bam_name, opts.chr.c_str());
+        bam_header_t* header = reader.header();
+        while (reader.next(b) > 0) {
             string format = "sam";
             string alt = "";
-            //char *mtid;
-            //mtid = in->header->target_name[b->core.tid];
-            int same_tid = strcmp(in->header->target_name[b->core.tid],in->header->target_name[b->core.mtid]) == 0 ? 1:0;
+            int same_tid = strcmp(
+                header->target_name[b->core.tid],
+                header->target_name[b->core.mtid]) == 0 ? 1:0;
+
             vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, opts.platform);
             string ori = aln_return[1];
             string readgroup = aln_return[0];
@@ -2405,7 +2318,7 @@ void EstimatePriorParameters(
             if(lib.empty())
                 continue;
             // analyze 1 chromosome
-            if(opts.chr != "0" && opts.chr != in->header->target_name[b->core.tid])
+            if(opts.chr != "0" && opts.chr != header->target_name[b->core.tid])
                 continue;
             //if(readlen_stat.find(lib) == readlen_stat.end())    // don't need to issue a new stat
             //readlen_stat[lib] = ; // Statistics::Descriptive::Sparse->new() // don't need to issue a new stat
@@ -2417,7 +2330,6 @@ void EstimatePriorParameters(
             //if(insert_stat.find(lib) == insert_stat.end())    // don't need to issue a new stat
             insert_stat[lib].push_back(b->core.isize);
         }
-        samclose(in);
     }
     bam_destroy1(b);
     for(map<string,vector<int> >::const_iterator ii_readlen_stat = readlen_stat.begin(); ii_readlen_stat != readlen_stat.end(); ii_readlen_stat ++){

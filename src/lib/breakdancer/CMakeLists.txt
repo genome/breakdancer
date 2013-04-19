@@ -4,6 +4,8 @@ set(SOURCES
     AlnParser.cpp
     AlnParser.h
     BDTypedefs.hpp
+    BamReader.cpp
+    BamReader.hpp
     LegacyBamReader.cpp
     LegacyBamReader.hpp
     Region.cpp
