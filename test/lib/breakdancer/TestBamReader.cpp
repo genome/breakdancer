@@ -22,12 +22,12 @@ class TestRegionLimitedBamReader : public ::testing::Test {
             bfs::remove_all(_temp_dir);
         }
 
-        string _bam_path;
+        char const* _bam_path;
         string _temp_dir;
 };
 
 TEST_F(TestRegionLimitedBamReader, readChromosome) {
-    if (_bam_path.empty()) {
+    if (!_bam_path) {
         return;
     }
 
