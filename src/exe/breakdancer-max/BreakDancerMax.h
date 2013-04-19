@@ -136,7 +136,7 @@ void do_break_func(
     int min_read_pair,
     string dump_BED,
     int *max_readlen,
-    samfile_t *in,
+    bam_header_t* bam_header,
     int seq_coverage_lim,
     uint32_t *ntotal_nucleotides,
     map<string, float> &read_density,
@@ -195,7 +195,7 @@ void buildConnection(
     map<string, string> &ReadsOut,
     map<string, string> &SVtype,
     map<string, float> &mean_insertsize,
-    samfile_t *in,
+    bam_header_t* bam_header,
     map<string, float> &read_density,
     int CN_lib,
     vector<string> maps, // FIXME: should be constref
