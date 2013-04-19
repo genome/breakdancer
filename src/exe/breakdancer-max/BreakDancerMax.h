@@ -172,7 +172,7 @@ void Analysis (
     int d,
     int *max_readlen,
     string ori,
-    samfile_t *in,
+    bam_header_t* in,
     uint32_t *ntotal_nucleotides,
     map<string, float> &read_density,
     map<string, uint32_t> &possible_fake_data,
