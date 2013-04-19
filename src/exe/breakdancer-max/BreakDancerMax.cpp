@@ -8,16 +8,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <boost/shared_ptr.hpp>
-#include <boost/scoped_ptr.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
+#include <memory>
 #include <assert.h>
 
 #ifndef SCORE_FLOAT_TYPE
 # define SCORE_FLOAT_TYPE double
 #endif
 
-using boost::scoped_ptr;
 using boost::shared_ptr;
 
 KSORT_INIT(heap, heap1_t, heap_lt)
@@ -68,6 +67,13 @@ real_type ComputeProbScore(
 );
 
 namespace {
+    auto_ptr<BamReader> openBam(std::string const& path, Options const& opts) {
+        if (opts.chr == "0")
+            return auto_ptr<BamReader>(new BamReader(path));
+        else
+            return auto_ptr<BamReader>(new RegionLimitedBamReader(path, opts.chr.c_str()));
+    }
+
     Options parseArguments(int argc, char** argv) {
         int c;
         Options opts;
@@ -324,22 +330,17 @@ int main(int argc, char *argv[]) {
         string bam_name = (*ii).first;
 
 
-        scoped_ptr<BamReader> reader;
 
-        if(opts.chr == "0") {
-            // no chromosome defined
-            // convert the entire bam file
-            // XXX: Note: the original code would 'continue' if a particular
-            // bam could not be opened. It would also spew the bam name into
-            // the output, which probably messes it up anyway. We are going
-            // to crash. If it is determined that this is wrong, we should
-            // declare a variable for the BamReader, heap allocate it (with
-            // boost::scoped_ptr/std::unique_ptr/std::auto_ptr) in a try
-            // block and continue on exceptions.
-            reader.reset(new BamReader(bam_name));
-        } else {
-            reader.reset(new RegionLimitedBamReader(bam_name, opts.chr.c_str()));
-        }
+        // no chromosome defined
+        // convert the entire bam file
+        // XXX: Note: the original code would 'continue' if a particular
+        // bam could not be opened. It would also spew the bam name into
+        // the output, which probably messes it up anyway. We are going
+        // to crash. If it is determined that this is wrong, we should
+        // declare a variable for the BamReader, heap allocate it (with
+        // boost::scoped_ptr/std::unique_ptr/std::auto_ptr) in a try
+        // block and continue on exceptions.
+        auto_ptr<BamReader> reader(openBam(bam_name, opts));
 
         while (reader->next(b) > 0) {
             int same_tid = (b->core.tid == b->core.mtid)? 1:0;
@@ -533,245 +534,119 @@ int main(int argc, char *argv[]) {
     }
     //################# node index here ###################
     else if(n == 1){
-        if(opts.chr == "0") {
-            BamReader reader(maps[0]);
-            int r;
-            bam1_t *b = bam_init1();
-            while ((r = reader.next(b)) >= 0) {
-                if(b->core.tid < 0)
-                    continue;
-                int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
-                string readgroup = aln_return[0];
-                string ori = aln_return[1];
-                string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+        auto_ptr<BamReader> reader(openBam(maps[0], opts));
+        int r;
+        bam1_t *b = bam_init1();
+        while ((r = reader->next(b)) >= 0) {
+            if(b->core.tid < 0)
+                continue;
+            int same_tid = b->core.tid == b->core.mtid ? 1:0;
+            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+            string readgroup = aln_return[0];
+            string ori = aln_return[1];
+            string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 
-                if(!library.empty()){
-                    Analysis(
-                        opts,
-                        bdancer,
-                        library,
-                        b,
-                        reg_seq,
-                        reg_name,
-                        read,
-                        regs,
-                        &idx_buff,
-                        &nnormal_reads,
-                        &normal_switch,
-                        &reg_idx,
-                        x_readcounts,
-                        reference_len,
-                        ReadsOut,
-                        mean_insertsize,
-                        SVtype,
-                        mapQual,
-                        uppercutoff,
-                        lowercutoff,
-                        d,
-                        &max_readlen,
-                        ori,
-                        reader.samfile(),
-                        &ntotal_nucleotides,
-                        read_density,
-                        possible_fake_data,
-                        libmaps,
-                        maps
-                    );
-                }
-            }
-            if(reg_seq.size() != 0){
-                do_break_func(
+            if(!library.empty()){
+                Analysis(
                     opts,
                     bdancer,
+                    library,
+                    b,
                     reg_seq,
                     reg_name,
                     read,
                     regs,
                     &idx_buff,
-                    opts.buffer_size,
                     &nnormal_reads,
-                    opts.min_len,
+                    &normal_switch,
                     &reg_idx,
-                    opts.transchr_rearrange,
-                    opts.min_map_qual,
-                    opts.Illumina_long_insert,
-                    opts.prefix_fastq,
                     x_readcounts,
                     reference_len,
-                    opts.fisher,
                     ReadsOut,
                     mean_insertsize,
                     SVtype,
                     mapQual,
                     uppercutoff,
                     lowercutoff,
-                    opts.max_sd,
                     d,
-                    opts.min_read_pair,
-                    opts.dump_BED,
                     &max_readlen,
-                    reader.header(),
-                    opts.seq_coverage_lim,
+                    ori,
+                    reader->samfile(),
                     &ntotal_nucleotides,
                     read_density,
-                    opts.CN_lib,
+                    possible_fake_data,
                     libmaps,
-                    maps,
-                    opts.print_AF,
-                    opts.score_threshold
+                    maps
                 );
             }
-
-            buildConnection(
+        }
+        if(reg_seq.size() != 0){
+            do_break_func(
+                opts,
                 bdancer,
-                read,
+                reg_seq,
                 reg_name,
+                read,
                 regs,
+                &idx_buff,
+                opts.buffer_size,
+                &nnormal_reads,
+                opts.min_len,
+                &reg_idx,
+                opts.transchr_rearrange,
+                opts.min_map_qual,
+                opts.Illumina_long_insert,
+                opts.prefix_fastq,
                 x_readcounts,
                 reference_len,
                 opts.fisher,
+                ReadsOut,
+                mean_insertsize,
+                SVtype,
+                mapQual,
+                uppercutoff,
+                lowercutoff,
+                opts.max_sd,
+                d,
                 opts.min_read_pair,
                 opts.dump_BED,
-                max_readlen,
-                opts.prefix_fastq,
-                ReadsOut,
-                SVtype,
-                mean_insertsize,
-                reader.header(),
+                &max_readlen,
+                reader->header(),
+                opts.seq_coverage_lim,
+                &ntotal_nucleotides,
                 read_density,
                 opts.CN_lib,
+                libmaps,
                 maps,
                 opts.print_AF,
-                opts.score_threshold,
-                libmaps
+                opts.score_threshold
             );
-            bam_destroy1(b);
         }
-        else{
-            RegionLimitedBamReader reader(maps[0], opts.chr.c_str());
 
-            int tid = reader.tid();
-            int end = reader.end();
-
-            bam1_t *b = bam_init1();
-            while (reader.next(b) > 0) {
-                if(b->core.tid < 0)
-                    continue;
-                if(b->core.tid == tid && b->core.pos < end){
-                    int same_tid = b->core.tid == b->core.mtid ? 1:0;
-                    vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
-                    string ori = aln_return[1];
-                    string readgroup = aln_return[0];
-                    string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-                    if(!library.empty()){
-                        Analysis(
-                            opts,
-                            bdancer,
-                            library,
-                            b,
-                            reg_seq,
-                            reg_name,
-                            read,
-                            regs,
-                            &idx_buff,
-                            &nnormal_reads,
-                            &normal_switch,
-                            &reg_idx,
-                            x_readcounts,
-                            reference_len,
-                            ReadsOut,
-                            mean_insertsize,
-                            SVtype,
-                            mapQual,
-                            uppercutoff,
-                            lowercutoff,
-                            d,
-                            &max_readlen,
-                            ori,
-                            reader.samfile(),
-                            &ntotal_nucleotides,
-                            read_density,
-                            possible_fake_data,
-                            libmaps,
-                            maps
-                        );
-                    }
-                    /*else{
-                     if(b->core.pos >= 43803315 && b->core.pos <= 103860201){
-                     count_no_lib ++;
-                     //cout << b->core.pos + 1 << endl;
-                     }
-                     }*/
-                }
-            }
-            if(reg_seq.size() != 0){
-                do_break_func(
-                    opts,
-                    bdancer,
-                    reg_seq,
-                    reg_name,
-                    read,
-                    regs,
-                    &idx_buff,
-                    opts.buffer_size,
-                    &nnormal_reads,
-                    opts.min_len,
-                    &reg_idx,
-                    opts.transchr_rearrange,
-                    opts.min_map_qual,
-                    opts.Illumina_long_insert,
-                    opts.prefix_fastq,
-                    x_readcounts,
-                    reference_len,
-                    opts.fisher,
-                    ReadsOut,
-                    mean_insertsize,
-                    SVtype,
-                    mapQual,
-                    uppercutoff,
-                    lowercutoff,
-                    opts.max_sd,
-                    d,
-                    opts.min_read_pair,
-                    opts.dump_BED,
-                    &max_readlen,
-                    reader.header(),
-                    opts.seq_coverage_lim,
-                    &ntotal_nucleotides,
-                    read_density,
-                    opts.CN_lib,
-                    libmaps,
-                    maps,
-                    opts.print_AF,
-                    opts.score_threshold
-                );
-            }
-            buildConnection(
-                bdancer,
-                read,
-                reg_name,
-                regs,
-                x_readcounts,
-                reference_len,
-                opts.fisher,
-                opts.min_read_pair,
-                opts.dump_BED,
-                max_readlen,
-                opts.prefix_fastq,
-                ReadsOut,
-                SVtype,
-                mean_insertsize,
-                reader.header(),
-                read_density,
-                opts.CN_lib,
-                maps,
-                opts.print_AF,
-                opts.score_threshold,
-                libmaps
-            );
-            bam_destroy1(b);
-        }
+        buildConnection(
+            bdancer,
+            read,
+            reg_name,
+            regs,
+            x_readcounts,
+            reference_len,
+            opts.fisher,
+            opts.min_read_pair,
+            opts.dump_BED,
+            max_readlen,
+            opts.prefix_fastq,
+            ReadsOut,
+            SVtype,
+            mean_insertsize,
+            reader->header(),
+            read_density,
+            opts.CN_lib,
+            maps,
+            opts.print_AF,
+            opts.score_threshold,
+            libmaps
+        );
+        bam_destroy1(b);
     }
     else{
         string *big_bam = new string[n];
@@ -782,11 +657,10 @@ int main(int argc, char *argv[]) {
         heap1_t *heap;
         heap = (heap1_t*)calloc(n,sizeof(heap1_t));
 
-        samfile_t **in;
-        in = new samfile_t *[n];
         uint64_t idx = 0;
 
         if(opts.chr == "0") {
+            samfile_t **in = new samfile_t *[n];
              // open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu) samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - maq mapmerge
                // dig into merge samtools code and utilize what we needed
 
@@ -940,6 +814,11 @@ int main(int argc, char *argv[]) {
                 opts.score_threshold,
                 libmaps
             );
+
+            for (int k = 0; k < n; ++k) {
+                samclose(in[k]);
+            }
+            free(in);
         }
 
         //############### find the designated chromosome and put all of them together for all bam files #############
@@ -1137,6 +1016,7 @@ int main(int argc, char *argv[]) {
 
         }
         //cout << "release memory\n";
+
         free(heap);
 
         delete []big_bam;
