@@ -8,6 +8,8 @@ set(SOURCES
     BamReader.hpp
     LegacyBamReader.cpp
     LegacyBamReader.hpp
+    Read.cpp
+    Read.hpp
     Region.cpp
     Region.hpp
     samtools.h
