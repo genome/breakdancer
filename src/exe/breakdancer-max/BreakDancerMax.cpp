@@ -571,7 +571,7 @@ int main(int argc, char *argv[]) {
                     d,
                     &max_readlen,
                     ori,
-                    reader->samfile(),
+                    reader->header(),
                     &ntotal_nucleotides,
                     read_density,
                     possible_fake_data,
@@ -702,7 +702,7 @@ int main(int argc, char *argv[]) {
                                 d,
                                 &max_readlen,
                                 ori,
-                                in[heap->i],
+                                in[heap->i]->header,
                                 &ntotal_nucleotides,
                                 read_density,
                                 possible_fake_data,
@@ -887,7 +887,7 @@ int main(int argc, char *argv[]) {
                                     d,
                                     &max_readlen,
                                     ori,
-                                    readers[0]->samfile(),
+                                    readers[0]->header(),
                                     &ntotal_nucleotides,
                                     read_density,
                                     possible_fake_data,
@@ -1162,7 +1162,7 @@ void Analysis (
     int d,
     int *max_readlen,
     string ori,
-    samfile_t *in,
+    bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,
     map<string, float> &read_density,
     map<string, uint32_t> &possible_fake_data,
@@ -1257,7 +1257,7 @@ void Analysis (
           return;
   }
 
-    if(strcmp(in->header->target_name[b->core.tid],"*")==0) // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
+    if(strcmp(bam_header->target_name[b->core.tid],"*")==0) // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
         return;
 
     if(b->core.flag == 0)
@@ -1391,7 +1391,7 @@ void Analysis (
                     ReadsOut,
                     SVtype,
                     mean_insertsize,
-                    in->header,
+                    bam_header,
                     read_density,
                     CN_lib,
                     maps,
