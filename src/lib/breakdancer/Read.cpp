@@ -35,7 +35,7 @@ Read::~Read() {
 }
 
 string Read::operator[](std::vector<std::string>::size_type idx) {
-    return "";
+    return _string_record[idx];
 }
 
 string Read::readgroup() {
