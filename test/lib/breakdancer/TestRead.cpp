@@ -30,7 +30,7 @@ class TestRead : public ::testing::Test {
             bam_record.data = &data[0];
             readgroup_platform["rg3"] = "helicos";
             readgroup_library["rg3"] = "some_lib";
-            test_read = new Read(&bam_record, "sam", readgroup_platform, readgroup_library, "some_platform");
+            test_read = new Read(&bam_record, "sam", readgroup_platform, readgroup_library);
         }
         void TearDown() {
             delete test_read;
@@ -69,7 +69,7 @@ TEST_F(TestRead, indexing) {
     ASSERT_EQ((*test_read)[3], "+");
     ASSERT_EQ((*test_read)[4], "478");
     ASSERT_EQ((*test_read)[5], "0"); //currently not set
-    ASSERT_EQ((*test_read)[6], "0"); //currently not set
+    ASSERT_EQ((*test_read)[6], "37");
     ASSERT_EQ((*test_read)[7], "2");
     ASSERT_EQ((*test_read)[8], "some_lib");
     ASSERT_EQ((*test_read)[9], "CT");

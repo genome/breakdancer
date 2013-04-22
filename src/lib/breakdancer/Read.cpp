@@ -5,14 +5,14 @@
 using namespace std;
 using namespace breakdancer;
 
-Read::Read(bam1_t const* record, string const& format, map<string, string> const& readgroup_platform, map<string, string> const& readgroup_library, string const& platform) {
+Read::Read(bam1_t const* record, string const& format, map<string, string> const& readgroup_platform, map<string, string> const& readgroup_library) {
     _record = bam_init1(); 
     bam_copy1(_record, record);
     
     _bdflag = NA;
-    _bdqual = 0;
+    _bdqual = _determine_bdqual();
 
-    _platform = _set_platform(readgroup_platform);
+    platform = _platform(readgroup_platform);
     library = _library(readgroup_library);
     
     _string_record.push_back(queryname());
@@ -88,7 +88,7 @@ string Read::ori() {
     return  _record->core.flag & 0x0010 ? "-" : "+";
 }
 
-string Read::_set_platform(map<string, string> const& readgroup_platform) {
+string Read::_platform(map<string, string> const& readgroup_platform) {
     map<string, string>::const_iterator platform_it = readgroup_platform.find(readgroup());
     if(platform_it != readgroup_platform.end()) {
         return platform_it->second;
@@ -106,5 +106,16 @@ string Read::_library(map<string, string> const& readgroup_library) {
     }
     else {
         return "";
+    }
+}
+
+int Read::_determine_bdqual() {
+    //Breakdancer always takes the alternative mapping quality, if available
+    //it originally contained support for AQ, but the newer tag appears to be AM. Dropping support for AQ.
+    if(uint8_t* alt_qual = bam_aux_get(_record, "AM")) {
+         return bam_aux2i(alt_qual);					
+    }
+    else {
+        return _record->core.qual;  //if no alternative mapping quality, use core quality
     }
 }
