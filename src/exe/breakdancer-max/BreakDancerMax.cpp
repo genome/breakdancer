@@ -370,6 +370,10 @@ int main(int argc, char *argv[]) {
             if(lib.length() == 0)
                 continue;
 
+            //Below seems like a bug to me. 18 means FR orientation plus paired end req met in MAQ
+            //this would also allow 20 (RF and paired end req met) and 24 (RR and paired end req met)
+            //the latter two are abnormal mappings and this would allow them but would skip 17 (FF and paired end req met)
+            //I don't know if these were ever real world values but this oddness seems inconsistent with the intent
             if(b->core.qual > opts.min_map_qual && b->core.flag < 32 && b->core.flag >=18){
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
