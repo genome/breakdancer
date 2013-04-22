@@ -9,7 +9,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _record = bam_init1(); 
     bam_copy1(_record, record);
     
-    _bdflag = UNKNOWN;
+    _bdflag = NA;
     _bdqual = 0;
 
     _platform = _set_platform(readgroup_platform);

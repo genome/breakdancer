@@ -10,7 +10,7 @@ extern "C" {
 }
 
 namespace breakdancer {
-    enum pair_orientation_flag {UNKNOWN=0, FF=1, FR_big_insert=2, FR_small_insert=3, RF=4, RR=8, CTX=32};
+    enum pair_orientation_flag {NA=0, FF=1, FR_big_insert=2, FR_small_insert=3, RF=4, RR=8, CTX=32};
     class Read {
         private:
             bam1_t* _record;
