@@ -68,7 +68,7 @@ TEST_F(TestRead, indexing) {
     ASSERT_EQ((*test_read)[2], "29184911");
     ASSERT_EQ((*test_read)[3], "+");
     ASSERT_EQ((*test_read)[4], "478");
-    ASSERT_EQ((*test_read)[5], "0"); //currently not set
+    ASSERT_EQ((*test_read)[5], "18");
     ASSERT_EQ((*test_read)[6], "37");
     ASSERT_EQ((*test_read)[7], "2");
     ASSERT_EQ((*test_read)[8], "some_lib");

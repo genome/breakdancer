@@ -9,8 +9,8 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _record = bam_init1(); 
     bam_copy1(_record, record);
     
-    _bdflag = NA;
-    _bdqual = _determine_bdqual();
+    bdflag = _determine_bdflag();
+    bdqual = _determine_bdqual();
 
     platform = _platform(readgroup_platform);
     library = _library(readgroup_library);
@@ -20,8 +20,8 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _string_record.push_back(boost::lexical_cast<string>(_record->core.pos));
     _string_record.push_back(ori());
     _string_record.push_back(boost::lexical_cast<string>(_record->core.isize));
-    _string_record.push_back(boost::lexical_cast<string>(_bdflag));
-    _string_record.push_back(boost::lexical_cast<string>(_bdqual));
+    _string_record.push_back(boost::lexical_cast<string>(bdflag));
+    _string_record.push_back(boost::lexical_cast<string>(bdqual));
     _string_record.push_back(boost::lexical_cast<string>(_record->core.l_qseq));
     _string_record.push_back(library);
 
@@ -118,4 +118,72 @@ int Read::_determine_bdqual() {
     else {
         return _record->core.qual;  //if no alternative mapping quality, use core quality
     }
+}
+
+//FIXME This is practically illegible and there are many flag definitions that need to be added
+//In addition, there is some caching that could happen to make this whole thing shorter
+//and less computationally expensive
+pair_orientation_flag Read::_determine_bdflag() {
+    pair_orientation_flag flag = NA;
+    if(!(_record->core.flag & BAM_FDUP)) { //this should probably include QCfail as well
+        if(_record->core.flag & BAM_FPAIRED) {
+            if(_record->core.flag & BAM_FUNMAP) {
+                flag = UNMAPPED;
+            }
+            else if(_record->core.flag & BAM_FMUNMAP) {
+                flag = MATE_UNMAPPED;
+            }
+            else if(_record->core.tid != _record->core.mtid) {
+                flag = ARP_CTX;
+            }
+            else if(_record->core.flag & BAM_FPROPER_PAIR) {
+                if(platform == "solid") { //assuming config parser has normalized this for me
+                    flag = NORMAL_FR; //normal insert size
+                }
+                else {
+                    if(_record->core.pos < _record->core.mpos) {
+                        flag = (_record->core.flag & BAM_FREVERSE) ? NORMAL_RF : NORMAL_FR;
+                    }
+                    else {
+                        flag = (_record->core.flag & BAM_FREVERSE) ? NORMAL_FR : NORMAL_RF;
+                    }
+                }
+            }
+            else {
+                if(platform == "solid") {
+                    if((_record->core.flag & BAM_FREVERSE) == (_record->core.flag & BAM_FMREVERSE)) { //do the mates have the same orientation?
+                        flag = (_record->core.flag & BAM_FREVERSE) ? ARP_RR : ARP_FF;
+                    }
+                    else if( !(_record->core.flag & BAM_FREVERSE)) {
+                        if(_record->core.flag & BAM_FREAD1) {
+                            flag = (_record->core.pos < _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
+                        }
+                        else {
+                            flag = (_record->core.pos > _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
+                        }
+                    }
+                    else {
+                        if(_record->core.flag & BAM_FREAD1) {
+                            flag = (_record->core.pos > _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
+                        }
+                        else {
+                            flag = (_record->core.pos < _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
+                        }
+                    }
+                }
+                else {
+                    if((_record->core.flag & BAM_FREVERSE) == (_record->core.flag & BAM_FMREVERSE)) { //do the mates have the same orientation?
+                        flag = (_record->core.flag & BAM_FMREVERSE) ? ARP_RR : ARP_FF;
+                    }
+                    else if((_record->core.mpos > _record->core.pos && (_record->core.flag & BAM_FREVERSE)) || (_record->core.pos > _record->core.mpos && !(_record->core.flag & BAM_FREVERSE))) {
+                        flag = ARP_RF;
+                    }
+                    else {
+                        flag = ARP_FR_big_insert;
+                    }
+                }
+            }
+        }
+    }
+    return flag;
 }
