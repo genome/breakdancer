@@ -4,6 +4,7 @@
 #include "breakdancer/Region.hpp"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/LegacyBamReader.hpp"
+#include "breakdancer/BDConfig.hpp"
 
 #include "version.h"
 #include <stdio.h>
@@ -12,13 +13,12 @@
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <memory>
+#include <stdexcept>
 #include <assert.h>
 
 #ifndef SCORE_FLOAT_TYPE
 # define SCORE_FLOAT_TYPE double
 #endif
-
-using boost::shared_ptr;
 
 KSORT_INIT(heap, heap1_t, heap_lt)
 
@@ -49,6 +49,7 @@ using boost::math::cdf;
 using boost::math::complement;
 using boost::math::poisson_distribution;
 using boost::math::chi_squared;
+using boost::shared_ptr;
 
 using namespace std;
 
@@ -68,11 +69,11 @@ real_type ComputeProbScore(
 );
 
 namespace {
-    auto_ptr<BamReader> openBam(std::string const& path, Options const& opts) {
+    auto_ptr<IBamReader> openBam(std::string const& path, Options const& opts) {
         if (opts.chr == "0")
-            return auto_ptr<BamReader>(new BamReader(path));
+            return auto_ptr<IBamReader>(new BamReader(path));
         else
-            return auto_ptr<BamReader>(new RegionLimitedBamReader(path, opts.chr.c_str()));
+            return auto_ptr<IBamReader>(new RegionLimitedBamReader(path, opts.chr.c_str()));
     }
 
     Options parseArguments(int argc, char** argv) {
@@ -183,6 +184,10 @@ int main(int argc, char *argv[]) {
 
     // configure file
     ifstream CONFIG;
+    CONFIG.open(argv[optind]);
+    BDConfig __cfg(CONFIG);
+    CONFIG.close();
+
     CONFIG.open(argv[optind]);
     //CONFIG.open("/gscuser/xfan/kdevelop/BreakDancerMax/debug/src/configure2.cfg");
     char line_[512]; // each line of the config file
@@ -341,7 +346,7 @@ int main(int argc, char *argv[]) {
         // declare a variable for the BamReader, heap allocate it (with
         // boost::scoped_ptr/std::unique_ptr/std::auto_ptr) in a try
         // block and continue on exceptions.
-        auto_ptr<BamReader> reader(openBam(bam_name, opts));
+        auto_ptr<IBamReader> reader(openBam(bam_name, opts));
 
         while (reader->next(b) > 0) {
             int same_tid = (b->core.tid == b->core.mtid)? 1:0;
@@ -377,6 +382,11 @@ int main(int argc, char *argv[]) {
             //this would also allow 20 (RF and paired end req met) and 24 (RR and paired end req met)
             //the latter two are abnormal mappings and this would allow them but would skip 17 (FF and paired end req met)
             //I don't know if these were ever real world values but this oddness seems inconsistent with the intent
+            // (^dlarson)
+            //
+            // This is the thing I was talking about that creeped me out
+            // (relational cmps on bitvectors)
+            // -tabbott
             if(b->core.qual > opts.min_map_qual && b->core.flag < 32 && b->core.flag >=18){
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
@@ -541,7 +551,7 @@ int main(int argc, char *argv[]) {
     }
     //################# node index here ###################
     else if(n == 1){
-        auto_ptr<BamReader> reader(openBam(maps[0], opts));
+        auto_ptr<IBamReader> reader(openBam(maps[0], opts));
         int r;
         bam1_t *b = bam_init1();
         while ((r = reader->next(b)) >= 0) {
@@ -838,18 +848,36 @@ int main(int argc, char *argv[]) {
             // FIXME: make this not use shared_ptr
             // c++11 unique_ptr would be better, but we're c++98/03ing it for now
             typedef vector<shared_ptr<RegionLimitedBamReader> > ReaderVecType;
-            ReaderVecType readers;
+            ReaderVecType sp_readers;
 
+            vector<IBamReader*> readers;
+
+            int tid = -1;
+            int reg_end = -1;
             for(int i = 0; i!=n; ++i){
                 shared_ptr<RegionLimitedBamReader> reader(
                     new RegionLimitedBamReader(big_bam[i], opts.chr.c_str()));
-                readers.push_back(reader);
+
+                // XXX: these are low detail err msgs, but this code is going away soon
+                if (tid >= 0 && reader->tid() != tid) {
+                    throw runtime_error("tid mismatch");
+                }
+
+                if (reg_end >= 0 && reader->end() != reg_end) {
+                    throw runtime_error("region end mismatch");
+                }
+
+                tid = reader->tid();
+                reg_end = reader->end();
+
+                sp_readers.push_back(reader);
+                readers.push_back(reader.get());
 
                 heap1_t *h;
                 h = heap + i;
                 h->i = i;
                 h->b = bam_init1();
-                if (readers.back()->next(h->b)) {
+                if (sp_readers.back()->next(h->b)) {
                     h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
                     h->idx = idx++;
                 }
@@ -865,7 +893,7 @@ int main(int argc, char *argv[]) {
                 while(heap->pos != HEAP_EMPTY){
 
                     if(skip_previous == 0){
-                        if( b->core.tid == readers[heap->i]->tid() && b->core.pos < readers[heap->i]->end() ){
+                        if( b->core.tid == tid && b->core.pos < reg_end) {
                             int same_tid = b->core.tid == b->core.mtid ? 1:0;
                             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
                             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);

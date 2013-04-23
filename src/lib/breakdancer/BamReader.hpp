@@ -1,5 +1,7 @@
 #pragma once
 
+#include "IBamReader.hpp"
+
 #include <string>
 
 extern "C" {
@@ -7,21 +9,14 @@ extern "C" {
     #include <bam.h>
 }
 
-class BamReader {
+class BamReader : public IBamReader {
 public:
     BamReader(std::string const& path);
-    virtual ~BamReader();
+    ~BamReader();
 
-    virtual int next(bam1_t* entry);
+    int next(bam1_t* entry);
 
-    // FIXME: make things not need this
-    samfile_t* samfile() {
-        return _in;
-    }
-
-    bam_header_t* header() const {
-        return _in->header;
-    }
+    bam_header_t* header() const;
 
 protected:
     std::string _path;
@@ -48,3 +43,8 @@ protected:
     int _beg;
     int _end;
 };
+
+inline
+bam_header_t* BamReader::header() const {
+    return _in->header;
+}
