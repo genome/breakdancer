@@ -14,8 +14,6 @@ namespace breakdancer {
     class Read {
         private:
             bam1_t* _record;
-            int bdqual;
-            pair_orientation_flag bdflag;
 
             std::vector<std::string> _string_record;
             std::string platform;
@@ -26,6 +24,9 @@ namespace breakdancer {
             pair_orientation_flag _determine_bdflag();
 
         public:
+            int bdqual;
+            pair_orientation_flag bdflag;
+
             Read(bam1_t const* record, std::string const& format, std::map<std::string, std::string> const& readgroup_platform, std::map<std::string, std::string> const& readgroup_library);
             virtual ~Read();
             std::string operator[](std::vector<std::string>::size_type idx);

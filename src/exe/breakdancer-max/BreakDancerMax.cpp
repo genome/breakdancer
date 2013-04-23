@@ -2,6 +2,7 @@
 
 #include "breakdancer/BamReader.hpp"
 #include "breakdancer/Region.hpp"
+#include "breakdancer/Read.hpp"
 #include "breakdancer/LegacyBamReader.hpp"
 
 #include "version.h"
@@ -345,6 +346,8 @@ int main(int argc, char *argv[]) {
         while (reader->next(b) > 0) {
             int same_tid = (b->core.tid == b->core.mtid)? 1:0;
             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+            breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
+            assert(b->core.flag == aln2.bdflag);
 
             string ori = aln_return[1];
             string readgroup = aln_return[0];
