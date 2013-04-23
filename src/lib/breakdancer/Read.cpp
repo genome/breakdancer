@@ -151,7 +151,8 @@ pair_orientation_flag Read::_determine_bdflag() {
             }
             else {
                 if(platform == "solid") {
-                    if((_record->core.flag & BAM_FREVERSE) == (_record->core.flag & BAM_FMREVERSE)) { //do the mates have the same orientation?
+                    if( ((_record->core.flag & BAM_FREVERSE) && !(_record->core.flag & BAM_FMREVERSE)) ||
+                        (!(_record->core.flag & BAM_FREVERSE) && (_record->core.flag & BAM_FMREVERSE))) { //do the mates have different orientation?
                         flag = (_record->core.flag & BAM_FREVERSE) ? ARP_RR : ARP_FF;
                     }
                     else if( !(_record->core.flag & BAM_FREVERSE)) {
@@ -172,7 +173,9 @@ pair_orientation_flag Read::_determine_bdflag() {
                     }
                 }
                 else {
-                    if((_record->core.flag & BAM_FREVERSE) == (_record->core.flag & BAM_FMREVERSE)) { //do the mates have the same orientation?
+                    if( ((_record->core.flag & BAM_FREVERSE) && (_record->core.flag & BAM_FMREVERSE)) ||
+                        (!(_record->core.flag & BAM_FREVERSE) && !(_record->core.flag & BAM_FMREVERSE))) { //do the mates have the same orientation?
+                    
                         flag = (_record->core.flag & BAM_FMREVERSE) ? ARP_RR : ARP_FF;
                     }
                     else if((_record->core.mpos > _record->core.pos && (_record->core.flag & BAM_FREVERSE)) || (_record->core.pos > _record->core.mpos && !(_record->core.flag & BAM_FREVERSE))) {
