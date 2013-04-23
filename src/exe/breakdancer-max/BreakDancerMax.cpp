@@ -345,8 +345,8 @@ int main(int argc, char *argv[]) {
 
         while (reader->next(b) > 0) {
             int same_tid = (b->core.tid == b->core.mtid)? 1:0;
-            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
+            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
             assert(b->core.flag == aln2.bdflag);
 
             string ori = aln_return[1];
@@ -548,7 +548,9 @@ int main(int argc, char *argv[]) {
             if(b->core.tid < 0)
                 continue;
             int same_tid = b->core.tid == b->core.mtid ? 1:0;
+            breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+            assert(b->core.flag == aln2.bdflag);
             string readgroup = aln_return[0];
             string ori = aln_return[1];
             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -678,7 +680,9 @@ int main(int argc, char *argv[]) {
 
                     if(skip_previous == 0){
                         int same_tid = b->core.tid == b->core.mtid ? 1:0;
+                        breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
                         vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+                        assert(b->core.flag == aln2.bdflag);
                         string ori = aln_return[1];
                         string readgroup = aln_return[0];
                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -863,7 +867,9 @@ int main(int argc, char *argv[]) {
                     if(skip_previous == 0){
                         if( b->core.tid == readers[heap->i]->tid() && b->core.pos < readers[heap->i]->end() ){
                             int same_tid = b->core.tid == b->core.mtid ? 1:0;
+                            breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
                             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
+                            assert(b->core.flag == aln2.bdflag);
                             string ori = aln_return[1];
                             string readgroup = aln_return[0];
                             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
@@ -2081,7 +2087,9 @@ void EstimatePriorParameters(
                 header->target_name[b->core.tid],
                 header->target_name[b->core.mtid]) == 0 ? 1:0;
 
+            breakdancer::Read aln2(b, format, readgroup_platform, readgroup_library);
             vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, opts.platform);
+            assert(b->core.flag == aln2.bdflag);
             string ori = aln_return[1];
             string readgroup = aln_return[0];
 
