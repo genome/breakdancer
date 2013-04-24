@@ -458,10 +458,10 @@ int main(int argc, char *argv[]) {
                 continue;
             }
 
-            if(x_readcounts.find(b->core.flag) != x_readcounts.end() && x_readcounts[b->core.flag].find(lib) != x_readcounts[b->core.flag].end())
-                x_readcounts[b->core.flag][lib] ++;
+            if(x_readcounts.find(aln2.bdflag) != x_readcounts.end() && x_readcounts[aln2.bdflag].find(lib) != x_readcounts[aln2.bdflag].end())
+                x_readcounts[aln2.bdflag][lib] ++;
             else
-                x_readcounts[b->core.flag][lib] = 1;
+                x_readcounts[aln2.bdflag][lib] = 1;
         }
         reader.reset(); // free bam reader
 
