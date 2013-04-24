@@ -357,10 +357,15 @@ int main(int argc, char *argv[]) {
             string ori = aln_return[1];
             string readgroup = aln_return[0];
 
+            //FIXME this could be filtered out on reading the BAM
             if(b->core.tid < 0){
                 //cout << b->core.tid << "\tError: no correspondence of the chromosome to the header file!" << endl;
                 continue;
             }
+
+            //This seems weird below, but it could allow for merging of differently sorted bams
+            //If we don't care if we support this then we would need to check that they are the same elsewhere
+            //and then this could switch to a tid comparison...
             char const* new_seq_name = reader->header()->target_name[b->core.tid];
             if (p_chr) {
                 if (strcmp(p_chr, new_seq_name) == 0) {
@@ -369,6 +374,7 @@ int main(int argc, char *argv[]) {
             }
             p_pos = b->core.pos;
             p_chr = new_seq_name;
+
             string lib;
             if(!(readgroup.empty()))
                 lib = readgroup_library[readgroup];
@@ -387,7 +393,10 @@ int main(int argc, char *argv[]) {
             // This is the thing I was talking about that creeped me out
             // (relational cmps on bitvectors)
             // -tabbott
-            if(b->core.qual > opts.min_map_qual && b->core.flag < 32 && b->core.flag >=18){
+            //
+            // Indeed. Having looked over the flags, my comment above does not apply...
+            // -dlarson
+            if(aln2.bdqual > opts.min_map_qual && (aln2.bdflag == breakdancer::NORMAL_FR || aln2.bdflag == breakdancer::NORMAL_RF)) {
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
                     ++nreads_[libmaps[lib]];
