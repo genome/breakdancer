@@ -423,21 +423,35 @@ int main(int argc, char *argv[]) {
             if((opts.transchr_rearrange && aln2.bdflag != breakdancer::ARP_CTX) || aln2.bdflag == breakdancer::MATE_UNMAPPED || aln2.bdflag == breakdancer::UNMAPPED)
                 continue;
 
+            //It would be nice if this was pulled into the Read class as well
+            //for now, let's just set the bdflag directly here since it is public
             if(opts.Illumina_long_insert){
-                if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
-                    b->core.flag = 4;
-                if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
+                if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_RF) {
+                    b->core.flag = 4;   //why isn't this ARP_FR_big_insert ie. 2?
+                    aln2.bdflag = breakdancer::ARP_RF;
+                }
+                if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag == breakdancer::ARP_RF) {
                     b->core.flag = 20;
-                if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20)
+                    aln2.bdflag = breakdancer::NORMAL_RF;
+                }
+                if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_RF) {
                     b->core.flag = 3;
+                    aln2.bdflag = breakdancer::ARP_FR_small_insert; //FIXME this name doesn't make a whole lot of sense here
+                }
             }
             else{
-                if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18)
+                if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_FR) {
                     b->core.flag = 2;
-                if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2)
+                    aln2.bdflag = breakdancer::ARP_FR_big_insert;
+                }
+                if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag == breakdancer::ARP_FR_big_insert) {
                     b->core.flag = 18;
-                if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18)
+                    aln2.bdflag = breakdancer::NORMAL_FR;
+                }
+                if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_FR) {
                     b->core.flag = 3;
+                    aln2.bdflag = breakdancer::ARP_FR_small_insert;
+                }
             }
 
             if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130){
