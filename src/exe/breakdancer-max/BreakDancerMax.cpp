@@ -454,7 +454,7 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130){
+            if(aln2.bdflag == breakdancer::NORMAL_FR || aln2.bdflag == breakdancer::NORMAL_RF) {
                 continue;
             }
 
