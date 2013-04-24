@@ -33,12 +33,49 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     }
 }
 
-Read::~Read() {
-    bam_destroy1(_record);
+Read::Read(const Read& other) {
+    if(other._record) {
+        _record = bam_init1();
+        bam_copy1(_record, other._record);
+    }
+    else {
+        _record = NULL;
+    }
+    bdflag = other.bdflag;
+    bdqual = other.bdqual;
+    platform = other.platform;
+    library = other.library;
+    _string_record = other._string_record;
 }
 
-string Read::operator[](std::vector<std::string>::size_type idx) {
+Read::~Read() {
+    if(_record != NULL) {
+        bam_destroy1(_record);
+    }
+}
+
+string Read::operator[](std::vector<std::string>::size_type idx) const {
     return _string_record[idx];
+}
+
+Read& Read::operator=(const Read& other) {
+    if(this != &other) {
+        bam1_t* old_record = NULL;
+        if(other._record != NULL) {
+            old_record = _record;
+            _record = bam_init1();
+            bam_copy1(_record, other._record);
+        }
+        bdflag = other.bdflag;
+        bdqual = other.bdqual;
+        platform = other.platform;
+        library = other.library;
+        _string_record = other._string_record;
+        if(old_record) {
+            bam_destroy1(old_record);
+        }
+    }
+    return *this;
 }
 
 string Read::readgroup() {
@@ -189,4 +226,13 @@ pair_orientation_flag Read::_determine_bdflag() {
         }
     }
     return flag;
+}
+
+vector<string>::size_type Read::size() {
+    return _string_record.size();
+}
+
+void Read::set_bdflag(pair_orientation_flag new_flag) {
+    bdflag = new_flag;
+    _string_record[5] = boost::lexical_cast<string>(new_flag); //this may need a check
 }

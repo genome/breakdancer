@@ -28,8 +28,15 @@ namespace breakdancer {
             pair_orientation_flag bdflag;
 
             Read(bam1_t const* record, std::string const& format, std::map<std::string, std::string> const& readgroup_platform, std::map<std::string, std::string> const& readgroup_library);
+            Read() : _record(NULL), bdqual(0), bdflag(NA) {};
+            Read(const Read& other);
             virtual ~Read();
-            std::string operator[](std::vector<std::string>::size_type idx);
+            //not really sure where the optimaly location for this const is or even what it's modifying.
+            //Need to talk to Travis :(
+            std::string operator[](std::vector<std::string>::size_type idx) const;
+            Read& operator=(const Read& other);
+            void set_bdflag(pair_orientation_flag new_flag);
+            std::vector<std::string>::size_type size();
             std::string readgroup();
             std::string queryname();
             std::string query_sequence();

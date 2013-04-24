@@ -1,7 +1,5 @@
 #include "breakdancer/AlnParser.h"
 #include "breakdancer/Read.hpp"
-#include "breakdancer/Region.hpp"
-#include "breakdancer/BDTypedefs.hpp"
 #include "breakdancer/saminternals.h"
 
 #include <iostream>
@@ -96,11 +94,11 @@ struct BreakDancerData {
 
 struct AnalysisData {
     map<string, uint32_t > possible_fake_data;
-    map<int, vector<Read> > regs;//global in analysis
+    map<int, vector<breakdancer::Read> > regs;//global in analysis
     map<string, vector<int> > read;// global in analysis
     map<int,vector<int> > reg_name;// global in analysis
-    vector<Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
-    vector<Read>::const_iterator it_reg_seq; // global
+    vector<breakdancer::Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
+    vector<breakdancer::Read>::const_iterator it_reg_seq; // global
 };
     
 
@@ -110,10 +108,10 @@ T from_string(const std::string& s,
 void do_break_func(
     Options const& opts,
     BreakDancerData& bdancer,
-    vector<Read> const& reg_seq,
+    vector<breakdancer::Read> const& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
-    map<int, vector<Read> > &regs,
+    map<int, vector<breakdancer::Read> > &regs,
     int *idx_buff,
     int buffer_size,
     int *nnormal_reads,
@@ -155,10 +153,10 @@ void Analysis (
     string lib,
     bam1_t *b,
     breakdancer::Read &aln,
-    vector<Read> &reg_seq,
+    vector<breakdancer::Read> &reg_seq,
     map<int, vector<int> > &reg_name,
     map<string, vector<int> > &read,
-    map<int, vector<Read> > &regs,
+    map<int, vector<breakdancer::Read> > &regs,
     int *idx_buff,
     int *nnormal_reads,
     int *normal_switch,
@@ -186,7 +184,7 @@ void buildConnection(
     BreakDancerData& bdancer,
     map<string, vector<int> > &read,
     map<int, vector<int> > &reg_name,
-    map<int, vector<Read> > &regs,
+    map<int, vector<breakdancer::Read> > &regs,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
     int fisher,
@@ -250,7 +248,7 @@ string char2str(char *str_);
 
 // refactoring functions
 // write out reads to fastq files
-void write_fastq_for_flag(const string &flag, const vector<Read> &support_reads, const map<string, string> &ReadsOut);
+void write_fastq_for_flag(const string &flag, const vector<breakdancer::Read> &support_reads, const map<string, string> &ReadsOut);
 
 // choose the predominant type of read in a region
 string choose_sv_flag(const int num_readpairs, const map<string, int> reads_per_type);
