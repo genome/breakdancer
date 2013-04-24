@@ -1391,7 +1391,7 @@ void Analysis (
     //count reads mapped by SW, FR and RF reads, but only if normal_switch is true
     //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
     //I suspect this is to include those reads in the fastq dump for assembly!
-    if(b->core.flag == 18 || b->core.flag == 20 || b->core.flag == 130){
+    if(aln.bdflag == breakdancer::NORMAL_FR || aln.bdflag == breakdancer::NORMAL_RF) {
         if(*normal_switch == 1 && b->core.isize > 0){
             (*nnormal_reads)++;
         }
@@ -1456,8 +1456,8 @@ void Analysis (
 
             // reg_seq is an array of arrays of information about the reads. The first value is the read name.
             // This adds the region id to an array of region ids
-            vector<vector<string> > p;
-            for(vector<vector<string> >::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
+            vector<Read> p;
+            for(vector<Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq++){
                 p.push_back(*it_reg_seq);
                 string s = (*it_reg_seq)[0];
                 read[s].push_back(k);
@@ -1543,6 +1543,7 @@ void Analysis (
 
     // deal with the name string
     // this drops any trailing /1 or /2 strings on the read. Probably not necessary if the BAM is well formatted (but I'm not certain).
+    // //FIXME this can and should be dropped
     string qname_tmp = bam1_qname(b);
     size_t found1 = qname_tmp.rfind("/1");
     size_t found2 = qname_tmp.rfind("/2");
