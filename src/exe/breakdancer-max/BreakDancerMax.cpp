@@ -406,6 +406,10 @@ int main(int argc, char *argv[]) {
                 }
             }
 
+            //XXX This seems weird to me as well. Why are we checking the 
+            //mapping quality in two different places and performing some 
+            //calculations before this is applied?
+            //-dlarson
             if(mapQual.find(lib) != mapQual.end()){
                 if(aln2.bdqual <= mapQual[lib])
                     continue;
@@ -414,9 +418,9 @@ int main(int argc, char *argv[]) {
                 if(aln2.bdqual <= opts.min_map_qual)
                     continue;
             }
-            if(b->core.flag == 0)
+            if(aln2.bdflag == breakdancer::NA)
                 continue;
-            if((opts.transchr_rearrange && b->core.flag < 32) || b->core.flag >= 64)
+            if((opts.transchr_rearrange && aln2.bdflag != breakdancer::ARP_CTX) || aln2.bdflag == breakdancer::MATE_UNMAPPED || aln2.bdflag == breakdancer::UNMAPPED)
                 continue;
 
             if(opts.Illumina_long_insert){
