@@ -1,4 +1,5 @@
 #include "breakdancer/AlnParser.h"
+#include "breakdancer/Read.hpp"
 #include "breakdancer/Region.hpp"
 #include "breakdancer/BDTypedefs.hpp"
 #include "breakdancer/saminternals.h"
@@ -153,6 +154,7 @@ void Analysis (
     BreakDancerData& bdancer,
     string lib,
     bam1_t *b,
+    breakdancer::Read &aln,
     vector<Read> &reg_seq,
     map<int, vector<int> > &reg_name,
     map<string, vector<int> > &read,

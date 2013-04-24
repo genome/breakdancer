@@ -601,6 +601,7 @@ int main(int argc, char *argv[]) {
                     bdancer,
                     library,
                     b,
+                    aln2,
                     reg_seq,
                     reg_name,
                     read,
@@ -734,6 +735,7 @@ int main(int argc, char *argv[]) {
                                 bdancer,
                                 library,
                                 b,
+                                aln2,
                                 reg_seq,
                                 reg_name,
                                 read,
@@ -939,6 +941,7 @@ int main(int argc, char *argv[]) {
                                     bdancer,
                                     library,
                                     b,
+                                    aln2,
                                     reg_seq,
                                     reg_name,
                                     read,
@@ -1214,6 +1217,7 @@ void Analysis (
     BreakDancerData& bdancer,
     string lib,
     bam1_t *b,
+    breakdancer::Read &aln,
     vector<vector<string> > &reg_seq,
     map<int, vector<int> > &reg_name,
     map<string, vector<int> > &read,
@@ -1274,7 +1278,7 @@ void Analysis (
     // region between last and next begin
     // Store readdepth in nread_ROI by bam name (no per library calc) or by library
     // I believe this only counts normally mapped reads
-    if(b->core.qual > min_map_qual && b->core.flag < 32 && b->core.flag >= 18){
+    if(aln.bdqual > opts.min_map_qual && (aln.bdflag == breakdancer::NORMAL_FR || aln.bdflag == breakdancer::NORMAL_RF)) {
         if(CN_lib == 1){
             if(nread_ROI.find(lib) == nread_ROI.end())
                 nread_ROI[lib] = 1;
@@ -1318,55 +1322,71 @@ void Analysis (
     }
     // mapQual is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
   if(mapQual.find(lib) != mapQual.end()){
-      if(b->core.qual <= mapQual[lib])
+      if(aln.bdqual <= mapQual[lib])
           return;
   }
   else{
       //here filter out if mapping quality is less than or equal to the min_map_qual.
       //Note that this doesn't make sense as a cutoff of 0 would still exclude reads with qual 0
-      if(b->core.qual <= min_map_qual)
+      if(aln.bdqual <= min_map_qual)
           return;
   }
 
+  //FIXME this is likely to have a special tid reserved in the spec. Go back and fix it.
     if(strcmp(bam_header->target_name[b->core.tid],"*")==0) // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
         return;
 
-    if(b->core.flag == 0)
-        return; // return fragment reads
+    if(aln.bdflag == breakdancer::NA)
+        return; // return fragment reads and other bad ones
 
-    //This is quite possibly the goofiest way to check core.flag == 32 that I know of.
-    //Perhaps there are other flags I'm not considering?
-  if((transchr_rearrange && b->core.flag < 32) || b->core.flag >=64) // only care flag 32 for CTX
+  if((transchr_rearrange && aln.bdflag != breakdancer::ARP_CTX) || aln.bdflag == breakdancer::MATE_UNMAPPED || aln.bdflag == breakdancer::UNMAPPED) // only care flag 32 for CTX
         return;
     // for long insert
     // Mate pair libraries have different expected orientations so adjust
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
     if(Illumina_long_insert){
-        if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 20)
+        if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag == breakdancer::NORMAL_RF) {
+            aln.bdflag = breakdancer::ARP_RF;
             b->core.flag = 4;
-        if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 4)
+        }
+        if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag == breakdancer::ARP_RF) {
             b->core.flag = 20;
-        if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 20)
+            aln.bdflag = breakdancer::NORMAL_RF;
+        }
+        if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag == breakdancer::NORMAL_RF) {
             b->core.flag = 3;
+            aln.bdflag = breakdancer::ARP_FR_small_insert;
+        }
     }
     else{
-        if(abs(b->core.isize) > uppercutoff[lib] && b->core.flag == 18)
+        if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag == breakdancer::NORMAL_FR) {
             b->core.flag = 2;
-        if(abs(b->core.isize) < uppercutoff[lib] && b->core.flag == 2)
+            aln.bdflag = breakdancer::ARP_FR_big_insert;
+        }
+        if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag == breakdancer::ARP_FR_big_insert) {
             b->core.flag = 18;
-        if(abs(b->core.isize) < lowercutoff[lib] && b->core.flag == 18)
+            aln.bdflag = breakdancer::NORMAL_FR;
+        }
+        if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag == breakdancer::NORMAL_FR) {
             b->core.flag = 3;
-        if(b->core.flag == 20)
+            aln.bdflag = breakdancer::ARP_FR_small_insert;
+        }
+        if(aln.bdflag == breakdancer::NORMAL_RF) {
             b->core.flag = 4; // if it is RF orientation, then regardless of distance
+            aln.bdflag = breakdancer::ARP_RF;
+        }
     }
     // This makes FF and RR the same thing
-    if(b->core.flag == 8)
+    if(aln.bdflag == breakdancer::ARP_RR) {
         b->core.flag = 1;
-    // for normally mapped pairs, ignore if TOO far apart. Interesting... Isn't this exactly what we're trying to find?
-    // For some reason doesn't apply to SmithWaterman MAQ reads. Don't think we have that info with BWA
-    if(b->core.flag < 32 && abs(b->core.isize)>max_sd) // skip read pairs mapped too distantly on the same chromosome
+        aln.bdflag = breakdancer::ARP_FF;
+    }
+    //this isn't an exact match to what was here previously
+    //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
+    if(aln.bdflag != breakdancer::ARP_CTX && abs(b->core.isize) > max_sd) {// skip read pairs mapped too distantly on the same chromosome
         return;
+    }
 
     //count reads mapped by SW, FR and RF reads, but only if normal_switch is true
     //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
