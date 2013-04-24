@@ -375,6 +375,9 @@ int main(int argc, char *argv[]) {
             p_pos = b->core.pos;
             p_chr = new_seq_name;
 
+            //FIXME It would be better if this was done as part of the Read class
+            //doing it in a way in which the read class doesn't have to know about how we are 
+            //reading the files would be key though
             string lib;
             if(!(readgroup.empty()))
                 lib = readgroup_library[readgroup];
@@ -404,11 +407,11 @@ int main(int argc, char *argv[]) {
             }
 
             if(mapQual.find(lib) != mapQual.end()){
-                if(b->core.qual <= mapQual[lib])
+                if(aln2.bdqual <= mapQual[lib])
                     continue;
             }
             else{
-                if(b->core.qual <= opts.min_map_qual)
+                if(aln2.bdqual <= opts.min_map_qual)
                     continue;
             }
             if(b->core.flag == 0)
