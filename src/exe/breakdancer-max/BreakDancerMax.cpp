@@ -516,12 +516,12 @@ int main(int argc, char *argv[]) {
 
         int nread_lengthDiscrepant = -1;
 
-        if(x_readcounts.find(2) != x_readcounts.end() && x_readcounts[2].find(lib) != x_readcounts[2].end())
-            nread_lengthDiscrepant = x_readcounts[2][lib];
-        if(x_readcounts.find(3) != x_readcounts.end() && x_readcounts[3].find(lib) != x_readcounts[3].end()){
+        if(x_readcounts.find(breakdancer::ARP_FR_big_insert) != x_readcounts.end() && x_readcounts[breakdancer::ARP_FR_big_insert].find(lib) != x_readcounts[breakdancer::ARP_FR_big_insert].end())
+            nread_lengthDiscrepant = x_readcounts[breakdancer::ARP_FR_big_insert][lib];
+        if(x_readcounts.find(breakdancer::ARP_FR_small_insert) != x_readcounts.end() && x_readcounts[breakdancer::ARP_FR_small_insert].find(lib) != x_readcounts[breakdancer::ARP_FR_small_insert].end()){
             if(nread_lengthDiscrepant == -1)
                 nread_lengthDiscrepant = 0;
-            nread_lengthDiscrepant += x_readcounts[3][lib];
+            nread_lengthDiscrepant += x_readcounts[breakdancer::ARP_FR_small_insert][lib];
         }
         float tmp = (nread_lengthDiscrepant > 0)?(float)reference_len/(float)nread_lengthDiscrepant:50;
         d = d<tmp?d:tmp;
