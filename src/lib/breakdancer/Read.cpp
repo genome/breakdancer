@@ -162,6 +162,8 @@ int Read::_determine_bdqual() {
 //and less computationally expensive
 pair_orientation_flag Read::_determine_bdflag() {
     pair_orientation_flag flag = NA;
+    int read_reversed = _record->core.flag & BAM_FREVERSE;
+    int mate_reversed = _record->core.flag & BAM_FMREVERSE;
     if(!(_record->core.flag & BAM_FDUP)) { //this should probably include QCfail as well
         if(_record->core.flag & BAM_FPAIRED) {
             if(_record->core.flag & BAM_FUNMAP) {
@@ -179,20 +181,20 @@ pair_orientation_flag Read::_determine_bdflag() {
                 }
                 else {
                     if(_record->core.pos < _record->core.mpos) {
-                        flag = (_record->core.flag & BAM_FREVERSE) ? NORMAL_RF : NORMAL_FR;
+                        flag = (read_reversed) ? NORMAL_RF : NORMAL_FR;
                     }
                     else {
-                        flag = (_record->core.flag & BAM_FREVERSE) ? NORMAL_FR : NORMAL_RF;
+                        flag = (read_reversed) ? NORMAL_FR : NORMAL_RF;
                     }
                 }
             }
             else {
                 if(platform == "solid") {
-                    if( ((_record->core.flag & BAM_FREVERSE) && !(_record->core.flag & BAM_FMREVERSE)) ||
-                        (!(_record->core.flag & BAM_FREVERSE) && (_record->core.flag & BAM_FMREVERSE))) { //do the mates have different orientation?
-                        flag = (_record->core.flag & BAM_FREVERSE) ? ARP_RR : ARP_FF;
+                    if( ((read_reversed) && !(mate_reversed)) ||
+                        (!(read_reversed) && (mate_reversed))) { //do the mates have different orientation?
+                        flag = (read_reversed) ? ARP_RR : ARP_FF;
                     }
-                    else if( !(_record->core.flag & BAM_FREVERSE)) {
+                    else if( !(read_reversed)) {
                         if(_record->core.flag & BAM_FREAD1) {
                             flag = (_record->core.pos < _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
                         }
@@ -210,12 +212,12 @@ pair_orientation_flag Read::_determine_bdflag() {
                     }
                 }
                 else {
-                    if( ((_record->core.flag & BAM_FREVERSE) && (_record->core.flag & BAM_FMREVERSE)) ||
-                        (!(_record->core.flag & BAM_FREVERSE) && !(_record->core.flag & BAM_FMREVERSE))) { //do the mates have the same orientation?
+                    if( ((read_reversed) && (mate_reversed)) ||
+                        (!(read_reversed) && !(mate_reversed))) { //do the mates have the same orientation?
                     
-                        flag = (_record->core.flag & BAM_FMREVERSE) ? ARP_RR : ARP_FF;
+                        flag = (mate_reversed) ? ARP_RR : ARP_FF;
                     }
-                    else if((_record->core.mpos > _record->core.pos && (_record->core.flag & BAM_FREVERSE)) || (_record->core.pos > _record->core.mpos && !(_record->core.flag & BAM_FREVERSE))) {
+                    else if((_record->core.mpos > _record->core.pos && (read_reversed)) || (_record->core.pos > _record->core.mpos && !(read_reversed))) {
                         flag = ARP_RF;
                     }
                     else {
