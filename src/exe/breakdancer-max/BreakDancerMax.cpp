@@ -4,6 +4,7 @@
 //#include "breakdancer/Region.hpp"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/LegacyBamReader.hpp"
+#include "breakdancer/BamMerger.hpp"
 #include "breakdancer/BDConfig.hpp"
 
 #include "version.h"
@@ -69,11 +70,22 @@ real_type ComputeProbScore(
 );
 
 namespace {
-    auto_ptr<IBamReader> openBam(std::string const& path, Options const& opts) {
+    IBamReader* openBam(std::string const& path, Options const& opts) {
         if (opts.chr == "0")
-            return auto_ptr<IBamReader>(new BamReader(path));
+            return new BamReader(path);
         else
-            return auto_ptr<IBamReader>(new RegionLimitedBamReader(path, opts.chr.c_str()));
+            return new RegionLimitedBamReader(path, opts.chr.c_str());
+    }
+
+    vector<shared_ptr<IBamReader> > openBams(
+            vector<string> const& paths,
+            Options const& opts)
+    {
+        vector<shared_ptr<IBamReader> > rv;
+        for (size_t i = 0; i < paths.size(); ++i) {
+            rv.push_back(shared_ptr<IBamReader>(openBam(paths[i], opts)));
+        }
+        return rv;
     }
 
     Options parseArguments(int argc, char** argv) {
@@ -350,9 +362,7 @@ int main(int argc, char *argv[]) {
 
         while (reader->next(b) > 0) {
             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-            b->core.flag = aln2.bdflag(); //FIXME as soon as we have moved off this bam parsing code
-
-            string& readgroup = aln2.readgroup;
+            string const& readgroup = aln2.readgroup;
 
             //FIXME this could be filtered out on reading the BAM
             if(b->core.tid < 0){
@@ -566,515 +576,65 @@ int main(int argc, char *argv[]) {
     // first, need to merge the bam files into one big string seperated by blank, and return the number
     int n = fmaps.size();
 
-    if(n == 0){
+    if(n == 0) {
         cout << "wrong: no bam file!\n";
-        return 0;
+        return 1;
     }
-    //################# node index here ###################
-    else if(n == 1){
-        auto_ptr<IBamReader> reader(openBam(maps[0], opts));
-        int r;
-        bam1_t *b = bam_init1();
-        while ((r = reader->next(b)) >= 0) {
-            if(b->core.tid < 0)
-                continue;
-            breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-            b->core.flag = aln2.bdflag(); //FIXME
-            string& readgroup = aln2.readgroup;
-            string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 
-            if(!library.empty()){
-                Analysis(
-                    opts,
-                    bdancer,
-                    library,
-                    b,
-                    aln2,
-                    reg_seq,
-                    reg_name,
-                    read,
-                    regs,
-                    &idx_buff,
-                    &nnormal_reads,
-                    &normal_switch,
-                    &reg_idx,
-                    x_readcounts,
-                    reference_len,
-                    ReadsOut,
-                    mean_insertsize,
-                    SVtype,
-                    mapQual,
-                    uppercutoff,
-                    lowercutoff,
-                    d,
-                    &max_readlen,
-                    reader->header(),
-                    &ntotal_nucleotides,
-                    read_density,
-                    possible_fake_data,
-                    libmaps,
-                    maps
-                );
-            }
-        }
-        if(reg_seq.size() != 0){
-            do_break_func(
-                opts,
-                bdancer,
-                reg_seq,
-                reg_name,
-                read,
-                regs,
-                &idx_buff,
-                opts.buffer_size,
-                &nnormal_reads,
-                opts.min_len,
-                &reg_idx,
-                opts.transchr_rearrange,
-                opts.min_map_qual,
-                opts.Illumina_long_insert,
-                opts.prefix_fastq,
-                x_readcounts,
-                reference_len,
-                opts.fisher,
-                ReadsOut,
-                mean_insertsize,
-                SVtype,
-                mapQual,
-                uppercutoff,
-                lowercutoff,
-                opts.max_sd,
-                d,
-                opts.min_read_pair,
-                opts.dump_BED,
-                &max_readlen,
-                reader->header(),
-                opts.seq_coverage_lim,
-                &ntotal_nucleotides,
-                read_density,
-                opts.CN_lib,
-                libmaps,
-                maps,
-                opts.print_AF,
-                opts.score_threshold
+    vector<string> bam_files;
+    typedef map<string, string>::const_iterator IterType;
+    for(IterType ii_fmaps = fmaps.begin(); ii_fmaps != fmaps.end(); ii_fmaps++)
+        bam_files.push_back(ii_fmaps->first);
+
+    typedef vector<shared_ptr<IBamReader> > ReaderVecType;
+    ReaderVecType sp_readers(openBams(bam_files, opts));
+    vector<IBamReader*> readers;
+    for(size_t i = 0; i != sp_readers.size(); ++i)
+        readers.push_back(sp_readers[i].get());
+
+    BamMerger merged_reader(readers);
+
+    b = bam_init1();
+    while (merged_reader.next(b) >= 0) {
+        if(b->core.tid < 0)
+            continue;
+
+        breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
+        string const& readgroup = aln2.readgroup;
+        string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+
+        if(!library.empty()){
+            Analysis(opts, bdancer, library, b, aln2, reg_seq, reg_name, read,
+                regs, &idx_buff, &nnormal_reads, &normal_switch, &reg_idx,
+                x_readcounts, reference_len, ReadsOut, mean_insertsize, SVtype,
+                mapQual, uppercutoff, lowercutoff, d, &max_readlen,
+                merged_reader.header(), &ntotal_nucleotides, read_density,
+                possible_fake_data, libmaps, maps
             );
         }
+    }
 
-        buildConnection(
-            bdancer,
-            read,
-            reg_name,
-            regs,
-            x_readcounts,
-            reference_len,
-            opts.fisher,
-            opts.min_read_pair,
-            opts.dump_BED,
-            max_readlen,
-            opts.prefix_fastq,
-            ReadsOut,
-            SVtype,
-            mean_insertsize,
-            reader->header(),
-            read_density,
-            opts.CN_lib,
-            maps,
-            opts.print_AF,
-            opts.score_threshold,
-            libmaps
+    if (reg_seq.size() != 0) {
+        do_break_func(opts, bdancer, reg_seq, reg_name, read, regs, &idx_buff,
+            opts.buffer_size, &nnormal_reads, opts.min_len, &reg_idx,
+            opts.transchr_rearrange, opts.min_map_qual,
+            opts.Illumina_long_insert, opts.prefix_fastq, x_readcounts,
+            reference_len, opts.fisher, ReadsOut, mean_insertsize, SVtype,
+            mapQual, uppercutoff, lowercutoff, opts.max_sd, d,
+            opts.min_read_pair, opts.dump_BED, &max_readlen,
+            merged_reader.header(), opts.seq_coverage_lim, &ntotal_nucleotides,
+            read_density, opts.CN_lib, libmaps, maps, opts.print_AF,
+            opts.score_threshold
         );
-        bam_destroy1(b);
     }
-    else{
-        string *big_bam = new string[n];
-        int i_tmp = 0;
-        for(map<string, string>::const_iterator ii_fmaps = fmaps.begin(); ii_fmaps != fmaps.end(); ii_fmaps++)
-            big_bam[i_tmp++] = (*ii_fmaps).first;
 
-        heap1_t *heap;
-        heap = (heap1_t*)calloc(n,sizeof(heap1_t));
-
-        uint64_t idx = 0;
-
-        if(opts.chr == "0") {
-            samfile_t **in = new samfile_t *[n];
-             // open pipe, improvement made by Ben Oberkfell (boberkfe@genome.wustl.edu) samtools merge - in1.bam in2.bam in3.bam in_N.bam | samtools view - maq mapmerge
-               // dig into merge samtools code and utilize what we needed
-
-            if(MergeBams_prep(big_bam, n, in, heap, &idx)){
-                bam1_t *b = heap->b;
-                int skip_previous = 0;
-                while(heap->pos != HEAP_EMPTY){
-
-                    if(skip_previous == 0){
-                        breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-                        b->core.flag = aln2.bdflag(); //FIXME
-                        string& readgroup = aln2.readgroup;
-                        string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-                        //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
-                        //continue;
-                        if(!library.empty()){
-                            Analysis(
-                                opts,
-                                bdancer,
-                                library,
-                                b,
-                                aln2,
-                                reg_seq,
-                                reg_name,
-                                read,
-                                regs,
-                                &idx_buff,
-                                &nnormal_reads,
-                                &normal_switch,
-                                &reg_idx,
-                                x_readcounts,
-                                reference_len,
-                                ReadsOut,
-                                mean_insertsize,
-                                SVtype,
-                                mapQual,
-                                uppercutoff,
-                                lowercutoff,
-                                d,
-                                &max_readlen,
-                                in[heap->i]->header,
-                                &ntotal_nucleotides,
-                                read_density,
-                                possible_fake_data,
-                                libmaps,
-                                maps
-                            );
-                        }
-                        /*else{
-                         if(b->core.pos >= 43803315 && b->core.pos <= 103860201){
-                         count_no_lib ++;
-                         //cout << b->core.pos + 1 << endl;
-                         }
-                         }*/
-
-                    }
-                    int j = samread(in[heap->i],heap->b);
-                    //    j = -1;
-                    if(j >= 0){
-                        heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
-                        heap -> idx = idx++;
-                        b = heap->b;
-                        if(b->core.tid < 0){
-                            skip_previous = 1;
-                            continue;
-                        }
-                        if(skip_previous == 1)
-                            skip_previous = 0;
-                        ks_heapadjust(heap, 0, n, heap);
-                        //if(strcmp(in[heap->i]->header->target_name[b->core.tid],"NT_113888") == 0)
-                        //int k = 0;
-                    }
-                    else if(j == -1){
-                        heap->pos = HEAP_EMPTY;
-                        //cout << "heap empty" << endl;
-                        free(heap->b->data);
-                        free(heap->b);
-                        heap->b = 0;
-                        //                                                cout << "here" << endl;
-                    }
-                    else
-                        cout << "[bam_merge_core] " << big_bam[heap->i] << " is truncated. Continue anyway.\n";
-
-
-                }
-            }
-            //cout << "build connection:" << endl;
-            if(reg_seq.size() != 0){
-                do_break_func(
-                    opts,
-                    bdancer,
-                    reg_seq,
-                    reg_name,
-                    read,
-                    regs,
-                    &idx_buff,
-                    opts.buffer_size,
-                    &nnormal_reads,
-                    opts.min_len,
-                    &reg_idx,
-                    opts.transchr_rearrange,
-                    opts.min_map_qual,
-                    opts.Illumina_long_insert,
-                    opts.prefix_fastq,
-                    x_readcounts,
-                    reference_len,
-                    opts.fisher,
-                    ReadsOut,
-                    mean_insertsize,
-                    SVtype,
-                    mapQual,
-                    uppercutoff,
-                    lowercutoff,
-                    opts.max_sd,
-                    d,
-                    opts.min_read_pair,
-                    opts.dump_BED,
-                    &max_readlen,
-                    in[0]->header,
-                    opts.seq_coverage_lim,
-                    &ntotal_nucleotides,
-                    read_density,
-                    opts.CN_lib,
-                    libmaps,
-                    maps,
-                    opts.print_AF,
-                    opts.score_threshold
-                    );
-            }
-            buildConnection(
-                bdancer,
-                read,
-                reg_name,
-                regs,
-                x_readcounts,
-                reference_len,
-                opts.fisher,
-                opts.min_read_pair,
-                opts.dump_BED,
-                max_readlen,
-                opts.prefix_fastq,
-                ReadsOut,
-                SVtype,
-                mean_insertsize,
-                in[0]->header,
-                read_density,
-                opts.CN_lib,
-                maps,
-                opts.print_AF,
-                opts.score_threshold,
-                libmaps
-            );
-
-            for (int k = 0; k < n; ++k) {
-                samclose(in[k]);
-            }
-            free(in);
-        }
-
-        //############### find the designated chromosome and put all of them together for all bam files #############
-        else{//#customized merge & sort
-
-            // FIXME: make this not use shared_ptr
-            // c++11 unique_ptr would be better, but we're c++98/03ing it for now
-            typedef vector<shared_ptr<RegionLimitedBamReader> > ReaderVecType;
-            ReaderVecType sp_readers;
-
-            vector<IBamReader*> readers;
-
-            int tid = -1;
-            int reg_end = -1;
-            for(int i = 0; i!=n; ++i){
-                shared_ptr<RegionLimitedBamReader> reader(
-                    new RegionLimitedBamReader(big_bam[i], opts.chr.c_str()));
-
-                // XXX: these are low detail err msgs, but this code is going away soon
-                if (tid >= 0 && reader->tid() != tid) {
-                    throw runtime_error("tid mismatch");
-                }
-
-                if (reg_end >= 0 && reader->end() != reg_end) {
-                    throw runtime_error("region end mismatch");
-                }
-
-                tid = reader->tid();
-                reg_end = reader->end();
-
-                sp_readers.push_back(reader);
-                readers.push_back(reader.get());
-
-                heap1_t *h;
-                h = heap + i;
-                h->i = i;
-                h->b = bam_init1();
-                if (sp_readers.back()->next(h->b)) {
-                    h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
-                    h->idx = idx++;
-                }
-                else h->pos = HEAP_EMPTY;
-            }
-            ks_heapmake(heap, n, heap);
-            int merge_tmp = 1;
-
-            if(merge_tmp){
-                bam1_t *b = heap->b;
-                int skip_previous = 0;
-                int n_ava_heap = n;
-                while(heap->pos != HEAP_EMPTY){
-
-                    if(skip_previous == 0){
-                        if( b->core.tid == tid && b->core.pos < reg_end) {
-                            breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-                            b->core.flag = aln2.bdflag(); //FIXME
-                            string& readgroup = aln2.readgroup;
-                            string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
-                            //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
-                            //continue;
-                            if(!library.empty()){
-                                Analysis(
-                                    opts,
-                                    bdancer,
-                                    library,
-                                    b,
-                                    aln2,
-                                    reg_seq,
-                                    reg_name,
-                                    read,
-                                    regs,
-                                    &idx_buff,
-                                    &nnormal_reads,
-                                    &normal_switch,
-                                    &reg_idx,
-                                    x_readcounts,
-                                    reference_len,
-                                    ReadsOut,
-                                    mean_insertsize,
-                                    SVtype,
-                                    mapQual,
-                                    uppercutoff,
-                                    lowercutoff,
-                                    d,
-                                    &max_readlen,
-                                    readers[0]->header(),
-                                    &ntotal_nucleotides,
-                                    read_density,
-                                    possible_fake_data,
-                                    libmaps,
-                                    maps
-                                );
-                            }
-                        }
-                    }
-
-                    int j = readers[heap->i]->next(b);
-                    if(j > 0){
-                        heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
-                        heap -> idx = idx++;
-                        b = heap->b;
-                        if(b->core.tid < 0){
-                            skip_previous = 1;
-                            continue;
-                        }
-                        if(skip_previous == 1)
-                            skip_previous = 0;
-                        ks_heapadjust(heap, 0, n_ava_heap, heap);
-                    }
-                    else {
-                        n_ava_heap --;
-                        //int n_ava_heap = n-1;
-                        int jj = 0;
-                        while(n_ava_heap > 0 && jj == 0){
-                            heap1_t tmp = heap[0];
-                            heap[0] = heap[n_ava_heap];
-                            heap[n_ava_heap] = tmp;
-                            ks_heapadjust(heap, 0, n_ava_heap, heap);
-                            jj = readers[heap->i]->next(b);
-                            if(jj == 0){
-                                n_ava_heap --;
-                            }
-                            else if(jj > 0){
-
-                                heap -> pos = ((uint64_t)b->core.tid<<32) | (uint32_t)b->core.pos << 1 | bam1_strand(b);
-                                heap -> idx = idx++;
-                                b = heap->b;
-                                if(b->core.tid < 0){
-                                    skip_previous = 1;
-                                    // continue;
-                                }
-                                if(skip_previous == 1)
-                                    skip_previous = 0;
-                                ks_heapadjust(heap, 0, n_ava_heap, heap);
-                            }
-
-                        }
-                        if(n_ava_heap == 0){
-                            heap->pos = HEAP_EMPTY;
-                            free(heap->b->data);
-                            free(heap->b);
-                            heap->b = 0;
-                        }
-                    }
-                }
-            }
-            if(reg_seq.size() != 0){
-                do_break_func(
-                    opts,
-                    bdancer,
-                    reg_seq,
-                    reg_name,
-                    read,
-                    regs,
-                    &idx_buff,
-                    opts.buffer_size,
-                    &nnormal_reads,
-                    opts.min_len,
-                    &reg_idx,
-                    opts.transchr_rearrange,
-                    opts.min_map_qual,
-                    opts.Illumina_long_insert,
-                    opts.prefix_fastq,
-                    x_readcounts,
-                    reference_len,
-                    opts.fisher,
-                    ReadsOut,
-                    mean_insertsize,
-                    SVtype,
-                    mapQual,
-                    uppercutoff,
-                    lowercutoff,
-                    opts.max_sd,
-                    d,
-                    opts.min_read_pair,
-                    opts.dump_BED,
-                    &max_readlen,
-                    readers[0]->header(),
-                    opts.seq_coverage_lim,
-                    &ntotal_nucleotides,
-                    read_density,
-                    opts.CN_lib,
-                    libmaps,
-                    maps,
-                    opts.print_AF,
-                    opts.score_threshold
-                    );
-            }
-            buildConnection(
-                bdancer,
-                read,
-                reg_name,
-                regs,
-                x_readcounts,
-                reference_len,
-                opts.fisher,
-                opts.min_read_pair,
-                opts.dump_BED,
-                max_readlen,
-                opts.prefix_fastq,
-                ReadsOut,
-                SVtype,
-                mean_insertsize,
-                readers[0]->header(),
-                read_density,
-                opts.CN_lib,
-                maps,
-                opts.print_AF,
-                opts.score_threshold,
-                libmaps
-            );
-
-        }
-        //cout << "release memory\n";
-
-        free(heap);
-
-        delete []big_bam;
-        big_bam = NULL;
-    }
+    buildConnection(bdancer, read, reg_name, regs, x_readcounts, reference_len,
+        opts.fisher, opts.min_read_pair, opts.dump_BED, max_readlen,
+        opts.prefix_fastq, ReadsOut, SVtype, mean_insertsize,
+        merged_reader.header(), read_density, opts.CN_lib, maps, opts.print_AF,
+        opts.score_threshold, libmaps
+    );
+    bam_destroy1(b);
 
     cerr << "Max Kahan error: " << _max_kahan_err << "\n";
 
@@ -2098,8 +1658,7 @@ void EstimatePriorParameters(
             string format = "sam";
             string alt = "";
             breakdancer::Read aln2(b, format, readgroup_platform, readgroup_library);
-            b->core.flag = aln2.bdflag(); //FIXME
-            string& readgroup = aln2.readgroup;
+            string const& readgroup = aln2.readgroup;
 
             // analyze the bam file line by line
             string lib = readgroup.empty()?(*ii).second:readgroup_library[readgroup];// when multiple libraries are in a BAM file
@@ -2209,38 +1768,6 @@ int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name){
         total_region_size += clust_end - clust_start + 1;
     }
     return total_region_size;
-}
-
-// read bam files all together, and merge them
-int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *idx){
-    for(int i = 0; i!=n; ++i){
-        heap1_t *h;
-
-        if ((in[i] = samopen(fn[i].c_str(), "rb", 0)) == 0) {
-            fprintf(stderr, "[main_samview] fail to open file %s for reading.\n",
-                fn[i].c_str());
-            continue;
-        }
-        if (in[i]->header == 0) {
-            fprintf(stderr, "[main_samview] fail to read the header (%s).\n",
-                fn[i].c_str());
-            continue;
-        }
-        h = heap + i;
-        h->i = i;
-        h->b = (bam1_t*)calloc(1,sizeof(bam1_t));
-        int r;
-        if ((r = samread(in[i], h->b)) >= 0) {
-            h->pos = ((uint64_t)h->b->core.tid <<32) | (uint32_t)h->b->core.pos << 1 | bam1_strand(h->b);
-            h->idx = (*idx)++;
-        }
-        else {
-            h->pos = HEAP_EMPTY;
-        }
-    }
-
-    ks_heapmake(heap, n, heap);
-    return 1;
 }
 
 // read config file from bam2cfg.pl

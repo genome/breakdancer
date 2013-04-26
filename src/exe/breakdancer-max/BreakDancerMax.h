@@ -220,8 +220,6 @@ float standard_deviation(vector<int> &stat, float mean);
 
 int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name);
 
-int MergeBams_prep(string *fn, int n, samfile_t **in, heap1_t *heap, uint64_t *idx);
-
 string get_from_line(string line,string search,int flag);
 
 string get_from_line_two(string line,string search1,string search2,int flag2);
