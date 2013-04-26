@@ -1835,7 +1835,5 @@ breakdancer::pair_orientation_flag choose_sv_flag(const int num_readpairs, const
  t.dist            :        b->core.isize
  t.seq            :        bam1_seq(b)        (length: b.core.l_qseq)
  t.basequal        :        bam1_qual(b)    (length: b.core.l_qseq)
- t.ori            :        ori as a return in AlnParser    (in samtools, can be derived by bam1_strand(b), bam1_mstrand(b))
- t.readgroup        :        readgroup as a pointer in AlnParser input
  t.readlen        :        b->core.l_qseq
  */
