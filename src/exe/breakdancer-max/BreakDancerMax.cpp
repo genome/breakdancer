@@ -1342,41 +1342,32 @@ void Analysis (
     if(Illumina_long_insert){
         if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag == breakdancer::NORMAL_RF) {
             aln.set_bdflag(breakdancer::ARP_RF);
-            b->core.flag = 4;
         }
         if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag == breakdancer::ARP_RF) {
-            b->core.flag = 20;
             aln.set_bdflag(breakdancer::NORMAL_RF);
         }
         if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag == breakdancer::NORMAL_RF) {
-            b->core.flag = 3;
             aln.set_bdflag(breakdancer::ARP_FR_small_insert);
         }
     }
     else{
         if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag == breakdancer::NORMAL_FR) {
-            b->core.flag = 2;
             aln.set_bdflag(breakdancer::ARP_FR_big_insert);
         }
         if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag == breakdancer::ARP_FR_big_insert) {
-            b->core.flag = 18;
             aln.set_bdflag(breakdancer::NORMAL_FR);
         }
         if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag == breakdancer::NORMAL_FR) {
-            b->core.flag = 3;
             aln.set_bdflag(breakdancer::ARP_FR_small_insert);
         }
         if(aln.bdflag == breakdancer::NORMAL_RF) {
-            b->core.flag = 4; // if it is RF orientation, then regardless of distance
             aln.set_bdflag(breakdancer::ARP_RF);
         }
     }
     // This makes FF and RR the same thing
     if(aln.bdflag == breakdancer::ARP_RR) {
-        b->core.flag = 1;
         aln.set_bdflag(breakdancer::ARP_FF);
     }
-    assert(aln.bdflag == b->core.flag);
     //this isn't an exact match to what was here previously
     //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
     if(aln.bdflag != breakdancer::ARP_CTX && abs(b->core.isize) > max_sd) {// skip read pairs mapped too distantly on the same chromosome
