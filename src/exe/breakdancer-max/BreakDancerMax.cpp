@@ -620,6 +620,7 @@ int main(int argc, char *argv[]) {
     buildConnection(opts, bdancer, read, reg_name, regs, x_readcounts,
         reference_len, max_readlen, ReadsOut, SVtype, mean_insertsize,
         merged_reader.header(), read_density, maps, libmaps);
+
     bam_destroy1(b);
 
     cerr << "Max Kahan error: " << _max_kahan_err << "\n";
@@ -752,69 +753,40 @@ void Analysis (
     // region between last and next begin
     // Store readdepth in nread_ROI by bam name (no per library calc) or by library
     // I believe this only counts normally mapped reads
-    if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
-        if(opts.CN_lib == 1){
-            if(nread_ROI.find(lib) == nread_ROI.end())
-                nread_ROI[lib] = 1;
-            else
-                nread_ROI[lib] ++;
-        }
-        else{
-            if(nread_ROI.find(bam_name) == nread_ROI.end())
-                nread_ROI[bam_name] = 1;
-            else
-                nread_ROI[bam_name] ++;
-        }
-    // This stores the same counts. Not sure why.
-    if(opts.CN_lib == 1){
-            if(possible_fake_data.find(lib) == possible_fake_data.end())
-                possible_fake_data[lib] = 1;
-            else
-                possible_fake_data[lib] ++;
-        }
-        else{
-            if(possible_fake_data.find(bam_name) == possible_fake_data.end())
-                possible_fake_data[bam_name] = 1;
-            else
-                possible_fake_data[bam_name] ++;
-        }
-
-        // region between begin and last
-        // This stores the exact same counts yet again. Still not sure why.
-        if(opts.CN_lib == 1){
-            if(nread_FR.find(lib) == nread_FR.end())
-                nread_FR[lib] = 1;
-            else
-                nread_FR[lib] ++;
-        }
-        else{
-            if(nread_FR.find(bam_name) == nread_FR.end())
-                nread_FR[bam_name] = 1;
-            else
-                nread_FR[bam_name] ++;
-        }
+    if(aln.bdqual() > opts.min_map_qual
+        && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF))
+    {
+        string const& key = opts.CN_lib == 1 ? lib : bam_name;
+        ++nread_ROI[key];
+        ++possible_fake_data[key];
+        ++nread_FR[key];
     }
-    // mapQual is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
-  if(mapQual.find(lib) != mapQual.end()){
-      if(aln.bdqual() <= mapQual[lib])
-          return;
-  }
-  else{
-      //here filter out if mapping quality is less than or equal to the min_map_qual.
-      //Note that this doesn't make sense as a cutoff of 0 would still exclude reads with qual 0
-      if(aln.bdqual() <= opts.min_map_qual)
-          return;
-  }
 
-  //FIXME this is likely to have a special tid reserved in the spec. Go back and fix it.
-    if(strcmp(bam_header->target_name[b->core.tid],"*")==0) // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
-        return;
+    // mapQual is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
+    map<string, int>::const_iterator libraryMinMapq = mapQual.find(lib);
+    if (libraryMinMapq != mapQual.end()) {
+        if (aln.bdqual() <= libraryMinMapq->second)
+            return;
+    } else if(aln.bdqual() <= opts.min_map_qual) {
+        //here filter out if mapping quality is less than or equal to the min_map_qual.
+        //Note that this doesn't make sense as a cutoff of 0 would still exclude reads with qual 0
+            return;
+    }
+
+    //FIXME this is likely to have a special tid reserved in the spec. Go back and fix it.
+    if(strcmp(bam_header->target_name[b->core.tid], "*")==0)
+        return; // ignore reads that failed to associate with a reference
 
     if(aln.bdflag() == breakdancer::NA)
         return; // return fragment reads and other bad ones
 
-  if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED) // only care flag 32 for CTX
+    if ((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX)
+            || aln.bdflag() == breakdancer::MATE_UNMAPPED
+            || aln.bdflag() == breakdancer::UNMAPPED) // only care flag 32 for CTX
+    {
         return;
+    }
+
     // for long insert
     // Mate pair libraries have different expected orientations so adjust
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
@@ -860,7 +832,7 @@ void Analysis (
     //I suspect this is to include those reads in the fastq dump for assembly!
     if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
         if(*normal_switch == 1 && b->core.isize > 0){
-            (*nnormal_reads)++;
+            ++(*nnormal_reads);
         }
         return;
     }
@@ -869,14 +841,15 @@ void Analysis (
         *ntotal_nucleotides += b->core.l_qseq;
         *max_readlen = (*max_readlen < b->core.l_qseq) ? b->core.l_qseq : *max_readlen;
     }
+
     //This appears to test that you've exited a window after your first abnormal read by either reading off the chromosome or exiting the the window
     // d appears to be 1e8 at max (seems big), 50 at minimum or the smallest mean - readlen*2 for a given library
     int do_break = (int(b->core.tid) != lasts || int(b->core.pos) - lastc > d)?1:0;
 
-    if(do_break){ // breakpoint in the assembly
+    if(do_break) { // breakpoint in the assembly
         float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
         if(lastc - beginc > opts.min_len
-            && seq_coverage < opts.seq_coverage_lim) // skip short/unreliable flnaking supporting regions
+                && seq_coverage < opts.seq_coverage_lim) // skip short/unreliable flanking supporting regions
         {
             // register reliable region and supporting reads across gaps
             int k = (*reg_idx) ++;  //assign an id to this region
@@ -889,16 +862,8 @@ void Analysis (
             // record nread_ROI
             // track the number of reads from each library for the region
             for(map<string, uint32_t>::const_iterator nread_ROI_it = nread_ROI.begin(); nread_ROI_it != nread_ROI.end(); nread_ROI_it ++){
-                string lib_ = (*nread_ROI_it).first;
-                if(read_count_ROI_map.find(k) == read_count_ROI_map.end()){
-                    read_count_ROI_map[k][lib_] = nread_ROI[lib_];
-                }
-                else if(read_count_ROI_map[k].find(lib_) == read_count_ROI_map[k].end()){
-                    read_count_ROI_map[k][lib_] = nread_ROI[lib_];
-                }
-                else{
-                    read_count_ROI_map[k][lib_] += nread_ROI[lib_];
-                }
+                string const& lib_ = nread_ROI_it->first;
+                read_count_ROI_map[k][lib_] += nread_ROI[lib_];
             }
 
             // compute nread_FR and record it
