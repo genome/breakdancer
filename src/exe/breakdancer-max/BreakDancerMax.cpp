@@ -427,34 +427,27 @@ int main(int argc, char *argv[]) {
             //for now, let's just set the bdflag directly here since it is public
             if(opts.Illumina_long_insert){
                 if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_RF) {
-                    b->core.flag = 4;   //why isn't this ARP_FR_big_insert ie. 2?
                     aln2.set_bdflag(breakdancer::ARP_RF);
                 }
                 if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag == breakdancer::ARP_RF) {
-                    b->core.flag = 20;
                     aln2.set_bdflag(breakdancer::NORMAL_RF);
                 }
                 if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_RF) {
-                    b->core.flag = 3;
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
                 }
             }
             else{
                 if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_FR) {
-                    b->core.flag = 2;
                     aln2.set_bdflag(breakdancer::ARP_FR_big_insert);
                 }
                 if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag == breakdancer::ARP_FR_big_insert) {
-                    b->core.flag = 18;
                     aln2.set_bdflag(breakdancer::NORMAL_FR);
                 }
                 if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_FR) {
-                    b->core.flag = 3;
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert);
                 }
             }
 
-            assert(aln2.bdflag == b->core.flag);
             if(aln2.bdflag == breakdancer::NORMAL_FR || aln2.bdflag == breakdancer::NORMAL_RF) {
                 continue;
             }
