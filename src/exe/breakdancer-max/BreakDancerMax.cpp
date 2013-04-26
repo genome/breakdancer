@@ -2138,7 +2138,7 @@ void EstimatePriorParameters(
             //if(readlen_stat.find(lib) == readlen_stat.end())    // don't need to issue a new stat
             //readlen_stat[lib] = ; // Statistics::Descriptive::Sparse->new() // don't need to issue a new stat
             readlen_stat[lib].push_back(b->core.isize);
-            if(b->core.qual <= opts.min_map_qual)    // skip low quality mapped reads
+            if(aln2.bdqual <= opts.min_map_qual)    // skip low quality mapped reads
                 continue;
             if((b->core.flag != 18 && b->core.flag != 20) || b->core.isize <= 0)
                 continue;
