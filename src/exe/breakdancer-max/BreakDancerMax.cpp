@@ -2140,7 +2140,7 @@ void EstimatePriorParameters(
             readlen_stat[lib].push_back(b->core.isize);
             if(aln2.bdqual <= opts.min_map_qual)    // skip low quality mapped reads
                 continue;
-            if((b->core.flag != 18 && b->core.flag != 20) || b->core.isize <= 0)
+            if((aln2.bdqual != breakdancer::NORMAL_FR && aln2.bdqual != breakdancer::NORMAL_RF) || b->core.isize <= 0)
                 continue;
             //if(insert_stat.find(lib) == insert_stat.end())    // don't need to issue a new stat
             insert_stat[lib].push_back(b->core.isize);
