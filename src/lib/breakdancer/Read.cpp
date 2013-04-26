@@ -12,6 +12,8 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     bdflag = _determine_bdflag();
     bdqual = _determine_bdqual();
 
+    //Be careful below. These must be in this order as _platform and _library depend on readgroup
+    readgroup = _readgroup();
     platform = _platform(readgroup_platform);
     library = _library(readgroup_library);
     
@@ -78,7 +80,7 @@ Read& Read::operator=(const Read& other) {
     return *this;
 }
 
-string Read::readgroup() {
+string Read::_readgroup() {
     if(uint8_t* tmp = bam_aux_get(_record, "RG")) {
         return string(bam_aux2Z(tmp));
     }
@@ -126,7 +128,7 @@ string Read::ori() {
 }
 
 string Read::_platform(map<string, string> const& readgroup_platform) {
-    map<string, string>::const_iterator platform_it = readgroup_platform.find(readgroup());
+    map<string, string>::const_iterator platform_it = readgroup_platform.find(readgroup);
     if(platform_it != readgroup_platform.end()) {
         return platform_it->second;
     }
@@ -137,7 +139,7 @@ string Read::_platform(map<string, string> const& readgroup_platform) {
 
 string Read::_library(map<string, string> const& readgroup_library) {
     //contrary to the regular code, let's assume we've fixed things so that the map returns the filename if the readgroup is empty.
-    map<string, string>::const_iterator lib = readgroup_library.find(readgroup());
+    map<string, string>::const_iterator lib = readgroup_library.find(readgroup);
     if(lib != readgroup_library.end()) {
         return lib->second;
     }

@@ -43,7 +43,7 @@ class TestRead : public ::testing::Test {
 };
 
 TEST_F(TestRead, readgroup) {
-    ASSERT_EQ(test_read->readgroup(), "rg3");
+    ASSERT_EQ(test_read->readgroup, "rg3");
 }
 
 TEST_F(TestRead, queryname) {
