@@ -354,7 +354,7 @@ int main(int argc, char *argv[]) {
             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
             assert(b->core.flag == aln2.bdflag);
 
-            string readgroup = aln_return[0];
+            string& readgroup = aln2.readgroup;
 
             //FIXME this could be filtered out on reading the BAM
             if(b->core.tid < 0){
@@ -584,7 +584,7 @@ int main(int argc, char *argv[]) {
             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
             assert(b->core.flag == aln2.bdflag);
-            string readgroup = aln_return[0];
+            string& readgroup = aln2.readgroup;
             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 
             if(!library.empty()){
@@ -715,7 +715,7 @@ int main(int argc, char *argv[]) {
                         breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
                         vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                         assert(b->core.flag == aln2.bdflag);
-                        string readgroup = aln_return[0];
+                        string& readgroup = aln2.readgroup;
                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                         //continue;
@@ -919,7 +919,7 @@ int main(int argc, char *argv[]) {
                             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
                             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                             assert(b->core.flag == aln2.bdflag);
-                            string readgroup = aln_return[0];
+                            string& readgroup = aln2.readgroup;
                             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                             //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
                             //continue;
@@ -2117,7 +2117,7 @@ void EstimatePriorParameters(
             breakdancer::Read aln2(b, format, readgroup_platform, readgroup_library);
             vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, opts.platform);
             assert(b->core.flag == aln2.bdflag);
-            string readgroup = aln_return[0];
+            string& readgroup = aln2.readgroup;
 
             // analyze the bam file line by line
             string lib = readgroup.empty()?(*ii).second:readgroup_library[readgroup];// when multiple libraries are in a BAM file
