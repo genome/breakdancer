@@ -171,7 +171,6 @@ void Analysis (
     map<string, float> &lowercutoff,
     int d,
     int *max_readlen,
-    string ori,
     bam_header_t* in,
     uint32_t *ntotal_nucleotides,
     map<string, float> &read_density,

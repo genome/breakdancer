@@ -354,7 +354,6 @@ int main(int argc, char *argv[]) {
             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
             assert(b->core.flag == aln2.bdflag);
 
-            string ori = aln_return[1];
             string readgroup = aln_return[0];
 
             //FIXME this could be filtered out on reading the BAM
@@ -586,7 +585,6 @@ int main(int argc, char *argv[]) {
             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
             assert(b->core.flag == aln2.bdflag);
             string readgroup = aln_return[0];
-            string ori = aln_return[1];
             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 
             if(!library.empty()){
@@ -614,7 +612,6 @@ int main(int argc, char *argv[]) {
                     lowercutoff,
                     d,
                     &max_readlen,
-                    ori,
                     reader->header(),
                     &ntotal_nucleotides,
                     read_density,
@@ -718,7 +715,6 @@ int main(int argc, char *argv[]) {
                         breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
                         vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                         assert(b->core.flag == aln2.bdflag);
-                        string ori = aln_return[1];
                         string readgroup = aln_return[0];
                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
@@ -748,7 +744,6 @@ int main(int argc, char *argv[]) {
                                 lowercutoff,
                                 d,
                                 &max_readlen,
-                                ori,
                                 in[heap->i]->header,
                                 &ntotal_nucleotides,
                                 read_density,
@@ -924,7 +919,6 @@ int main(int argc, char *argv[]) {
                             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
                             vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
                             assert(b->core.flag == aln2.bdflag);
-                            string ori = aln_return[1];
                             string readgroup = aln_return[0];
                             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                             //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
@@ -954,7 +948,6 @@ int main(int argc, char *argv[]) {
                                     lowercutoff,
                                     d,
                                     &max_readlen,
-                                    ori,
                                     readers[0]->header(),
                                     &ntotal_nucleotides,
                                     read_density,
@@ -1230,7 +1223,6 @@ void Analysis (
     map<string, float> &lowercutoff,
     int d,
     int *max_readlen,
-    string ori,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,
     map<string, float> &read_density,
@@ -2125,7 +2117,6 @@ void EstimatePriorParameters(
             breakdancer::Read aln2(b, format, readgroup_platform, readgroup_library);
             vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, opts.platform);
             assert(b->core.flag == aln2.bdflag);
-            string ori = aln_return[1];
             string readgroup = aln_return[0];
 
             // analyze the bam file line by line
