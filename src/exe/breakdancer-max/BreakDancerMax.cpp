@@ -336,28 +336,21 @@ int main(int argc, char *argv[]) {
 
      for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii)
      {
-
         maps.push_back((*ii).first);
-         uint32_t ref_len = 0;
-         string exe = exes[maps[i]];
-         i ++;
-         cmds[exe] ++;
+        uint32_t ref_len = 0;
+        string const& exe = exes[maps[i]];
+        ++i;
+        ++cmds[exe];
 
-         int p_pos = 0;
-         const char *p_chr = 0;
-        string bam_name = (*ii).first;
+        int p_pos = 0;
+        const char *p_chr = 0;
+        string const& bam_name = (*ii).first;
 
-
-
-        // no chromosome defined
-        // convert the entire bam file
         // XXX: Note: the original code would 'continue' if a particular
         // bam could not be opened. It would also spew the bam name into
         // the output, which probably messes it up anyway. We are going
         // to crash. If it is determined that this is wrong, we should
-        // declare a variable for the BamReader, heap allocate it (with
-        // boost::scoped_ptr/std::unique_ptr/std::auto_ptr) in a try
-        // block and continue on exceptions.
+        // continue if openBam fails.
         auto_ptr<IBamReader> reader(openBam(bam_name, opts));
 
         while (reader->next(b) > 0) {
@@ -615,25 +608,18 @@ int main(int argc, char *argv[]) {
     }
 
     if (reg_seq.size() != 0) {
-        do_break_func(opts, bdancer, reg_seq, reg_name, read, regs, &idx_buff,
-            opts.buffer_size, &nnormal_reads, opts.min_len, &reg_idx,
-            opts.transchr_rearrange, opts.min_map_qual,
-            opts.Illumina_long_insert, opts.prefix_fastq, x_readcounts,
-            reference_len, opts.fisher, ReadsOut, mean_insertsize, SVtype,
-            mapQual, uppercutoff, lowercutoff, opts.max_sd, d,
-            opts.min_read_pair, opts.dump_BED, &max_readlen,
-            merged_reader.header(), opts.seq_coverage_lim, &ntotal_nucleotides,
-            read_density, opts.CN_lib, libmaps, maps, opts.print_AF,
-            opts.score_threshold
-        );
+        do_break_func(
+            opts, bdancer, reg_seq, reg_name, read, regs, &idx_buff,
+            &nnormal_reads, &reg_idx, x_readcounts, reference_len, ReadsOut,
+            mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, d,
+            &max_readlen, merged_reader.header(), &ntotal_nucleotides,
+            read_density, libmaps, maps
+            );
     }
 
-    buildConnection(bdancer, read, reg_name, regs, x_readcounts, reference_len,
-        opts.fisher, opts.min_read_pair, opts.dump_BED, max_readlen,
-        opts.prefix_fastq, ReadsOut, SVtype, mean_insertsize,
-        merged_reader.header(), read_density, opts.CN_lib, maps, opts.print_AF,
-        opts.score_threshold, libmaps
-    );
+    buildConnection(opts, bdancer, read, reg_name, regs, x_readcounts,
+        reference_len, max_readlen, ReadsOut, SVtype, mean_insertsize,
+        merged_reader.header(), read_density, maps, libmaps);
     bam_destroy1(b);
 
     cerr << "Max Kahan error: " << _max_kahan_err << "\n";
@@ -650,37 +636,23 @@ void do_break_func(
     map<string, vector<int> >& read,
     map<int, vector<breakdancer::Read> > &regs,
     int *idx_buff,
-    int buffer_size,
     int *nnormal_reads,
-    int min_len,
     int *reg_idx,
-    int transchr_rearrange,
-    int min_map_qual,
-    int Illumina_long_insert,
-    string prefix_fastq,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    int fisher,
     map<string, string> &ReadsOut,
     map<string, float> &mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, int> &mapQual,
     map<string, float> &uppercutoff,
     map<string, float> &lowercutoff,
-    int max_sd,
     int d,
-    int min_read_pair,
-    string dump_BED,
     int *max_readlen,
     bam_header_t* bam_header,
-    int seq_coverage_lim,
     uint32_t *ntotal_nucleotides,
     map<string, float>& read_density,
-    int CN_lib,
     map<string, string> libmaps,
-    vector<string> maps,
-    int print_AF,
-    int score_threshold
+    vector<string> maps
     )
 {
 
@@ -689,7 +661,10 @@ void do_break_func(
     int& lastc = bdancer.lastc;
 
     float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
-    if(lastc - beginc > min_len && seq_coverage < seq_coverage_lim){ // skip short/unreliable flnaking supporting regions
+    if (lastc - beginc > opts.min_len
+        && seq_coverage < opts.seq_coverage_lim)
+        // skip short/unreliable flnaking supporting regions
+    {
         // register reliable region and supporting reads across gaps
         int k = (*reg_idx) ++;
         reg_name[k].push_back(begins);
@@ -709,43 +684,19 @@ void do_break_func(
 
         regs[k] = p;
         (*idx_buff)++;
-        if(*idx_buff > buffer_size){
+        if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
-            buildConnection(
-                bdancer,
-                read,
-                reg_name,
-                regs,
-                x_readcounts,
-                reference_len,
-                fisher,
-                min_read_pair,
-                dump_BED,
-                *max_readlen,
-                prefix_fastq,
-                ReadsOut,
-                SVtype,
-                mean_insertsize,
-                bam_header,
-                read_density,
-                CN_lib,
-                maps,
-                print_AF,
-                score_threshold,
-                libmaps
-            );
+            buildConnection(opts, bdancer, read, reg_name, regs, x_readcounts,
+                reference_len, *max_readlen, ReadsOut, SVtype, mean_insertsize,
+                bam_header, read_density, maps, libmaps);
+
             *idx_buff = 0;
         }
     }
-    else{
-        if(reg_seq.size()>0){
-            for(vector<breakdancer::Read>::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
-                ///string s = get_item_from_string(*it_reg_seq,0);
-                string s = it_reg_seq->query_name();
-                if(read.find(s) != read.end())
-                    read.erase(read.find(s));
-                //cout << "read erase: " << s << endl;
-            }
+    else if(reg_seq.size() > 0) {
+        for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
+            ///string s = get_item_from_string(*it_reg_seq,0);
+            read.erase(it_reg_seq->query_name());
         }
     }
 }
@@ -785,21 +736,6 @@ void Analysis (
 {
     // for now, we can just set up references to the data struct so we
     // don't have to modify too much code
-    int buffer_size = opts.buffer_size;
-    int min_len = opts.min_len;
-    bool transchr_rearrange = opts.transchr_rearrange;
-    int min_map_qual = opts.min_map_qual;
-    int Illumina_long_insert = opts.Illumina_long_insert;
-    string const& prefix_fastq = opts.prefix_fastq;
-    bool fisher = opts.fisher;
-    int max_sd = opts.max_sd;
-    int min_read_pair = opts.min_read_pair;
-    string const& dump_BED = opts.dump_BED;
-    int seq_coverage_lim = opts.seq_coverage_lim;
-    bool CN_lib = opts.CN_lib;
-    bool print_AF = opts.print_AF;
-    int score_threshold = opts.score_threshold;
-
     int& begins = bdancer.begins;
     int& beginc = bdancer.beginc;
     int& lasts = bdancer.lasts;
@@ -810,14 +746,14 @@ void Analysis (
     map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
 
 
-    string bam_name = libmaps[lib];
+    string const& bam_name = libmaps[lib];
     //main analysis code
 
     // region between last and next begin
     // Store readdepth in nread_ROI by bam name (no per library calc) or by library
     // I believe this only counts normally mapped reads
     if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
-        if(CN_lib == 1){
+        if(opts.CN_lib == 1){
             if(nread_ROI.find(lib) == nread_ROI.end())
                 nread_ROI[lib] = 1;
             else
@@ -830,7 +766,7 @@ void Analysis (
                 nread_ROI[bam_name] ++;
         }
     // This stores the same counts. Not sure why.
-    if(CN_lib == 1){
+    if(opts.CN_lib == 1){
             if(possible_fake_data.find(lib) == possible_fake_data.end())
                 possible_fake_data[lib] = 1;
             else
@@ -845,7 +781,7 @@ void Analysis (
 
         // region between begin and last
         // This stores the exact same counts yet again. Still not sure why.
-        if(CN_lib == 1){
+        if(opts.CN_lib == 1){
             if(nread_FR.find(lib) == nread_FR.end())
                 nread_FR[lib] = 1;
             else
@@ -866,7 +802,7 @@ void Analysis (
   else{
       //here filter out if mapping quality is less than or equal to the min_map_qual.
       //Note that this doesn't make sense as a cutoff of 0 would still exclude reads with qual 0
-      if(aln.bdqual() <= min_map_qual)
+      if(aln.bdqual() <= opts.min_map_qual)
           return;
   }
 
@@ -877,13 +813,13 @@ void Analysis (
     if(aln.bdflag() == breakdancer::NA)
         return; // return fragment reads and other bad ones
 
-  if((transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED) // only care flag 32 for CTX
+  if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED) // only care flag 32 for CTX
         return;
     // for long insert
     // Mate pair libraries have different expected orientations so adjust
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
-    if(Illumina_long_insert){
+    if(opts.Illumina_long_insert){
         if(aln.abs_isize() > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
             aln.set_bdflag(breakdancer::ARP_RF);
         }
@@ -912,9 +848,10 @@ void Analysis (
     if(aln.bdflag() == breakdancer::ARP_RR) {
         aln.set_bdflag(breakdancer::ARP_FF);
     }
+
     //this isn't an exact match to what was here previously
     //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
-    if(aln.bdflag() != breakdancer::ARP_CTX && aln.abs_isize() > max_sd) {// skip read pairs mapped too distantly on the same chromosome
+    if(aln.bdflag() != breakdancer::ARP_CTX && aln.abs_isize() > opts.max_sd) {// skip read pairs mapped too distantly on the same chromosome
         return;
     }
 
@@ -938,7 +875,9 @@ void Analysis (
 
     if(do_break){ // breakpoint in the assembly
         float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
-        if(lastc - beginc > min_len && seq_coverage < seq_coverage_lim){ // skip short/unreliable flnaking supporting regions
+        if(lastc - beginc > opts.min_len
+            && seq_coverage < opts.seq_coverage_lim) // skip short/unreliable flnaking supporting regions
+        {
             // register reliable region and supporting reads across gaps
             int k = (*reg_idx) ++;  //assign an id to this region
             reg_name[k].push_back(begins); //chromosome
@@ -995,31 +934,11 @@ void Analysis (
 
             regs[k] = p;    //store the array of reads at the region
             (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
-            if(*idx_buff > buffer_size){
+            if(*idx_buff > opts.buffer_size){
                 //flush buffer by building connection
-                buildConnection(
-                    bdancer,
-                    read,
-                    reg_name,
-                    regs,
-                    x_readcounts,
-                    reference_len,
-                    fisher,
-                    min_read_pair,
-                    dump_BED,
-                    *max_readlen,
-                    prefix_fastq,
-                    ReadsOut,
-                    SVtype,
-                    mean_insertsize,
-                    bam_header,
-                    read_density,
-                    CN_lib,
-                    maps,
-                    print_AF,
-                    score_threshold,
-                    libmaps
-                );
+                buildConnection(opts, bdancer, read, reg_name, regs, x_readcounts,
+                    reference_len, *max_readlen, ReadsOut, SVtype, mean_insertsize,
+                    bam_header, read_density, maps, libmaps);
                 *idx_buff = 0;
             }
         }
@@ -1094,26 +1013,20 @@ void Analysis (
 
 // pair up reads and print out results (SV estimation)
 void buildConnection(
+    Options const& opts,
     BreakDancerData& bdancer,
     map<string, vector<int> > &read,
     map<int, vector<int> > &reg_name,
     map<int, vector<breakdancer::Read> > &regs,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    int fisher,
-    int min_read_pair,
-    string dump_BED,
     int max_readlen,
-    string prefix_fastq,
     map<string, string> &ReadsOut,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, float> &mean_insertsize,
     bam_header_t* bam_header,
     map<string, float> &read_density,
-    int CN_lib,
     vector<string> maps, // FIXME: should be constref
-    int print_AF,
-    int score_threshold,
     map<string, string> libmaps // FIXME: should be constref
     )
 {
@@ -1199,7 +1112,7 @@ void buildConnection(
                     vector<string> free_reads;
                     map<int,map<int,int> > nodepair;
                     int nlinks = clink[tail][s1];
-                    if(nlinks<min_read_pair) // require sufficient number of pairs
+                    if(nlinks<opts.min_read_pair) // require sufficient number of pairs
                         continue;
                     assert(nodepair.find(s1) == nodepair.end()); // a node only appear once in a pair
                     if(nodepair.find(s1) != nodepair.end()) // a node only appear once in a pair
@@ -1327,13 +1240,13 @@ void buildConnection(
                     //float score;//don't know if float; no usage actually
                     //int bestIndelSize;//don't know if int; no usage actually
                     // START HERE
-                    if(nread_pairs >= min_read_pair){
+                    if(nread_pairs >= opts.min_read_pair){
                         map<breakdancer::pair_orientation_flag, int> diffspans;
                         map<breakdancer::pair_orientation_flag, string> sptypes;
                         //FIXME lots of references to this below as a string
                         breakdancer::pair_orientation_flag flag = choose_sv_flag(nread_pairs, type);
 
-                        if(type[flag] >= min_read_pair) {
+                        if(type[flag] >= opts.min_read_pair) {
                             // print out result
                             int sv_chr1 = -1, sv_pos1 = 0, sv_chr2 = -1, sv_pos2 = 0;
                             string sv_ori1, sv_ori2;
@@ -1459,7 +1372,7 @@ void buildConnection(
                             float diffspan = 0;
                             //debug
                             //int tmp_size_tlr = type_library_readcount[fl].size();
-                            if(CN_lib == 1){
+                            if(opts.CN_lib == 1){
                                 for(map<string,int>::iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
                                     string sp = (*ii_type_lib_rc).first;
                                     // intialize to be zero, in case of no library, or DEL, or ITX.
@@ -1520,7 +1433,7 @@ void buildConnection(
                             sptypes[flag] = sptype;
 
 
-                            real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag), x_readcounts, reference_len, fisher, reg_name);
+                            real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag), x_readcounts, reference_len, opts.fisher, reg_name);
                             real_type PhredQ_tmp = -10*LogPvalue/log(10);
                             int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
                             //float AF = float(type[flag])/float(type[flag]+normal_rp);
@@ -1536,12 +1449,12 @@ void buildConnection(
                              k++;
                              }*/
                             //cout << bam_header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << bam_header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
-                            if(PhredQ > score_threshold){
+                            if(PhredQ > opts.score_threshold){
                                 cout << bam_header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << bam_header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag];// << endl;
                                 //printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
-                                if(print_AF == 1)
+                                if(opts.print_AF == 1)
                                     cout <<  "\t" << AF;
-                                if(CN_lib == 0 && flag != breakdancer::ARP_CTX){
+                                if(opts.CN_lib == 0 && flag != breakdancer::ARP_CTX){
                                     for(vector<string>::const_iterator iter = maps.begin(); iter != maps.end(); ++iter) {
                                         if(copy_number.find(*iter) == copy_number.end())
                                             cout << "\tNA";
@@ -1556,13 +1469,13 @@ void buildConnection(
 
 
 
-                                if(!prefix_fastq.empty()){ // print out supporting read pairs
+                                if(!opts.prefix_fastq.empty()){ // print out supporting read pairs
                                     write_fastq_for_flag(flag, support_reads, ReadsOut);
                                 }
 
-                                if(!dump_BED.empty()){  // print out SV and supporting reads in BED format
+                                if(!opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
                                     ofstream fh_BED;
-                                    fh_BED.open(dump_BED.c_str(), ofstream::app);
+                                    fh_BED.open(opts.dump_BED.c_str(), ofstream::app);
 
                                     string trackname(bam_header->target_name[sv_chr1]);
                                     trackname = trackname.append("_").append(itos(sv_pos1)).append("_").append(SVT).append("_").append(itos(diffspans[flag]));
@@ -1607,7 +1520,7 @@ void buildConnection(
         // remove reads in the regions
         int node = (*ii_free_nodes).first;
         vector<breakdancer::Read> reads = regs[node];
-        if(reads.size() < unsigned(min_read_pair)){
+        if(reads.size() < unsigned(opts.min_read_pair)){
             for(vector<breakdancer::Read>::iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
                 breakdancer::Read y = *ii_reads;
                 string readname = y.query_name();

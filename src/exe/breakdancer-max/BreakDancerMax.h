@@ -99,7 +99,6 @@ struct AnalysisData {
     vector<breakdancer::Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
     vector<breakdancer::Read>::const_iterator it_reg_seq; // global
 };
-    
 
 /*template <class T>
 T from_string(const std::string& s,
@@ -112,39 +111,24 @@ void do_break_func(
     map<string, vector<int> >& read,
     map<int, vector<breakdancer::Read> > &regs,
     int *idx_buff,
-    int buffer_size,
     int *nnormal_reads,
-    int min_len,
     int *reg_idx,
-    int transchr_rearrange,
-    int min_map_qual,
-    int Illumina_long_insert,
-    string prefix_fastq,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    int fisher,
     map<string, string> &ReadsOut,
     map<string, float> &mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, int> &mapQual,
     map<string, float> &uppercutoff,
     map<string, float> &lowercutoff,
-    int max_sd,
     int d,
-    int min_read_pair,
-    string dump_BED,
     int *max_readlen,
     bam_header_t* bam_header,
-    int seq_coverage_lim,
     uint32_t *ntotal_nucleotides,
-    map<string, float> &read_density,
-    int CN_lib,
+    map<string, float>& read_density,
     map<string, string> libmaps,
-    vector<string> maps,
-    int print_AF,
-    int score_threshold
+    vector<string> maps
     );
-
 
 void Analysis (
     Options const& opts,
@@ -179,28 +163,22 @@ void Analysis (
     );
 
 void buildConnection(
+    Options const& opts,
     BreakDancerData& bdancer,
     map<string, vector<int> > &read,
     map<int, vector<int> > &reg_name,
     map<int, vector<breakdancer::Read> > &regs,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    int fisher,
-    int min_read_pair,
-    string dump_BED,
     int max_readlen,
-    string prefix_fastq,
     map<string, string> &ReadsOut,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, float> &mean_insertsize,
     bam_header_t* bam_header,
     map<string, float> &read_density,
-    int CN_lib,
     vector<string> maps, // FIXME: should be constref
-    int print_AF,
-    int score_threshold,
     map<string, string> libmaps // FIXME: should be constref
-);
+    );
 
 void EstimatePriorParameters(
     Options const& opts,

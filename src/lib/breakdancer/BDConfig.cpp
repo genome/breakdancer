@@ -41,7 +41,6 @@ void ConfigEntry::parse() {
 
     library_name = find_required(directives, list_of("lib")("samp"));
     readgroup = find_required(directives, READ_GROUP_PROPS);
-    vector<string> READ_GROUP_PROPS = list_of("readgroup")("group")("lib")("samp");
     bam_file = find_required(directives, "map");
 }
 
