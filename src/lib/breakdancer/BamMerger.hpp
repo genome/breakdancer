@@ -7,16 +7,14 @@
 
 class BamReader;
 
-namespace {
-    // FIXME: figure out if something like this already exists.
-    // if not, move it someplace more general
-    template<typename T>
-    struct deref_greater {
-        bool operator()(T const* a, T const* b) const {
-            return *a > *b;
-        }
-    };
-}
+// FIXME: figure out if something like this already exists.
+// if not, move it someplace more general
+template<typename T>
+struct deref_greater {
+    bool operator()(T const* a, T const* b) const {
+        return *a > *b;
+    }
+};
 
 class BamMerger : IBamReader {
 public:

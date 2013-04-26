@@ -2,7 +2,6 @@
 
 #include <cassert>
 #include <stdexcept>
-#include <iostream>
 
 using namespace std;
 
@@ -56,12 +55,11 @@ bool BamMerger::Stream::valid() const {
 bool BamMerger::Stream::advance() {
     assert(bam && entry);
     status = bam->next(entry);
-    cerr << "ADVANCED WITH STATUS " << status << "\n";
     return status > 0;
 }
 
 BamMerger::BamMerger(std::vector<IBamReader*> const& streams) {
-    if (_streams.empty())
+    if (streams.empty())
         throw runtime_error("BamMerger created with no input streams!");
 
     // TODO: validate that headers are all "compatible".
@@ -100,6 +98,7 @@ int BamMerger::next(bam1_t* entry) {
 
     int rv = s->status;
     bam_copy1(entry, s->entry);
+
     if (s->advance()) {
         _streams.push(s);
     } else {
