@@ -30,7 +30,7 @@ namespace breakdancer {
             Read(bam1_t const* record, std::string const& format, std::map<std::string, std::string> const& readgroup_platform, std::map<std::string, std::string> const& readgroup_library);
             Read() : _record(NULL), bdqual(0), bdflag(NA) {};
             Read(const Read& other);
-            virtual ~Read();
+            ~Read();
             //not really sure where the optimaly location for this const is or even what it's modifying.
             //Need to talk to Travis :(
             std::string operator[](std::vector<std::string>::size_type idx) const;
