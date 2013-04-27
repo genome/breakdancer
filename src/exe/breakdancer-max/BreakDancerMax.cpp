@@ -2394,7 +2394,7 @@ void write_fastq_for_flag(const string &flag, const vector<breakdancer::Read> &s
     map<string,int> pairing;
     for( vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
         breakdancer::Read y = *ii_support_reads;
-        if(y.size() != 11 || y[5].compare(flag))
+        if(y.query_sequence() == "+" || y.quality_string() == "+" || y[5].compare(flag))
             continue;
         //Paradoxically, the first read seen is put in file 2 and the second in file 1
         string fh_tmp_str = (pairing.find(y.query_name()) != pairing.end()) ? ReadsOut.at(y[8].append("1")) : ReadsOut.at(y[8].append("2"));
@@ -2402,7 +2402,7 @@ void write_fastq_for_flag(const string &flag, const vector<breakdancer::Read> &s
         fh.open(fh_tmp_str.c_str(), ofstream::app);
         pairing[y.query_name()] = 1;
         //Note that no transformation on read bases based on read orientation is done here
-        string str_tmp = "@" + y.query_name() + "\n" + y[9] + "\n" + "+\n" + y[10] + "\n";
+        string str_tmp = "@" + y.query_name() + "\n" + y.query_sequence() + "\n" + "+\n" + y[10] + "\n";
         fh << str_tmp;
         fh.close();
     }
