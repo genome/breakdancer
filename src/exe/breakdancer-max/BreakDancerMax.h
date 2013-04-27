@@ -74,7 +74,7 @@ void do_break_func(
     int *reg_idx,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    map<string, string> &ReadsOut,
+    ConfigMap<string, string>::type const& ReadsOut,
     ConfigMap<string, float>::type const& mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
     ConfigMap<string, int>::type const& mapQual,
@@ -111,7 +111,7 @@ string get_string_qual(uint8_t *pt, int32_t length);
 
 // refactoring functions
 // write out reads to fastq files
-void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const vector<breakdancer::Read> &support_reads, const map<string, string> &ReadsOut);
+void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const vector<breakdancer::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut);
 
 // choose the predominant type of read in a region
 breakdancer::pair_orientation_flag choose_sv_flag(const int num_readpairs, const map<breakdancer::pair_orientation_flag, int> reads_per_type);

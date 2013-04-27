@@ -184,7 +184,7 @@ namespace {
         map<uint32_t, map<string,int> > &x_readcounts,
         uint32_t reference_len,
         int max_readlen,
-        map<string, string> &ReadsOut,
+        ConfigMap<string, string>::type const& ReadsOut,
         map<string, string> &SVtype,
         ConfigMap<string, float>::type const& mean_insertsize,
         bam_header_t* bam_header,
@@ -707,7 +707,7 @@ namespace {
         int *reg_idx,
         map<uint32_t, map<string, int> > &x_readcounts,
         uint32_t reference_len,
-        map<string, string> &ReadsOut,
+        ConfigMap<string, string>::type const& ReadsOut,
         ConfigMap<string, float>::type const& mean_insertsize,
         map<string, string> &SVtype,
         ConfigMap<string, int>::type const& mapQual,
@@ -1102,10 +1102,9 @@ int main(int argc, char *argv[]) {
     ConfigMap<string, float>::type const& readlens = cfg.readlens;
     ConfigMap<string, int>::type const& mapQual = cfg.mapQual;
     int& max_readlen = cfg.max_readlen;
-    map<uint32_t, map<string,int> >& x_readcounts = cfg.x_readcounts;
     ConfigMap<string, string>::type const& readgroup_library = cfg.readgroup_library;
     ConfigMap<string, string>::type const& readgroup_platform = cfg.readgroup_platform;
-    map<string,string>& ReadsOut = cfg.ReadsOut;;
+    ConfigMap<string,string>::type const& ReadsOut = cfg.ReadsOut;
     int& d = cfg.d;
 
     // go through the iteration of fmaps
@@ -1113,6 +1112,9 @@ int main(int argc, char *argv[]) {
     for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii) {
         exes.at(ii->first); // throws if not found
     }
+
+
+    map<uint32_t, map<string,int> > x_readcounts;
 
 /*
     if(opts.learn_par) {
@@ -1434,7 +1436,7 @@ void do_break_func(
     int *reg_idx,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    map<string, string> &ReadsOut,
+    ConfigMap<string, string>::type const& ReadsOut,
     ConfigMap<string, float>::type const& mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
     ConfigMap<string, int>::type const& mapQual,
@@ -1553,7 +1555,7 @@ string get_string(uint8_t *pt, int32_t length){
     return seq;
 }
 
-void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const vector<breakdancer::Read> &support_reads, const map<string, string> &ReadsOut) {
+void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const vector<breakdancer::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
     map<string,int> pairing;
     for( vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
         breakdancer::Read y = *ii_support_reads;

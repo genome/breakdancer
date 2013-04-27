@@ -4,7 +4,6 @@
 
 #include <string>
 #include <vector>
-#include <map>
 
 extern "C" {
     #include <sam.h>

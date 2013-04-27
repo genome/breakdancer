@@ -25,10 +25,9 @@ public:
     ConfigMap<std::string, float>::type lowercutoff;
     ConfigMap<std::string, float>::type readlens;
     ConfigMap<std::string, int>::type mapQual;
-    std::map<uint32_t, std::map<std::string,int> > x_readcounts;
     ConfigMap<std::string, std::string>::type readgroup_library;
     ConfigMap<std::string, std::string>::type readgroup_platform;
-    std::map<std::string, std::string> ReadsOut;
+    ConfigMap<std::string, std::string>::type ReadsOut;
 
     int d;
     int max_readlen;
