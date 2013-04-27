@@ -26,7 +26,7 @@ public:
     ConfigMap<std::string, float>::type readlens;
     ConfigMap<std::string, int>::type mapQual;
     std::map<uint32_t, std::map<std::string,int> > x_readcounts;
-    std::map<std::string,std::string> readgroup_library;
+    ConfigMap<std::string, std::string>::type readgroup_library;
     std::map<std::string, std::string> readgroup_platform;
     std::map<std::string, std::string> ReadsOut;
 

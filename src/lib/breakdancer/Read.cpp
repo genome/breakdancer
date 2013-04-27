@@ -5,11 +5,20 @@
 using namespace std;
 using namespace breakdancer;
 
-Read::Read(bam1_t const* record, string const& format, map<string, string> const& readgroup_platform, map<string, string> const& readgroup_library) :
-    _record(bam_init1()), _query_name_cached(false), _query_seq_cached(false), _quality_string_cached(false), _abs_isize_cached(false) {
+Read::Read(
+        bam1_t const* record,
+        string const& format,
+        map<string, string> const& readgroup_platform,
+        ConfigMap<string, string>::type const& readgroup_library)
+    : _record(bam_init1())
+    ,_query_name_cached(false)
+    ,_query_seq_cached(false)
+    ,_quality_string_cached(false)
+    ,_abs_isize_cached(false)
+{
     //create copy of bam record
     bam_copy1(_record, record);
-    
+
     //set flag and qualities
     _bdflag = _determine_bdflag();
     _bdqual = _determine_bdqual();
@@ -101,7 +110,7 @@ int Read::_determine_bdqual() {
     //Breakdancer always takes the alternative mapping quality, if available
     //it originally contained support for AQ, but the newer tag appears to be AM. Dropping support for AQ.
     if(uint8_t* alt_qual = bam_aux_get(_record, "AM")) {
-         return bam_aux2i(alt_qual);					
+         return bam_aux2i(alt_qual);
     }
     else {
         return _record->core.qual;  //if no alternative mapping quality, use core quality
@@ -166,7 +175,7 @@ pair_orientation_flag Read::_determine_bdflag() {
                 else {
                     if( ((read_reversed) && (mate_reversed)) ||
                         (!(read_reversed) && !(mate_reversed))) { //do the mates have the same orientation?
-                    
+
                         flag = (mate_reversed) ? ARP_RR : ARP_FF;
                     }
                     else if((_record->core.mpos > _record->core.pos && (read_reversed)) || (_record->core.pos > _record->core.mpos && !(read_reversed))) {

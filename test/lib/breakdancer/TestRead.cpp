@@ -1,5 +1,8 @@
 #include "breakdancer/Read.hpp"
+
 #include <map>
+#include <memory>
+
 #include <gtest/gtest.h>
 
 using namespace std;
@@ -30,16 +33,14 @@ class TestRead : public ::testing::Test {
             bam_record.data = &data[0];
             readgroup_platform["rg3"] = "helicos";
             readgroup_library["rg3"] = "some_lib";
-            test_read = new Read(&bam_record, "sam", readgroup_platform, readgroup_library);
+            test_read.reset(new Read(&bam_record, "sam", readgroup_platform, readgroup_library));
         }
-        void TearDown() {
-            delete test_read;
-        }
+
         bam1_core_t core;
         bam1_t bam_record;
-        Read* test_read;
+        auto_ptr<Read> test_read;
         map<string, string> readgroup_platform;
-        map<string, string> readgroup_library;
+        ConfigMap<string, string>::type readgroup_library;
 };
 
 TEST_F(TestRead, readgroup) {

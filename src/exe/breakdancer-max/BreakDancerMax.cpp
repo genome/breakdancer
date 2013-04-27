@@ -1103,7 +1103,7 @@ int main(int argc, char *argv[]) {
     ConfigMap<string, int>::type const& mapQual = cfg.mapQual;
     int& max_readlen = cfg.max_readlen;
     map<uint32_t, map<string,int> >& x_readcounts = cfg.x_readcounts;
-    map<string,string>& readgroup_library = cfg.readgroup_library;
+    ConfigMap<string, string>::type const& readgroup_library = cfg.readgroup_library;
     map<string, string>& readgroup_platform = cfg.readgroup_platform;
     map<string,string>& ReadsOut = cfg.ReadsOut;;
     int& d = cfg.d;
@@ -1173,7 +1173,7 @@ int main(int argc, char *argv[]) {
             //reading the files would be key though
             string lib;
             if(!(readgroup.empty()))
-                lib = readgroup_library[readgroup];
+                lib = readgroup_library.at(readgroup);
             else{
                 lib = fmaps.at(ii->first);
             }
@@ -1387,7 +1387,7 @@ int main(int argc, char *argv[]) {
 
         breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
         string const& readgroup = aln2.readgroup;
-        string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
+        string library = (!readgroup.empty())?readgroup_library.at(readgroup):((*(fmaps.begin())).second);
 
         if(!library.empty()){
             Analysis(opts, bdancer, library, b, aln2, reg_seq, reg_name, read,
