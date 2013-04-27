@@ -107,7 +107,7 @@ T from_string(const std::string& s,
 void do_break_func(
     Options const& opts,
     BreakDancerData& bdancer,
-    vector<breakdancer::Read> const& reg_seq,
+    vector<breakdancer::Read>& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
     map<int, vector<breakdancer::Read> > &regs,

@@ -1085,7 +1085,7 @@ int main(int argc, char *argv[]) {
 void do_break_func(
     Options const& opts,
     BreakDancerData& bdancer,
-    vector<breakdancer::Read> const& reg_seq,
+    vector<breakdancer::Read>& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
     map<int, vector<breakdancer::Read> > &regs,
@@ -1138,7 +1138,7 @@ void do_break_func(
         reg_name[k].push_back(*nnormal_reads);
 
         vector<breakdancer::Read> p;
-        for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
+        for(vector<breakdancer::Read>::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
             p.push_back(*it_reg_seq);
             string s = it_reg_seq->query_name();
             read[s].push_back(k);
@@ -1179,7 +1179,7 @@ void do_break_func(
     }
     else{
         if(reg_seq.size()>0){
-            for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
+            for(vector<breakdancer::Read>::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
                 ///string s = get_item_from_string(*it_reg_seq,0);
                 string s = it_reg_seq->query_name();
                 if(read.find(s) != read.end())
@@ -1427,7 +1427,7 @@ void Analysis (
             // reg_seq is an array of arrays of information about the reads. The first value is the read name.
             // This adds the region id to an array of region ids
             vector<breakdancer::Read> p;
-            for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq++){
+            for(vector<breakdancer::Read>::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq++){
                 p.push_back(*it_reg_seq);
                 string s = it_reg_seq->query_name();
                 read[s].push_back(k);
@@ -1488,7 +1488,7 @@ void Analysis (
 
             // remove any reads that are linking the last region with this new, merged in region
             if(reg_seq.size()>0){
-                for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
+                for(vector<breakdancer::Read>::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
                     string s = it_reg_seq->query_name();
                     if(read.find(s) != read.end())
                         read.erase(read.find(s));

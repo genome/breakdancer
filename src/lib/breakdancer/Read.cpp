@@ -9,7 +9,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _record = bam_init1(); 
     bam_copy1(_record, record);
     
-    _query_name = string(bam1_qname(_record));
+    _query_name_cached = false;
 
     bdflag = _determine_bdflag();
     bdqual = _determine_bdqual();
@@ -46,6 +46,7 @@ Read::Read(const Read& other) {
         _record = NULL;
     }
     _query_name = other._query_name;
+    _query_name_cached = other._query_name_cached;
     bdflag = other.bdflag;
     bdqual = other.bdqual;
     platform = other.platform;
@@ -81,6 +82,7 @@ Read& Read::operator=(const Read& other) {
         library = other.library;
         readgroup = other.readgroup;
         _query_name = other._query_name;
+        _query_name_cached = other._query_name_cached;
         _string_record = other._string_record;
         if(old_record) {
             bam_destroy1(old_record);
@@ -98,7 +100,10 @@ string Read::_readgroup() {
     }
 }
 
-string const& Read::query_name() const {
+string const& Read::query_name() {
+    if(!_query_name_cached) {
+        _query_name = string(bam1_qname(_record));
+    }
     return _query_name;
 }
 

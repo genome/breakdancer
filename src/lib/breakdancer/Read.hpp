@@ -16,6 +16,7 @@ namespace breakdancer {
         private:
             bam1_t* _record;
             std::string _query_name;
+            bool _query_name_cached;
 
             std::vector<std::string> _string_record;
             std::string _library(std::map<std::string, std::string> const& readgroup_library);
@@ -42,7 +43,7 @@ namespace breakdancer {
 
             void set_bdflag(pair_orientation_flag new_flag);
             std::vector<std::string>::size_type size();
-            std::string const& query_name() const;
+            std::string const& query_name();
             std::string query_sequence();
             std::string quality_string();
             std::string ori();
