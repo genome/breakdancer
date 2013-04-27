@@ -2402,7 +2402,7 @@ void write_fastq_for_flag(const string &flag, const vector<breakdancer::Read> &s
         fh.open(fh_tmp_str.c_str(), ofstream::app);
         pairing[y.query_name()] = 1;
         //Note that no transformation on read bases based on read orientation is done here
-        string str_tmp = "@" + y.query_name() + "\n" + y.query_sequence() + "\n" + "+\n" + y[10] + "\n";
+        string str_tmp = "@" + y.query_name() + "\n" + y.query_sequence() + "\n" + "+\n" + y.quality_string() + "\n";
         fh << str_tmp;
         fh.close();
     }
