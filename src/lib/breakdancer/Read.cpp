@@ -19,7 +19,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     platform = _platform(readgroup_platform);
     library = _library(readgroup_library);
     
-    _string_record.push_back(query_name());
+    _string_record.push_back("NA");
     _string_record.push_back(boost::lexical_cast<string>(_record->core.tid));
     _string_record.push_back(boost::lexical_cast<string>(_record->core.pos));
     _string_record.push_back(ori());
@@ -103,6 +103,7 @@ string Read::_readgroup() {
 string const& Read::query_name() {
     if(!_query_name_cached) {
         _query_name = string(bam1_qname(_record));
+        _query_name_cached = true;
     }
     return _query_name;
 }
