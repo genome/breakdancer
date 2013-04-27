@@ -45,6 +45,7 @@ Read::Read(const Read& other) {
     else {
         _record = NULL;
     }
+    _query_name = other._query_name;
     bdflag = other.bdflag;
     bdqual = other.bdqual;
     platform = other.platform;
@@ -59,6 +60,9 @@ Read::~Read() {
 }
 
 string Read::operator[](std::vector<std::string>::size_type idx) const {
+    if(idx == 0) {
+        throw "Accessing query name through index now unsupported";
+    }
     return _string_record[idx];
 }
 
@@ -74,6 +78,7 @@ Read& Read::operator=(const Read& other) {
         bdqual = other.bdqual;
         platform = other.platform;
         library = other.library;
+        _query_name = other._query_name;
         _string_record = other._string_record;
         if(old_record) {
             bam_destroy1(old_record);
@@ -91,7 +96,7 @@ string Read::_readgroup() {
     }
 }
 
-string& Read::query_name() {
+string const& Read::query_name() const {
     return _query_name;
 }
 

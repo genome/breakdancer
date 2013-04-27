@@ -42,7 +42,7 @@ namespace breakdancer {
 
             void set_bdflag(pair_orientation_flag new_flag);
             std::vector<std::string>::size_type size();
-            std::string& query_name();
+            std::string const& query_name() const;
             std::string query_sequence();
             std::string quality_string();
             std::string ori();
