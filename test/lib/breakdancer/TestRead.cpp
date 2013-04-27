@@ -62,6 +62,13 @@ TEST_F(TestRead, ori) {
     ASSERT_EQ(test_read->ori(), "+");
 }
 
+TEST_F(TestRead, set_bdflag) {
+    test_read->set_bdflag(breakdancer::ARP_CTX);
+    ASSERT_EQ((*test_read)[5],"32");
+    ASSERT_EQ(test_read->bdflag,breakdancer::ARP_CTX);
+    test_read->set_bdflag(breakdancer::NORMAL_FR);
+}
+
 TEST_F(TestRead, indexing) {
     //ASSERT_EQ((*test_read)[0], "junk");
     ASSERT_EQ((*test_read)[1], "22");
