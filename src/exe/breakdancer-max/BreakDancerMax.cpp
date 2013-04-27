@@ -162,8 +162,8 @@ namespace {
             es_readlens[lib] = mean(readlen_stat[lib]);
             es_means[lib] = mean_insert;
             es_stds[lib] = std_insert;
-            es_uppercutoff[lib] = uppercutoff;
-            es_lowercutoff[lib] = lowercutoff;
+            es_uppercutoff.at(lib) = uppercutoff;
+            es_lowercutoff.at(lib) = lowercutoff;
         }
         mean_insertsize = es_means;
         std_insertsize = es_stds;
@@ -711,8 +711,8 @@ namespace {
         ConfigMap<string, float>::type const& mean_insertsize,
         map<string, string> &SVtype,
         map<string, int> &mapQual,
-        map<string, float> &uppercutoff,
-        map<string, float> &lowercutoff,
+        ConfigMap<string, float>::type const& uppercutoff,
+        ConfigMap<string, float>::type const& lowercutoff,
         int d,
         int *max_readlen,
         bam_header_t* bam_header,
@@ -780,24 +780,24 @@ namespace {
         // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
         // Remark based on BD options
         if(opts.Illumina_long_insert){
-            if(aln.abs_isize() > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() > uppercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_RF);
             }
-            if(aln.abs_isize() < uppercutoff[lib] && aln.bdflag() == breakdancer::ARP_RF) {
+            if(aln.abs_isize() < uppercutoff.at(lib) && aln.bdflag() == breakdancer::ARP_RF) {
                 aln.set_bdflag(breakdancer::NORMAL_RF);
             }
-            if(aln.abs_isize() < lowercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() < lowercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
         }
         else{
-            if(aln.abs_isize() > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_FR) {
+            if(aln.abs_isize() > uppercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_big_insert);
             }
-            if(aln.abs_isize() < uppercutoff[lib] && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
+            if(aln.abs_isize() < uppercutoff.at(lib) && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
                 aln.set_bdflag(breakdancer::NORMAL_FR);
             }
-            if(aln.abs_isize() < lowercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_FR) {
+            if(aln.abs_isize() < lowercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
             if(aln.bdflag() == breakdancer::NORMAL_RF) {
@@ -1097,8 +1097,8 @@ int main(int argc, char *argv[]) {
     ConfigMap<string, string>::type const& libmaps = cfg.libmaps;
     ConfigMap<string, float>::type const& mean_insertsize = cfg.mean_insertsize;
     ConfigMap<string, float>::type const& std_insertsize = cfg.std_insertsize;
-    map<string,float>& uppercutoff = cfg.uppercutoff;
-    map<string,float>& lowercutoff = cfg.lowercutoff;
+    ConfigMap<string, float>::type const& uppercutoff = cfg.uppercutoff;
+    ConfigMap<string, float>::type const& lowercutoff = cfg.lowercutoff;
     map<string,float>& readlens = cfg.readlens;
     map<string,int>& mapQual = cfg.mapQual;
     int& max_readlen = cfg.max_readlen;
@@ -1219,24 +1219,24 @@ int main(int argc, char *argv[]) {
             //It would be nice if this was pulled into the Read class as well
             //for now, let's just set the bdflag directly here since it is public
             if(opts.Illumina_long_insert){
-                if(aln2.abs_isize() > uppercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_RF) {
+                if(aln2.abs_isize() > uppercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_RF);
                 }
-                if(aln2.abs_isize() < uppercutoff[lib] && aln2.bdflag() == breakdancer::ARP_RF) {
+                if(aln2.abs_isize() < uppercutoff.at(lib) && aln2.bdflag() == breakdancer::ARP_RF) {
                     aln2.set_bdflag(breakdancer::NORMAL_RF);
                 }
-                if(aln2.abs_isize() < lowercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_RF) {
+                if(aln2.abs_isize() < lowercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
                 }
             }
             else{
-                if(aln2.abs_isize() > uppercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_FR) {
+                if(aln2.abs_isize() > uppercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_big_insert);
                 }
-                if(aln2.abs_isize() < uppercutoff[lib] && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
+                if(aln2.abs_isize() < uppercutoff.at(lib) && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
                     aln2.set_bdflag(breakdancer::NORMAL_FR);
                 }
-                if(aln2.abs_isize() < lowercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_FR) {
+                if(aln2.abs_isize() < lowercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert);
                 }
             }
@@ -1313,8 +1313,8 @@ int main(int argc, char *argv[]) {
         float tmp = (nread_lengthDiscrepant > 0)?(float)reference_len/(float)nread_lengthDiscrepant:50;
         d = d<tmp?d:tmp;
 
-        //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff[lib],lowercutoff[lib],readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
-        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize.at(lib) << "\tuppercutoff:" << uppercutoff[lib] << "\tlowercutoff:" << lowercutoff[lib] << "\treadlen:" << readlens[lib] << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
+        //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff.at(lib),lowercutoff.at(lib),readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
+        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize.at(lib) << "\tuppercutoff:" << uppercutoff.at(lib) << "\tlowercutoff:" << lowercutoff.at(lib) << "\treadlen:" << readlens[lib] << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
 
         map<uint32_t,map<string,int> >::const_iterator x_readcounts_ii;
         for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){
@@ -1438,8 +1438,8 @@ void do_break_func(
     ConfigMap<string, float>::type const& mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, int> &mapQual,
-    map<string, float> &uppercutoff,
-    map<string, float> &lowercutoff,
+    ConfigMap<string, float>::type const& uppercutoff,
+    ConfigMap<string, float>::type const& lowercutoff,
     int d,
     int *max_readlen,
     bam_header_t* bam_header,

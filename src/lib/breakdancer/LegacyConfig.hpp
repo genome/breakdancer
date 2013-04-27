@@ -21,8 +21,8 @@ public:
     ConfigMap<std::string, std::string>::type libmaps;
     ConfigMap<std::string, float>::type mean_insertsize;
     ConfigMap<std::string, float>::type std_insertsize;
-    std::map<std::string, float> uppercutoff;
-    std::map<std::string, float> lowercutoff;
+    ConfigMap<std::string, float>::type uppercutoff;
+    ConfigMap<std::string, float>::type lowercutoff;
     std::map<std::string, float> readlens;
     std::map<std::string, int> mapQual;
     std::map<uint32_t, std::map<std::string,int> > x_readcounts;
