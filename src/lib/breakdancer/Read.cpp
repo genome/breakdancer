@@ -10,6 +10,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     bam_copy1(_record, record);
     
     _query_name_cached = false;
+    _query_seq_cached = false;
 
     bdflag = _determine_bdflag();
     bdqual = _determine_bdqual();
@@ -47,6 +48,8 @@ Read::Read(const Read& other) {
     }
     _query_name = other._query_name;
     _query_name_cached = other._query_name_cached;
+    _query_sequence = other._query_sequence;
+    _query_seq_cached = other._query_seq_cached;
     bdflag = other.bdflag;
     bdqual = other.bdqual;
     platform = other.platform;
@@ -83,6 +86,8 @@ Read& Read::operator=(const Read& other) {
         readgroup = other.readgroup;
         _query_name = other._query_name;
         _query_name_cached = other._query_name_cached;
+        _query_sequence = other._query_sequence;
+        _query_seq_cached = other._query_seq_cached;
         _string_record = other._string_record;
         if(old_record) {
             bam_destroy1(old_record);
@@ -108,19 +113,22 @@ string const& Read::query_name() {
     return _query_name;
 }
 
-string Read::query_sequence() {
-    uint8_t* seq_ptr = bam1_seq(_record);
-    if(_record->core.l_qseq) {
-        string seq;
-        seq.reserve(_record->core.l_qseq);
-        for(int i = 0; i < _record->core.l_qseq; ++i) {
-            seq += bam_nt16_rev_table[bam1_seqi(seq_ptr, i)];
+string const& Read::query_sequence() {
+    if(!_query_seq_cached) {
+        uint8_t* seq_ptr = bam1_seq(_record);
+        if(_record->core.l_qseq) {
+            string seq;
+            seq.reserve(_record->core.l_qseq);
+            for(int i = 0; i < _record->core.l_qseq; ++i) {
+                seq += bam_nt16_rev_table[bam1_seqi(seq_ptr, i)];
+            }
+            _query_sequence = seq;
         }
-        return seq;
+        else {
+            _query_sequence = "*"; //or maybe throw? I dunno
+        }
     }
-    else {
-        return "*"; //or maybe throw? I dunno
-    }
+    return _query_sequence;
 }
 
 string Read::quality_string() {
