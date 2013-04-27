@@ -11,6 +11,8 @@ set(SOURCES
     IBamReader.hpp
     LegacyBamReader.cpp
     LegacyBamReader.hpp
+    LegacyConfig.cpp
+    LegacyConfig.hpp
     Read.cpp
     Read.hpp
     Region.cpp

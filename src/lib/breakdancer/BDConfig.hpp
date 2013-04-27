@@ -6,6 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <set>
 #include <sstream>
 
 class ConfigEntry {
@@ -62,6 +63,16 @@ class BDConfig {
 public:
     explicit BDConfig(std::istream& cfg_stream);
 
-private:
+    std::set<std::string> readgroups() const {
+        return _readgroups;
+    }
+
+    std::set<std::string> library_names() const {
+        return _library_names;
+    }
+
+protected:
     std::vector<ConfigEntry> _entries;
+    std::set<std::string> _readgroups;
+    std::set<std::string> _library_names;
 };

@@ -1,3 +1,5 @@
+#include "breakdancer/BDConfig.hpp"
+#include "breakdancer/LegacyConfig.hpp"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/saminternals.h"
 
@@ -27,50 +29,7 @@ using namespace std;
 #define LZERO -99
 #define ZERO exp(LZERO)
 
-struct Options {
-    Options()
-        : chr("0")
-        , min_len(7)
-        , cut_sd(3)
-        , max_sd(1000000000)
-        , min_map_qual(35)
-        , min_read_pair(2)
-        , seq_coverage_lim(1000)
-        , buffer_size(100)
-        , learn_par(false)
-        , prior_prob(0.001)
-        , transchr_rearrange(false)
-        , fisher(false)
-        , Illumina_long_insert(false)
-        , Illumina_to_SOLiD(false)
-        , CN_lib(false)
-        , print_AF(false)
-        , score_threshold(30)
-    {
-    }
-
-    string chr;
-    int min_len;
-    int cut_sd;
-    int max_sd;
-    int min_map_qual;
-    int min_read_pair;
-    int seq_coverage_lim;
-    int buffer_size;
-    bool learn_par;
-    float prior_prob;
-    bool transchr_rearrange;
-    bool fisher;
-    bool Illumina_long_insert;
-    bool Illumina_to_SOLiD;
-    bool CN_lib;
-    bool print_AF;
-    int score_threshold;
-    string bam_file;
-    string prefix_fastq;
-    string dump_BED;
-    string platform;
-};
+class Options;
 
 struct BreakDancerData {
     BreakDancerData()
@@ -126,81 +85,15 @@ void do_break_func(
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,
     map<string, float>& read_density,
-    map<string, string> libmaps,
+    ConfigMap<string, string>::type const& libmaps,
     vector<string> maps
     );
-
-void Analysis (
-    Options const& opts,
-    BreakDancerData& bdancer,
-    string lib,
-    bam1_t *b,
-    breakdancer::Read &aln,
-    vector<breakdancer::Read> &reg_seq,
-    map<int, vector<int> > &reg_name,
-    map<string, vector<int> > &read,
-    map<int, vector<breakdancer::Read> > &regs,
-    int *idx_buff,
-    int *nnormal_reads,
-    int *normal_switch,
-    int *reg_idx,
-    map<uint32_t, map<string, int> > &x_readcounts,
-    uint32_t reference_len,
-    map<string, string> &ReadsOut,
-    map<string, float> &mean_insertsize,
-    map<breakdancer::pair_orientation_flag, string> &SVtype,
-    map<string, int> &mapQual,
-    map<string, float> &uppercutoff,
-    map<string, float> &lowercutoff,
-    int d,
-    int *max_readlen,
-    bam_header_t* in,
-    uint32_t *ntotal_nucleotides,
-    map<string, float> &read_density,
-    map<string, uint32_t> &possible_fake_data,
-    map<string, string> libmaps,
-    vector<string> maps
-    );
-
-void buildConnection(
-    Options const& opts,
-    BreakDancerData& bdancer,
-    map<string, vector<int> > &read,
-    map<int, vector<int> > &reg_name,
-    map<int, vector<breakdancer::Read> > &regs,
-    map<uint32_t, map<string,int> > &x_readcounts,
-    uint32_t reference_len,
-    int max_readlen,
-    map<string, string> &ReadsOut,
-    map<breakdancer::pair_orientation_flag, string> &SVtype,
-    map<string, float> &mean_insertsize,
-    bam_header_t* bam_header,
-    map<string, float> &read_density,
-    vector<string> maps, // FIXME: should be constref
-    map<string, string> libmaps // FIXME: should be constref
-    );
-
-void EstimatePriorParameters(
-    Options const& opts,
-    map<string,string> &fmaps,
-    map<string,string> &readgroup_library,
-    map<string, float> &mean_insertsize,
-    map<string, float> &std_insertsize,
-    map<string,float> &uppercutoff,
-    map<string,float> &lowercutoff,
-    map<string,float> &readlens,
-    map<string, string> &readgroup_platform
-);
 
 float mean(vector<int> &stat);
 
 float standard_deviation(vector<int> &stat, float mean);
 
 int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name);
-
-string get_from_line(string line,string search,int flag);
-
-string get_from_line_two(string line,string search1,string search2,int flag2);
 
 /*string itoa(int i);
 
@@ -215,10 +108,6 @@ string get_string_qual(uint8_t *pt, int32_t length);
 string get_string(uint8_t *pt, int32_t length);
 
 string get_string_qual(uint8_t *pt, int32_t length);
-
-string search_more(string line, string search,     size_t pos_begin);
-
-string char2str(char *str_);
 
 // refactoring functions
 // write out reads to fastq files

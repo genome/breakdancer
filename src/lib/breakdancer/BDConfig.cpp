@@ -47,6 +47,9 @@ void ConfigEntry::parse() {
 BDConfig::BDConfig(istream& cfg_stream) {
     string line;
     while (getline(cfg_stream, line)) {
-        _entries.push_back(ConfigEntry(line));
+        ConfigEntry entry(line);
+        _entries.push_back(entry);
+        _readgroups.insert(entry.readgroup);
+        _library_names.insert(entry.library_name);
     }
 }
