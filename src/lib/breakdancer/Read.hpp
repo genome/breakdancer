@@ -47,8 +47,9 @@ namespace breakdancer {
             bool _abs_isize_cached;
 
             std::string _readgroup();
-            std::string _library(std::map<std::string, std::string> const& readgroup_library);
-            std::string _platform(std::map<std::string, std::string> const& readgroup_platform);
+            std::string _library(ConfigMap<std::string, std::string>::type const& readgroup_library);
+            std::string _platform(ConfigMap<std::string, std::string>::type const& readgroup_platform);
+
             int _determine_bdqual();
             pair_orientation_flag _determine_bdflag();
 
@@ -57,11 +58,11 @@ namespace breakdancer {
             std::string platform;
             std::string library;
 
-            Read::Read(
-                    bam1_t const* record,
-                    string const& format,
-                    map<string, string> const& readgroup_platform,
-                    ConfigMap<string, string>::type const& readgroup_library);
+            Read::Read(bam1_t const* record,
+                std::string const& format,
+                ConfigMap<std::string, std::string>::type const& readgroup_platform,
+                ConfigMap<std::string, std::string>::type const& readgroup_library);
+
             Read() : _record(NULL), _bdflag(NA), _bdqual(0), _ori(0), _abs_isize() {};
 
             Read(const Read& other);

@@ -39,7 +39,7 @@ class TestRead : public ::testing::Test {
         bam1_core_t core;
         bam1_t bam_record;
         auto_ptr<Read> test_read;
-        map<string, string> readgroup_platform;
+        ConfigMap<string, string>::type readgroup_platform;
         ConfigMap<string, string>::type readgroup_library;
 };
 

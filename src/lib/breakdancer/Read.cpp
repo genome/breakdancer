@@ -8,7 +8,7 @@ using namespace breakdancer;
 Read::Read(
         bam1_t const* record,
         string const& format,
-        map<string, string> const& readgroup_platform,
+        ConfigMap<string, string>::type const& readgroup_platform,
         ConfigMap<string, string>::type const& readgroup_library)
     : _record(bam_init1())
     ,_query_name_cached(false)
@@ -96,8 +96,9 @@ string Read::_library(map<string, string> const& readgroup_library) {
     }
 }
 
-string Read::_platform(map<string, string> const& readgroup_platform) {
+string Read::_platform(ConfigMap<string, string>::type const& readgroup_platform) {
     map<string, string>::const_iterator platform_it = readgroup_platform.find(readgroup);
+    ConfigMap<string, string>::type::const_iterator platform_it = readgroup_platform.find(readgroup);
     if(platform_it != readgroup_platform.end()) {
         return platform_it->second;
     }

@@ -1104,7 +1104,7 @@ int main(int argc, char *argv[]) {
     int& max_readlen = cfg.max_readlen;
     map<uint32_t, map<string,int> >& x_readcounts = cfg.x_readcounts;
     ConfigMap<string, string>::type const& readgroup_library = cfg.readgroup_library;
-    map<string, string>& readgroup_platform = cfg.readgroup_platform;
+    ConfigMap<string, string>::type const& readgroup_platform = cfg.readgroup_platform;
     map<string,string>& ReadsOut = cfg.ReadsOut;;
     int& d = cfg.d;
 
