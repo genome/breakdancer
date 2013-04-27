@@ -1099,7 +1099,7 @@ int main(int argc, char *argv[]) {
     ConfigMap<string, float>::type const& std_insertsize = cfg.std_insertsize;
     ConfigMap<string, float>::type const& uppercutoff = cfg.uppercutoff;
     ConfigMap<string, float>::type const& lowercutoff = cfg.lowercutoff;
-    map<string,float>& readlens = cfg.readlens;
+    ConfigMap<string, float>::type const& readlens = cfg.readlens;
     map<string,int>& mapQual = cfg.mapQual;
     int& max_readlen = cfg.max_readlen;
     map<uint32_t, map<string,int> >& x_readcounts = cfg.x_readcounts;
@@ -1277,7 +1277,7 @@ int main(int argc, char *argv[]) {
     for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
     {
         string lib = (*nreads_ii).first;
-        float sequence_coverage = float(nreads[lib]*readlens[lib])/float(reference_len);
+        float sequence_coverage = float(nreads[lib]*readlens.at(lib))/float(reference_len);
         total_seq_cov += sequence_coverage;
 
         // compute read_density
@@ -1314,7 +1314,7 @@ int main(int argc, char *argv[]) {
         d = d<tmp?d:tmp;
 
         //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff.at(lib),lowercutoff.at(lib),readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
-        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize.at(lib) << "\tuppercutoff:" << uppercutoff.at(lib) << "\tlowercutoff:" << lowercutoff.at(lib) << "\treadlen:" << readlens[lib] << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
+        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize.at(lib) << "\tuppercutoff:" << uppercutoff.at(lib) << "\tlowercutoff:" << lowercutoff.at(lib) << "\treadlen:" << readlens.at(lib) << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
 
         map<uint32_t,map<string,int> >::const_iterator x_readcounts_ii;
         for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){
