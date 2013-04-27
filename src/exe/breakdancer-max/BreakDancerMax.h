@@ -77,7 +77,7 @@ void do_break_func(
     map<string, string> &ReadsOut,
     ConfigMap<string, float>::type const& mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
-    map<string, int> &mapQual,
+    ConfigMap<string, int>::type const& mapQual,
     ConfigMap<string, float>::type const& uppercutoff,
     ConfigMap<string, float>::type const& lowercutoff,
     int d,

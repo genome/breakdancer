@@ -710,7 +710,7 @@ namespace {
         map<string, string> &ReadsOut,
         ConfigMap<string, float>::type const& mean_insertsize,
         map<string, string> &SVtype,
-        map<string, int> &mapQual,
+        ConfigMap<string, int>::type const& mapQual,
         ConfigMap<string, float>::type const& uppercutoff,
         ConfigMap<string, float>::type const& lowercutoff,
         int d,
@@ -751,7 +751,7 @@ namespace {
         }
 
         // mapQual is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
-        map<string, int>::const_iterator libraryMinMapq = mapQual.find(lib);
+        ConfigMap<string, int>::type::const_iterator libraryMinMapq = mapQual.find(lib);
         if (libraryMinMapq != mapQual.end()) {
             if (aln.bdqual() <= libraryMinMapq->second)
                 return;
@@ -1100,7 +1100,7 @@ int main(int argc, char *argv[]) {
     ConfigMap<string, float>::type const& uppercutoff = cfg.uppercutoff;
     ConfigMap<string, float>::type const& lowercutoff = cfg.lowercutoff;
     ConfigMap<string, float>::type const& readlens = cfg.readlens;
-    map<string,int>& mapQual = cfg.mapQual;
+    ConfigMap<string, int>::type const& mapQual = cfg.mapQual;
     int& max_readlen = cfg.max_readlen;
     map<uint32_t, map<string,int> >& x_readcounts = cfg.x_readcounts;
     map<string,string>& readgroup_library = cfg.readgroup_library;
@@ -1204,7 +1204,7 @@ int main(int argc, char *argv[]) {
             //calculations before this is applied?
             //-dlarson
             if(mapQual.find(lib) != mapQual.end()){
-                if(aln2.bdqual() <= mapQual[lib])
+                if(aln2.bdqual() <= mapQual.at(lib))
                     continue;
             }
             else{
@@ -1437,7 +1437,7 @@ void do_break_func(
     map<string, string> &ReadsOut,
     ConfigMap<string, float>::type const& mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
-    map<string, int> &mapQual,
+    ConfigMap<string, int>::type const& mapQual,
     ConfigMap<string, float>::type const& uppercutoff,
     ConfigMap<string, float>::type const& lowercutoff,
     int d,
