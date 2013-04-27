@@ -1,8 +1,6 @@
 project(breakdancer)
 
 set(SOURCES
-    AlnParser.cpp
-    AlnParser.h
     BDConfig.cpp
     BDConfig.hpp
     BDTypedefs.hpp

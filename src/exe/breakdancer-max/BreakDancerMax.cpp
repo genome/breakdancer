@@ -349,10 +349,8 @@ int main(int argc, char *argv[]) {
         auto_ptr<IBamReader> reader(openBam(bam_name, opts));
 
         while (reader->next(b) > 0) {
-            int same_tid = (b->core.tid == b->core.mtid)? 1:0;
             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
-            assert(b->core.flag == aln2.bdflag);
+            b->core.flag = aln2.bdflag; //FIXME as soon as we have moved off this bam parsing code
 
             string& readgroup = aln2.readgroup;
 
@@ -580,10 +578,8 @@ int main(int argc, char *argv[]) {
         while ((r = reader->next(b)) >= 0) {
             if(b->core.tid < 0)
                 continue;
-            int same_tid = b->core.tid == b->core.mtid ? 1:0;
             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
-            assert(b->core.flag == aln2.bdflag);
+            b->core.flag = aln2.bdflag; //FIXME
             string& readgroup = aln2.readgroup;
             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 
@@ -711,10 +707,8 @@ int main(int argc, char *argv[]) {
                 while(heap->pos != HEAP_EMPTY){
 
                     if(skip_previous == 0){
-                        int same_tid = b->core.tid == b->core.mtid ? 1:0;
                         breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-                        vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
-                        assert(b->core.flag == aln2.bdflag);
+                        b->core.flag = aln2.bdflag; //FIXME
                         string& readgroup = aln2.readgroup;
                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
@@ -915,10 +909,8 @@ int main(int argc, char *argv[]) {
 
                     if(skip_previous == 0){
                         if( b->core.tid == tid && b->core.pos < reg_end) {
-                            int same_tid = b->core.tid == b->core.mtid ? 1:0;
                             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-                            vector<string> aln_return = AlnParser(b, format_, alt, readgroup_platform, same_tid, opts.platform);
-                            assert(b->core.flag == aln2.bdflag);
+                            b->core.flag = aln2.bdflag; //FIXME
                             string& readgroup = aln2.readgroup;
                             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                             //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
@@ -2110,13 +2102,8 @@ void EstimatePriorParameters(
         while (reader.next(b) > 0) {
             string format = "sam";
             string alt = "";
-            int same_tid = strcmp(
-                header->target_name[b->core.tid],
-                header->target_name[b->core.mtid]) == 0 ? 1:0;
-
             breakdancer::Read aln2(b, format, readgroup_platform, readgroup_library);
-            vector<string> aln_return = AlnParser(b, format, alt, readgroup_platform, same_tid, opts.platform);
-            assert(b->core.flag == aln2.bdflag);
+            b->core.flag = aln2.bdflag; //FIXME
             string& readgroup = aln2.readgroup;
 
             // analyze the bam file line by line
