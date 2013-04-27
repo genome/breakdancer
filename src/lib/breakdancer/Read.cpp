@@ -44,6 +44,8 @@ Read::Read(const Read& other) {
     _query_name_cached = other._query_name_cached;
     _query_sequence = other._query_sequence;
     _query_seq_cached = other._query_seq_cached;
+    _quality_string = other._quality_string;
+    _quality_string_cached = other._quality_string_cached;
     bdflag = other.bdflag;
     bdqual = other.bdqual;
     platform = other.platform;
@@ -82,6 +84,8 @@ Read& Read::operator=(const Read& other) {
         _query_name_cached = other._query_name_cached;
         _query_sequence = other._query_sequence;
         _query_seq_cached = other._query_seq_cached;
+        _quality_string = other._quality_string;
+        _quality_string_cached = other._quality_string_cached;
         _string_record = other._string_record;
         if(old_record) {
             bam_destroy1(old_record);
