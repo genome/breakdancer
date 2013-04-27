@@ -1096,7 +1096,7 @@ int main(int argc, char *argv[]) {
     ConfigMap<string, string>::type const& fmaps = cfg.fmaps;
     ConfigMap<string, string>::type const& libmaps = cfg.libmaps;
     ConfigMap<string, float>::type const& mean_insertsize = cfg.mean_insertsize;
-    map<string,float>& std_insertsize = cfg.std_insertsize;
+    ConfigMap<string, float>::type const& std_insertsize = cfg.std_insertsize;
     map<string,float>& uppercutoff = cfg.uppercutoff;
     map<string,float>& lowercutoff = cfg.lowercutoff;
     map<string,float>& readlens = cfg.readlens;
@@ -1314,7 +1314,7 @@ int main(int argc, char *argv[]) {
         d = d<tmp?d:tmp;
 
         //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff[lib],lowercutoff[lib],readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
-        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize[lib] << "\tuppercutoff:" << uppercutoff[lib] << "\tlowercutoff:" << lowercutoff[lib] << "\treadlen:" << readlens[lib] << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
+        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize.at(lib) << "\tuppercutoff:" << uppercutoff[lib] << "\tlowercutoff:" << lowercutoff[lib] << "\treadlen:" << readlens[lib] << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
 
         map<uint32_t,map<string,int> >::const_iterator x_readcounts_ii;
         for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){

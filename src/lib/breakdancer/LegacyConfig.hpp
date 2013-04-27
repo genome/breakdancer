@@ -20,7 +20,7 @@ public:
     ConfigMap<std::string, std::string>::type fmaps;
     ConfigMap<std::string, std::string>::type libmaps;
     ConfigMap<std::string, float>::type mean_insertsize;
-    std::map<std::string, float> std_insertsize;
+    ConfigMap<std::string, float>::type std_insertsize;
     std::map<std::string, float> uppercutoff;
     std::map<std::string, float> lowercutoff;
     std::map<std::string, float> readlens;
