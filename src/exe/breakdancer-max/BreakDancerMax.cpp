@@ -98,11 +98,12 @@ namespace {
 
 
     // estimate prior parameters (not being used now)
+/*
     void EstimatePriorParameters(
         Options const& opts,
         ConfigMap<string, string>::type const& fmaps,
         map<string,string> &readgroup_library,
-        map<string, float> &mean_insertsize,
+        ConfigMap<string, float>::type const& mean_insertsize,
         map<string, float> &std_insertsize,
         map<string,float> &uppercutoff,
         map<string,float> &lowercutoff,
@@ -171,6 +172,7 @@ namespace {
         readlens = es_readlens;
         return;
     }
+*/
 
     // pair up reads and print out results (SV estimation)
     void buildConnection(
@@ -184,7 +186,7 @@ namespace {
         int max_readlen,
         map<string, string> &ReadsOut,
         map<string, string> &SVtype,
-        map<string, float> &mean_insertsize,
+        ConfigMap<string, float>::type const& mean_insertsize,
         bam_header_t* bam_header,
         map<string, float> &read_density,
         vector<string> maps, // FIXME: should be constref
@@ -542,7 +544,7 @@ namespace {
                                             sptype += ":" +  sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
                                         else
                                             sptype = sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
-                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*mean_insertsize[sp];
+                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*mean_insertsize.at(sp);
                                     }
                                 } // do lib for copy number and support reads
                                 else{
@@ -558,7 +560,7 @@ namespace {
                                                 type_bam_readcount[sp_bam] = (*ii_type_lib_rc).second;
                                             }
                                         }
-                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*mean_insertsize[sp];
+                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*mean_insertsize.at(sp);
                                     }
                                     for(map<string, int>::iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
                                         string sp = (*ii_type_bam_rc).first;
@@ -706,7 +708,7 @@ namespace {
         map<uint32_t, map<string, int> > &x_readcounts,
         uint32_t reference_len,
         map<string, string> &ReadsOut,
-        map<string, float> &mean_insertsize,
+        ConfigMap<string, float>::type const& mean_insertsize,
         map<string, string> &SVtype,
         map<string, int> &mapQual,
         map<string, float> &uppercutoff,
@@ -1093,7 +1095,7 @@ int main(int argc, char *argv[]) {
     ConfigMap<string, string>::type const& exes = cfg.exes;
     ConfigMap<string, string>::type const& fmaps = cfg.fmaps;
     ConfigMap<string, string>::type const& libmaps = cfg.libmaps;
-    map<string,float>& mean_insertsize = cfg.mean_insertsize;
+    ConfigMap<string, float>::type const& mean_insertsize = cfg.mean_insertsize;
     map<string,float>& std_insertsize = cfg.std_insertsize;
     map<string,float>& uppercutoff = cfg.uppercutoff;
     map<string,float>& lowercutoff = cfg.lowercutoff;
@@ -1112,9 +1114,11 @@ int main(int argc, char *argv[]) {
         exes.at(ii->first); // throws if not found
     }
 
+/*
     if(opts.learn_par) {
         EstimatePriorParameters(opts, fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, readgroup_platform);
     }
+*/
 
     uint32_t reference_len = 1;
     map<string, int> nreads;
@@ -1294,7 +1298,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        float physical_coverage = float(nreads[lib]*mean_insertsize[lib])/float(reference_len)/2;
+        float physical_coverage = float(nreads[lib]*mean_insertsize.at(lib))/float(reference_len)/2;
         total_phy_cov += physical_coverage;
 
         int nread_lengthDiscrepant = -1;
@@ -1310,7 +1314,7 @@ int main(int argc, char *argv[]) {
         d = d<tmp?d:tmp;
 
         //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff[lib],lowercutoff[lib],readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
-        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize[lib] << "\tstd:" << std_insertsize[lib] << "\tuppercutoff:" << uppercutoff[lib] << "\tlowercutoff:" << lowercutoff[lib] << "\treadlen:" << readlens[lib] << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
+        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize[lib] << "\tuppercutoff:" << uppercutoff[lib] << "\tlowercutoff:" << lowercutoff[lib] << "\treadlen:" << readlens[lib] << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
 
         map<uint32_t,map<string,int> >::const_iterator x_readcounts_ii;
         for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){
@@ -1431,7 +1435,7 @@ void do_break_func(
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
     map<string, string> &ReadsOut,
-    map<string, float> &mean_insertsize,
+    ConfigMap<string, float>::type const& mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, int> &mapQual,
     map<string, float> &uppercutoff,

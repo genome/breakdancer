@@ -19,12 +19,12 @@ public:
     ConfigMap<std::string, std::string>::type exes;
     ConfigMap<std::string, std::string>::type fmaps;
     ConfigMap<std::string, std::string>::type libmaps;
-    std::map<std::string, float> mean_insertsize;//global
-    std::map<std::string, float> std_insertsize;//global
-    std::map<std::string, float> uppercutoff;//global
-    std::map<std::string, float> lowercutoff;//global
-    std::map<std::string, float> readlens;//global
-    std::map<std::string, int> mapQual;// global
+    ConfigMap<std::string, float>::type mean_insertsize;
+    std::map<std::string, float> std_insertsize;
+    std::map<std::string, float> uppercutoff;
+    std::map<std::string, float> lowercutoff;
+    std::map<std::string, float> readlens;
+    std::map<std::string, int> mapQual;
     std::map<uint32_t, std::map<std::string,int> > x_readcounts;
     std::map<std::string,std::string> readgroup_library;
     std::map<std::string, std::string> readgroup_platform;
