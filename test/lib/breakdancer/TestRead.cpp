@@ -75,3 +75,21 @@ TEST_F(TestRead, indexing) {
     ASSERT_EQ((*test_read)[9], "CT");
     ASSERT_EQ((*test_read)[10], "HB");
 }
+
+TEST_F(TestRead, copy_constructor) {
+    Read test_copy(*test_read);
+    ASSERT_EQ(test_read->ori(), "+");
+    ASSERT_EQ(test_read->quality_string(), "HB");
+    ASSERT_EQ(test_read->query_sequence(), "CT");
+    ASSERT_EQ(test_read->query_name(), "junk");
+    ASSERT_EQ(test_read->readgroup, "rg3");
+}
+
+TEST_F(TestRead, assignment) {
+    Read test_copy = *test_read;
+    ASSERT_EQ(test_read->ori(), "+");
+    ASSERT_EQ(test_read->quality_string(), "HB");
+    ASSERT_EQ(test_read->query_sequence(), "CT");
+    ASSERT_EQ(test_read->query_name(), "junk");
+    ASSERT_EQ(test_read->readgroup, "rg3");
+}
