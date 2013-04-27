@@ -129,7 +129,7 @@ namespace {
 
 
 LegacyConfig::LegacyConfig(std::istream& in, Options const& opts)
-    : d(1e8)
+    : max_read_window_size(1e8)
     , max_readlen(0)
 {
     string line;
@@ -220,8 +220,8 @@ LegacyConfig::LegacyConfig(std::istream& in, Options const& opts)
             }
 
             int tmp = mean - readlen*2;    // this determines the mean of the max of the SV flanking region
-            d = d<tmp ? d:tmp;
+            max_read_window_size = std::min(max_read_window_size, tmp);
         }
 
-    d = std::max(d, 50);
+    max_read_window_size = std::max(max_read_window_size, 50);
 }

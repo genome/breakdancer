@@ -80,7 +80,6 @@ void do_break_func(
     ConfigMap<string, int>::type const& mapQual,
     ConfigMap<string, float>::type const& uppercutoff,
     ConfigMap<string, float>::type const& lowercutoff,
-    int d,
     int *max_readlen,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,

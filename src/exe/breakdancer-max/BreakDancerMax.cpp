@@ -713,7 +713,7 @@ namespace {
         ConfigMap<string, int>::type const& mapQual,
         ConfigMap<string, float>::type const& uppercutoff,
         ConfigMap<string, float>::type const& lowercutoff,
-        int d,
+        int max_read_window_size,
         int *max_readlen,
         bam_header_t* bam_header,
         uint32_t *ntotal_nucleotides,
@@ -832,7 +832,7 @@ namespace {
 
         //This appears to test that you've exited a window after your first abnormal read by either reading off the chromosome or exiting the the window
         // d appears to be 1e8 at max (seems big), 50 at minimum or the smallest mean - readlen*2 for a given library
-        int do_break = (int(b->core.tid) != lasts || int(b->core.pos) - lastc > d)?1:0;
+        bool do_break = (int(b->core.tid) != lasts || int(b->core.pos) - lastc > max_read_window_size);
 
         if(do_break) { // breakpoint in the assembly
             float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
@@ -1105,7 +1105,7 @@ int main(int argc, char *argv[]) {
     ConfigMap<string, string>::type const& readgroup_library = cfg.readgroup_library;
     ConfigMap<string, string>::type const& readgroup_platform = cfg.readgroup_platform;
     ConfigMap<string,string>::type const& ReadsOut = cfg.ReadsOut;
-    int& d = cfg.d;
+    int& max_read_window_size = cfg.max_read_window_size;
 
     // go through the iteration of fmaps
     ConfigMap<string,string>::type::const_iterator ii;
@@ -1312,8 +1312,8 @@ int main(int argc, char *argv[]) {
                 nread_lengthDiscrepant = 0;
             nread_lengthDiscrepant += x_readcounts[breakdancer::ARP_FR_small_insert][lib];
         }
-        float tmp = (nread_lengthDiscrepant > 0)?(float)reference_len/(float)nread_lengthDiscrepant:50;
-        d = d<tmp?d:tmp;
+        int tmp = (nread_lengthDiscrepant > 0)?(float)reference_len/(float)nread_lengthDiscrepant:50;
+        max_read_window_size = std::min(max_read_window_size, tmp);
 
         //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff.at(lib),lowercutoff.at(lib),readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
         cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize.at(lib) << "\tuppercutoff:" << uppercutoff.at(lib) << "\tlowercutoff:" << lowercutoff.at(lib) << "\treadlen:" << readlens.at(lib) << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
@@ -1395,7 +1395,7 @@ int main(int argc, char *argv[]) {
             Analysis(opts, bdancer, library, b, aln2, reg_seq, reg_name, read,
                 regs, &idx_buff, &nnormal_reads, &normal_switch, &reg_idx,
                 x_readcounts, reference_len, ReadsOut, mean_insertsize, SVtype,
-                mapQual, uppercutoff, lowercutoff, d, &max_readlen,
+                mapQual, uppercutoff, lowercutoff, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides, read_density,
                 possible_fake_data, libmaps, maps
             );
@@ -1406,7 +1406,7 @@ int main(int argc, char *argv[]) {
         do_break_func(
             opts, bdancer, reg_seq, reg_name, read, regs, &idx_buff,
             &nnormal_reads, &reg_idx, x_readcounts, reference_len, ReadsOut,
-            mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff, d,
+            mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides,
             read_density, libmaps, maps
             );
@@ -1442,7 +1442,6 @@ void do_break_func(
     ConfigMap<string, int>::type const& mapQual,
     ConfigMap<string, float>::type const& uppercutoff,
     ConfigMap<string, float>::type const& lowercutoff,
-    int d,
     int *max_readlen,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,

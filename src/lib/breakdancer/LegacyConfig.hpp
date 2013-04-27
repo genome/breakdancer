@@ -29,6 +29,6 @@ public:
     ConfigMap<std::string, std::string>::type readgroup_platform;
     ConfigMap<std::string, std::string>::type ReadsOut;
 
-    int d;
+    int max_read_window_size;
     int max_readlen;
 };
