@@ -50,6 +50,7 @@ Read::Read(const Read& other) {
     bdqual = other.bdqual;
     platform = other.platform;
     library = other.library;
+    readgroup = other.readgroup;
     _string_record = other._string_record;
 }
 
@@ -78,6 +79,7 @@ Read& Read::operator=(const Read& other) {
         bdqual = other.bdqual;
         platform = other.platform;
         library = other.library;
+        readgroup = other.readgroup;
         _query_name = other._query_name;
         _string_record = other._string_record;
         if(old_record) {
