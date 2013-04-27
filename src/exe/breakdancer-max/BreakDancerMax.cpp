@@ -98,6 +98,8 @@ namespace {
 
 
     // estimate prior parameters (not being used now)
+    // I think bam2cfg.pl does this? Can we remove this code?
+    // -ta
 /*
     void EstimatePriorParameters(
         Options const& opts,
@@ -178,19 +180,17 @@ namespace {
     void buildConnection(
         Options const& opts,
         BreakDancerData& bdancer,
+        LegacyConfig const& cfg,
         map<string, vector<int> > &read,
         map<int, vector<int> > &reg_name,
         map<int, vector<breakdancer::Read> > &regs,
         map<uint32_t, map<string,int> > &x_readcounts,
         uint32_t reference_len,
         int max_readlen,
-        ConfigMap<string, string>::type const& ReadsOut,
         map<string, string> &SVtype,
-        ConfigMap<string, float>::type const& mean_insertsize,
         bam_header_t* bam_header,
         map<string, float> &read_density,
-        vector<string> maps, // FIXME: should be constref
-        ConfigMap<string, string>::type const& libmaps
+        vector<string> maps // FIXME: should be constref
         )
     {
         map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
@@ -544,15 +544,15 @@ namespace {
                                             sptype += ":" +  sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
                                         else
                                             sptype = sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
-                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*mean_insertsize.at(sp);
+                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*cfg.mean_insertsize.at(sp);
                                     }
                                 } // do lib for copy number and support reads
                                 else{
                                     map<string, int> type_bam_readcount;
                                     for(map<string, int>::iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
                                         string sp = (*ii_type_lib_rc).first;
-                                        if(libmaps.find(sp) != libmaps.end()){
-                                            string sp_bam = libmaps.at(sp);
+                                        if(cfg.libmaps.find(sp) != cfg.libmaps.end()){
+                                            string sp_bam = cfg.libmaps.at(sp);
                                             if(type_bam_readcount.find(sp_bam)!= type_bam_readcount.end()){
                                                 type_bam_readcount[sp_bam] += (*ii_type_lib_rc).second;
                                             }
@@ -560,7 +560,7 @@ namespace {
                                                 type_bam_readcount[sp_bam] = (*ii_type_lib_rc).second;
                                             }
                                         }
-                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*mean_insertsize.at(sp);
+                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*cfg.mean_insertsize.at(sp);
                                     }
                                     for(map<string, int>::iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
                                         string sp = (*ii_type_bam_rc).first;
@@ -577,7 +577,7 @@ namespace {
                                 //debug
                                 //int tmp_tlm = type_library_meanspan[fl][sp];
                                 //int tmp_tlr = type_library_readcount[fl][sp];
-                                //int tmp_mi = mean_insertsize[sp];
+                                //int tmp_mi = cfg.mean_insertsize[sp];
                                 diffspans[flag] = int(diffspan/float(type[flag]) + 0.5);
                                 sptypes[flag] = sptype;
 
@@ -619,7 +619,7 @@ namespace {
 
 
                                     if(!opts.prefix_fastq.empty()){ // print out supporting read pairs
-                                        write_fastq_for_flag(flag, support_reads, ReadsOut);
+                                        write_fastq_for_flag(flag, support_reads, cfg.ReadsOut);
                                     }
 
                                     if(!opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
@@ -694,6 +694,7 @@ namespace {
     void Analysis (
         Options const& opts,
         BreakDancerData& bdancer,
+        LegacyConfig const& cfg,
         string lib,
         bam1_t *b,
         breakdancer::Read &aln,
@@ -707,19 +708,13 @@ namespace {
         int *reg_idx,
         map<uint32_t, map<string, int> > &x_readcounts,
         uint32_t reference_len,
-        ConfigMap<string, string>::type const& ReadsOut,
-        ConfigMap<string, float>::type const& mean_insertsize,
         map<string, string> &SVtype,
-        ConfigMap<string, int>::type const& mapQual,
-        ConfigMap<string, float>::type const& uppercutoff,
-        ConfigMap<string, float>::type const& lowercutoff,
         int max_read_window_size,
         int *max_readlen,
         bam_header_t* bam_header,
         uint32_t *ntotal_nucleotides,
         map<string, float> &read_density,
         map<string, uint32_t> &possible_fake_data,
-        ConfigMap<string, string>::type const& libmaps,
         vector<string> maps
         )
     {
@@ -735,7 +730,7 @@ namespace {
         map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
 
 
-        string const& bam_name = libmaps.at(lib);
+        string const& bam_name = cfg.libmaps.at(lib);
         //main analysis code
 
         // region between last and next begin
@@ -751,8 +746,8 @@ namespace {
         }
 
         // mapQual is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
-        ConfigMap<string, int>::type::const_iterator libraryMinMapq = mapQual.find(lib);
-        if (libraryMinMapq != mapQual.end()) {
+        ConfigMap<string, int>::type::const_iterator libraryMinMapq = cfg.mapQual.find(lib);
+        if (libraryMinMapq != cfg.mapQual.end()) {
             if (aln.bdqual() <= libraryMinMapq->second)
                 return;
         } else if(aln.bdqual() <= opts.min_map_qual) {
@@ -780,24 +775,24 @@ namespace {
         // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
         // Remark based on BD options
         if(opts.Illumina_long_insert){
-            if(aln.abs_isize() > uppercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() > cfg.uppercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_RF);
             }
-            if(aln.abs_isize() < uppercutoff.at(lib) && aln.bdflag() == breakdancer::ARP_RF) {
+            if(aln.abs_isize() < cfg.uppercutoff.at(lib) && aln.bdflag() == breakdancer::ARP_RF) {
                 aln.set_bdflag(breakdancer::NORMAL_RF);
             }
-            if(aln.abs_isize() < lowercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() < cfg.lowercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
         }
         else{
-            if(aln.abs_isize() > uppercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_FR) {
+            if(aln.abs_isize() > cfg.uppercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_big_insert);
             }
-            if(aln.abs_isize() < uppercutoff.at(lib) && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
+            if(aln.abs_isize() < cfg.uppercutoff.at(lib) && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
                 aln.set_bdflag(breakdancer::NORMAL_FR);
             }
-            if(aln.abs_isize() < lowercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_FR) {
+            if(aln.abs_isize() < cfg.lowercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
             if(aln.bdflag() == breakdancer::NORMAL_RF) {
@@ -888,9 +883,8 @@ namespace {
                 (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
-                    buildConnection(opts, bdancer, read, reg_name, regs, x_readcounts,
-                        reference_len, *max_readlen, ReadsOut, SVtype, mean_insertsize,
-                        bam_header, read_density, maps, libmaps);
+                    buildConnection(opts, bdancer, cfg, read, reg_name, regs, x_readcounts,
+                        reference_len, *max_readlen, SVtype, bam_header, read_density, maps);
                     *idx_buff = 0;
                 }
             }
@@ -1092,30 +1086,24 @@ int main(int argc, char *argv[]) {
     LegacyConfig cfg(config_stream, opts);
     config_stream.close();
 
-    ConfigMap<string, string>::type const& exes = cfg.exes;
-    ConfigMap<string, string>::type const& fmaps = cfg.fmaps;
-    ConfigMap<string, string>::type const& libmaps = cfg.libmaps;
-    ConfigMap<string, float>::type const& mean_insertsize = cfg.mean_insertsize;
-    ConfigMap<string, float>::type const& std_insertsize = cfg.std_insertsize;
-    ConfigMap<string, float>::type const& uppercutoff = cfg.uppercutoff;
-    ConfigMap<string, float>::type const& lowercutoff = cfg.lowercutoff;
-    ConfigMap<string, float>::type const& readlens = cfg.readlens;
-    ConfigMap<string, int>::type const& mapQual = cfg.mapQual;
-    int& max_readlen = cfg.max_readlen;
-    ConfigMap<string, string>::type const& readgroup_library = cfg.readgroup_library;
-    ConfigMap<string, string>::type const& readgroup_platform = cfg.readgroup_platform;
-    ConfigMap<string,string>::type const& ReadsOut = cfg.ReadsOut;
-    int& max_read_window_size = cfg.max_read_window_size;
+    // WTH, max_readlen just gets reset to zero before ever being used??? -ta
+    int max_readlen = cfg.max_readlen;
+    int max_read_window_size = cfg.max_read_window_size; // this gets updated, so we copy it
 
     // go through the iteration of fmaps
+    //
+    // is this just trying to validate that every "fmap" has a "exe" component?
+    // that should definitely be in the config object
     ConfigMap<string,string>::type::const_iterator ii;
-    for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii) {
-        exes.at(ii->first); // throws if not found
+    for(ii=cfg.fmaps.begin(); ii!=cfg.fmaps.end(); ++ii) {
+        cfg.exes.at(ii->first); // throws if not found
     }
-
 
     map<uint32_t, map<string,int> > x_readcounts;
 
+
+    // I think bam2cfg.pl does this, can we remove this code?
+    // -ta
 /*
     if(opts.learn_par) {
         EstimatePriorParameters(opts, fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, readgroup_platform);
@@ -1131,8 +1119,8 @@ int main(int argc, char *argv[]) {
     string format_ = "sam";
     vector<string> maps;
 
-     for(ii=fmaps.begin(); ii!=fmaps.end(); ++ii)
-     {
+    for(ii=cfg.fmaps.begin(); ii!=cfg.fmaps.end(); ++ii)
+    {
         maps.push_back((*ii).first);
         uint32_t ref_len = 0;
         ++i;
@@ -1146,10 +1134,11 @@ int main(int argc, char *argv[]) {
         // the output, which probably messes it up anyway. We are going
         // to crash. If it is determined that this is wrong, we should
         // continue if openBam fails.
+        // -ta
         auto_ptr<IBamReader> reader(openBam(bam_name, opts));
 
         while (reader->next(b) > 0) {
-            breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
+            breakdancer::Read aln2(b, format_, cfg.readgroup_platform, cfg.readgroup_library);
             string const& readgroup = aln2.readgroup;
 
             //FIXME this could be filtered out on reading the BAM
@@ -1171,15 +1160,15 @@ int main(int argc, char *argv[]) {
             p_chr = new_seq_name;
 
             //FIXME It would be better if this was done as part of the Read class
-            //doing it in a way in which the read class doesn't have to know about how we are 
+            //doing it in a way in which the read class doesn't have to know about how we are
             //reading the files would be key though
             string lib;
             if(!(readgroup.empty()))
-                lib = readgroup_library.at(readgroup);
-            else{
-                lib = fmaps.at(ii->first);
-            }
-            if(lib.length() == 0)
+                lib = cfg.readgroup_library.at(readgroup);
+            else
+                lib = cfg.fmaps.at(ii->first);
+
+            if(lib.empty())
                 continue;
 
             //Below seems like a bug to me. 18 means FR orientation plus paired end req met in MAQ
@@ -1197,16 +1186,17 @@ int main(int argc, char *argv[]) {
             if(aln2.bdqual() > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
-                    ++nreads_[libmaps.at(lib)];
+                    ++nreads_[cfg.libmaps.at(lib)];
                 }
             }
 
-            //XXX This seems weird to me as well. Why are we checking the 
-            //mapping quality in two different places and performing some 
+            //XXX This seems weird to me as well. Why are we checking the
+            //mapping quality in two different places and performing some
             //calculations before this is applied?
             //-dlarson
-            if(mapQual.find(lib) != mapQual.end()){
-                if(aln2.bdqual() <= mapQual.at(lib))
+
+            if(cfg.mapQual.find(lib) != cfg.mapQual.end()){
+                if(aln2.bdqual() <= cfg.mapQual.at(lib))
                     continue;
             }
             else{
@@ -1221,24 +1211,24 @@ int main(int argc, char *argv[]) {
             //It would be nice if this was pulled into the Read class as well
             //for now, let's just set the bdflag directly here since it is public
             if(opts.Illumina_long_insert){
-                if(aln2.abs_isize() > uppercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_RF) {
+                if(aln2.abs_isize() > cfg.uppercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_RF);
                 }
-                if(aln2.abs_isize() < uppercutoff.at(lib) && aln2.bdflag() == breakdancer::ARP_RF) {
+                if(aln2.abs_isize() < cfg.uppercutoff.at(lib) && aln2.bdflag() == breakdancer::ARP_RF) {
                     aln2.set_bdflag(breakdancer::NORMAL_RF);
                 }
-                if(aln2.abs_isize() < lowercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_RF) {
+                if(aln2.abs_isize() < cfg.lowercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
                 }
             }
             else{
-                if(aln2.abs_isize() > uppercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_FR) {
+                if(aln2.abs_isize() > cfg.uppercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_big_insert);
                 }
-                if(aln2.abs_isize() < uppercutoff.at(lib) && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
+                if(aln2.abs_isize() < cfg.uppercutoff.at(lib) && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
                     aln2.set_bdflag(breakdancer::NORMAL_FR);
                 }
-                if(aln2.abs_isize() < lowercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_FR) {
+                if(aln2.abs_isize() < cfg.lowercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert);
                 }
             }
@@ -1279,7 +1269,7 @@ int main(int argc, char *argv[]) {
     for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
     {
         string lib = (*nreads_ii).first;
-        float sequence_coverage = float(nreads[lib]*readlens.at(lib))/float(reference_len);
+        float sequence_coverage = float(nreads[lib]*cfg.readlens.at(lib))/float(reference_len);
         total_seq_cov += sequence_coverage;
 
         // compute read_density
@@ -1292,15 +1282,15 @@ int main(int argc, char *argv[]) {
             }
         }
         else{
-            if(nreads_.find(libmaps.at(lib)) != nreads_.end())
-                read_density[libmaps.at(lib)] = float(nreads_[libmaps.at(lib)])/float(reference_len);
+            if(nreads_.find(cfg.libmaps.at(lib)) != nreads_.end())
+                read_density[cfg.libmaps.at(lib)] = float(nreads_[cfg.libmaps.at(lib)])/float(reference_len);
             else{
-                read_density[libmaps.at(lib)] = 0.000001;
+                read_density[cfg.libmaps.at(lib)] = 0.000001;
                 cout << lib << " does not contain any normals" << endl;
             }
         }
 
-        float physical_coverage = float(nreads[lib]*mean_insertsize.at(lib))/float(reference_len)/2;
+        float physical_coverage = float(nreads[lib]*cfg.mean_insertsize.at(lib))/float(reference_len)/2;
         total_phy_cov += physical_coverage;
 
         int nread_lengthDiscrepant = -1;
@@ -1316,7 +1306,17 @@ int main(int argc, char *argv[]) {
         max_read_window_size = std::min(max_read_window_size, tmp);
 
         //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff.at(lib),lowercutoff.at(lib),readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
-        cout << "#" << libmaps.at(lib) << "\tmean:" << mean_insertsize.at(lib) << "\tstd:" << std_insertsize.at(lib) << "\tuppercutoff:" << uppercutoff.at(lib) << "\tlowercutoff:" << lowercutoff.at(lib) << "\treadlen:" << readlens.at(lib) << "\tlibrary:" << lib << "\treflen:" << reference_len << "\tseqcov:" << sequence_coverage << "\tphycov:" << physical_coverage;
+        cout << "#" << cfg.libmaps.at(lib)
+            << "\tmean:" << cfg.mean_insertsize.at(lib)
+            << "\tstd:" << cfg.std_insertsize.at(lib)
+            << "\tuppercutoff:" << cfg.uppercutoff.at(lib)
+            << "\tlowercutoff:" << cfg.lowercutoff.at(lib)
+            << "\treadlen:" << cfg.readlens.at(lib)
+            << "\tlibrary:" << lib
+            << "\treflen:" << reference_len
+            << "\tseqcov:" << sequence_coverage
+            << "\tphycov:" << physical_coverage
+            ;
 
         map<uint32_t,map<string,int> >::const_iterator x_readcounts_ii;
         for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){
@@ -1362,7 +1362,7 @@ int main(int argc, char *argv[]) {
     max_readlen = 0;
 
     // first, need to merge the bam files into one big string seperated by blank, and return the number
-    int n = fmaps.size();
+    int n = cfg.fmaps.size();
 
     if(n == 0) {
         cout << "wrong: no bam file!\n";
@@ -1371,7 +1371,7 @@ int main(int argc, char *argv[]) {
 
     vector<string> bam_files;
     typedef ConfigMap<string, string>::type::const_iterator IterType;
-    for(IterType ii_fmaps = fmaps.begin(); ii_fmaps != fmaps.end(); ii_fmaps++)
+    for(IterType ii_fmaps = cfg.fmaps.begin(); ii_fmaps != cfg.fmaps.end(); ii_fmaps++)
         bam_files.push_back(ii_fmaps->first);
 
     typedef vector<shared_ptr<IBamReader> > ReaderVecType;
@@ -1387,34 +1387,37 @@ int main(int argc, char *argv[]) {
         if(b->core.tid < 0)
             continue;
 
-        breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
+        breakdancer::Read aln2(b, format_, cfg.readgroup_platform, cfg.readgroup_library);
         string const& readgroup = aln2.readgroup;
-        string library = (!readgroup.empty())?readgroup_library.at(readgroup):((*(fmaps.begin())).second);
+// string library = (!readgroup.empty())?readgroup_library.at(readgroup):((*(fmaps.begin())).second);
+        string library;
+        if (!readgroup.empty())
+            library = cfg.readgroup_library.at(readgroup);
+        else
+            library = cfg.fmaps.begin()->second;
 
         if(!library.empty()){
-            Analysis(opts, bdancer, library, b, aln2, reg_seq, reg_name, read,
+            Analysis(opts, bdancer, cfg, library, b, aln2, reg_seq, reg_name, read,
                 regs, &idx_buff, &nnormal_reads, &normal_switch, &reg_idx,
-                x_readcounts, reference_len, ReadsOut, mean_insertsize, SVtype,
-                mapQual, uppercutoff, lowercutoff, max_read_window_size, &max_readlen,
+                x_readcounts, reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides, read_density,
-                possible_fake_data, libmaps, maps
+                possible_fake_data, maps
             );
         }
     }
 
     if (reg_seq.size() != 0) {
         do_break_func(
-            opts, bdancer, reg_seq, reg_name, read, regs, &idx_buff,
-            &nnormal_reads, &reg_idx, x_readcounts, reference_len, ReadsOut,
-            mean_insertsize, SVtype, mapQual, uppercutoff, lowercutoff,
+            opts, bdancer, cfg, reg_seq, reg_name, read, regs, &idx_buff,
+            &nnormal_reads, &reg_idx, x_readcounts, reference_len, SVtype,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides,
-            read_density, libmaps, maps
+            read_density, maps
             );
     }
 
-    buildConnection(opts, bdancer, read, reg_name, regs, x_readcounts,
-        reference_len, max_readlen, ReadsOut, SVtype, mean_insertsize,
-        merged_reader.header(), read_density, maps, libmaps);
+    buildConnection(opts, bdancer, cfg, read, reg_name, regs, x_readcounts,
+        reference_len, max_readlen, SVtype, merged_reader.header(),
+        read_density, maps);
 
     bam_destroy1(b);
 
@@ -1427,7 +1430,8 @@ int main(int argc, char *argv[]) {
 void do_break_func(
     Options const& opts,
     BreakDancerData& bdancer,
-    vector<breakdancer::Read>& reg_seq,
+    LegacyConfig const& cfg,
+    vector<breakdancer::Read> const& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
     map<int, vector<breakdancer::Read> > &regs,
@@ -1436,17 +1440,11 @@ void do_break_func(
     int *reg_idx,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    ConfigMap<string, string>::type const& ReadsOut,
-    ConfigMap<string, float>::type const& mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
-    ConfigMap<string, int>::type const& mapQual,
-    ConfigMap<string, float>::type const& uppercutoff,
-    ConfigMap<string, float>::type const& lowercutoff,
     int *max_readlen,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,
     map<string, float>& read_density,
-    ConfigMap<string, string>::type const& libmaps,
     vector<string> maps
     )
 {
@@ -1481,9 +1479,9 @@ void do_break_func(
         (*idx_buff)++;
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
-            buildConnection(opts, bdancer, read, reg_name, regs, x_readcounts,
-                reference_len, *max_readlen, ReadsOut, SVtype, mean_insertsize,
-                bam_header, read_density, maps, libmaps);
+            buildConnection(opts, bdancer, cfg, read, reg_name, regs, x_readcounts,
+                reference_len, *max_readlen, SVtype, bam_header, read_density,
+                maps);
 
             *idx_buff = 0;
         }

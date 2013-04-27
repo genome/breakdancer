@@ -65,7 +65,8 @@ T from_string(const std::string& s,
 void do_break_func(
     Options const& opts,
     BreakDancerData& bdancer,
-    vector<breakdancer::Read>& reg_seq,
+    LegacyConfig const& cfg,
+    vector<breakdancer::Read> const& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
     map<int, vector<breakdancer::Read> > &regs,
@@ -74,17 +75,11 @@ void do_break_func(
     int *reg_idx,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    ConfigMap<string, string>::type const& ReadsOut,
-    ConfigMap<string, float>::type const& mean_insertsize,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
-    ConfigMap<string, int>::type const& mapQual,
-    ConfigMap<string, float>::type const& uppercutoff,
-    ConfigMap<string, float>::type const& lowercutoff,
     int *max_readlen,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,
     map<string, float>& read_density,
-    ConfigMap<string, string>::type const& libmaps,
     vector<string> maps
     );
 
