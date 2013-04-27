@@ -21,6 +21,9 @@ namespace breakdancer {
             std::string _query_sequence;
             bool _query_seq_cached;
 
+            std::string _quality_string;
+            bool _quality_string_cached;
+
             std::vector<std::string> _string_record;
             std::string _library(std::map<std::string, std::string> const& readgroup_library);
             std::string _platform(std::map<std::string, std::string> const& readgroup_platform);
@@ -48,7 +51,7 @@ namespace breakdancer {
             std::vector<std::string>::size_type size();
             std::string const& query_name();
             std::string const& query_sequence();
-            std::string quality_string();
+            std::string const& quality_string();
             std::string ori();
 
             /* Other things we will need in our interface

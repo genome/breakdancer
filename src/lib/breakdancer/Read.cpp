@@ -11,6 +11,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     
     _query_name_cached = false;
     _query_seq_cached = false;
+    _quality_string_cached = false;
 
     bdflag = _determine_bdflag();
     bdqual = _determine_bdqual();
@@ -127,11 +128,13 @@ string const& Read::query_sequence() {
         else {
             _query_sequence = "*"; //or maybe throw? I dunno
         }
+        _query_seq_cached = true;
     }
     return _query_sequence;
 }
 
-string Read::quality_string() {
+string const& Read::quality_string() {
+    if(!_quality_string_cached) {
     uint8_t* qual_ptr = bam1_qual(_record);
     if(*qual_ptr != 0xff) { //fi 0xff then there is no qual string in BAM
         string qual;
@@ -139,11 +142,14 @@ string Read::quality_string() {
         for(int i = 0; i < _record->core.l_qseq; ++i) {
             qual += char(qual_ptr[i] + 33);
         }
-        return qual;
+        _quality_string = qual;
     }
     else {
-        return "*";
+        _quality_string = "*";
     }
+        _quality_string_cached = true;
+    }
+    return _quality_string;
 }
 
 string Read::ori() {
