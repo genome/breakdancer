@@ -9,6 +9,8 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _record = bam_init1(); 
     bam_copy1(_record, record);
     
+    _query_name = string(bam1_qname(_record));
+
     bdflag = _determine_bdflag();
     bdqual = _determine_bdqual();
 
@@ -17,7 +19,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     platform = _platform(readgroup_platform);
     library = _library(readgroup_library);
     
-    _string_record.push_back(queryname());
+    _string_record.push_back(query_name());
     _string_record.push_back(boost::lexical_cast<string>(_record->core.tid));
     _string_record.push_back(boost::lexical_cast<string>(_record->core.pos));
     _string_record.push_back(ori());
@@ -89,8 +91,8 @@ string Read::_readgroup() {
     }
 }
 
-string Read::queryname() {
-    return string(bam1_qname(_record));
+string& Read::query_name() {
+    return _query_name;
 }
 
 string Read::query_sequence() {

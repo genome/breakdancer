@@ -46,8 +46,8 @@ TEST_F(TestRead, readgroup) {
     ASSERT_EQ(test_read->readgroup, "rg3");
 }
 
-TEST_F(TestRead, queryname) {
-    ASSERT_EQ(test_read->queryname(), "junk");
+TEST_F(TestRead, query_name) {
+    ASSERT_EQ(test_read->query_name(), "junk");
 }
 
 TEST_F(TestRead, query_sequence) {
