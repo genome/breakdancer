@@ -1140,7 +1140,7 @@ void do_break_func(
         vector<breakdancer::Read> p;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
             p.push_back(*it_reg_seq);
-            string s = (*it_reg_seq)[0];
+            string s = it_reg_seq->query_name();
             read[s].push_back(k);
         }
 
@@ -1181,7 +1181,7 @@ void do_break_func(
         if(reg_seq.size()>0){
             for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
                 ///string s = get_item_from_string(*it_reg_seq,0);
-                string s= (*it_reg_seq)[0];
+                string s = it_reg_seq->query_name();
                 if(read.find(s) != read.end())
                     read.erase(read.find(s));
                 //cout << "read erase: " << s << endl;
@@ -1429,7 +1429,7 @@ void Analysis (
             vector<breakdancer::Read> p;
             for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq++){
                 p.push_back(*it_reg_seq);
-                string s = (*it_reg_seq)[0];
+                string s = it_reg_seq->query_name();
                 read[s].push_back(k);
             }
 
@@ -1489,7 +1489,7 @@ void Analysis (
             // remove any reads that are linking the last region with this new, merged in region
             if(reg_seq.size()>0){
                 for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
-                    string s= (*it_reg_seq)[0];
+                    string s = it_reg_seq->query_name();
                     if(read.find(s) != read.end())
                         read.erase(read.find(s));
                 }
@@ -1694,10 +1694,10 @@ void buildConnection(
                         //NOTE regs contains an array of information about the reads supporting the region (info is stored as a string array)
                         for(vector<breakdancer::Read>::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
                             breakdancer::Read y = *ii_regs;
-                            //cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;
+                            //cout << y[3] << "\t" << y.query_name() << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;
                             //skip things where the read name is no longer in our list of read names
                             //WHY ARE THESE CHECKS EVERYWHERE
-                            if(read.find(y[0]) == read.end())
+                            if(read.find(y.query_name()) == read.end())
                                 continue;
                             // initialize orient_count
                             // y[3] is the orientation. This is stored as a string value or - or +
@@ -1707,10 +1707,10 @@ void buildConnection(
                                 orient_count[y[3]]++;
 
                             //START HERE
-                            if(read_pair.find(y[0]) == read_pair.end()){
-                                read_pair[y[0]] = y;
+                            if(read_pair.find(y.query_name()) == read_pair.end()){
+                                read_pair[y.query_name()] = y;
                                 nonsupportives.push_back(y);
-                                //cout << y[3] << "\t" << y[0] << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;
+                                //cout << y[3] << "\t" << y.query_name() << "\t" << y[2] << "\t" << orient_count[y[3]] << endl;
                             }
                             else{
                                 // see if initialized 'type' or not
@@ -1734,12 +1734,12 @@ void buildConnection(
                                 else
                                     type_library_meanspan[y[5]][y[8]] = abs(y4_tmp);
                                 nread_pairs++;
-                                free_reads.push_back(y[0]);
-                                //cout << y[0] << endl;
+                                free_reads.push_back(y.query_name());
+                                //cout << y.query_name() << endl;
                                 support_reads.push_back(y);
-                                support_reads.push_back(read_pair[y[0]]);
-                                if(read_pair.find(y[0])!=read_pair.end()){
-                                    read_pair.erase(read_pair.find(y[0]));
+                                support_reads.push_back(read_pair[y.query_name()]);
+                                if(read_pair.find(y.query_name())!=read_pair.end()){
+                                    read_pair.erase(read_pair.find(y.query_name()));
                                 }
                             }
                         }
@@ -1757,7 +1757,7 @@ void buildConnection(
                         vector<breakdancer::Read> nonsupportives;
                         for(vector<breakdancer::Read>::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
                             breakdancer::Read y = *ii_regs;
-                            if(read_pair.find(y[0]) == read_pair.end())
+                            if(read_pair.find(y.query_name()) == read_pair.end())
                                 continue;
                             nonsupportives.push_back(y);
                         }
@@ -2019,9 +2019,9 @@ void buildConnection(
                                         y7_int = atoi(y[7].c_str());
                                         int aln_end = y2_int + y7_int - 1;
                                         string color = y[3].compare("+")?"0,0,255":"255,0,0";
-                                        //fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t1\t" << y[0] << "\t" << y[3] << "\t" << y[4] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";//sprintf(fh_BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y[0],y[3],y[4],y[2],aln_end,color);
+                                        //fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t1\t" << y.query_name() << "\t" << y[3] << "\t" << y[4] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";//sprintf(fh_BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y.query_name(),y[3],y[4],y[2],aln_end,color);
                                         int aln_score = atoi(y[6].c_str()) * 10;
-                                        fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t" << y[0] << "|" << y[8] << "\t" << aln_score << "\t" << y[3] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";
+                                        fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t" << y.query_name() << "|" << y[8] << "\t" << aln_score << "\t" << y[3] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";
                                     }
                                     fh_BED.close();
                                 }
@@ -2055,7 +2055,7 @@ void buildConnection(
         if(reads.size() < unsigned(min_read_pair)){
             for(vector<breakdancer::Read>::iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
                 breakdancer::Read y = *ii_reads;
-                string readname = y[0];
+                string readname = y.query_name();
                 //cout << readname << endl;
                 if(read.find(readname)!=read.end()){
                     read.erase(read.find(readname));
@@ -2397,12 +2397,12 @@ void write_fastq_for_flag(const string &flag, const vector<breakdancer::Read> &s
         if(y.size() != 11 || y[5].compare(flag))
             continue;
         //Paradoxically, the first read seen is put in file 2 and the second in file 1
-        string fh_tmp_str = (pairing.find(y[0]) != pairing.end()) ? ReadsOut.at(y[8].append("1")) : ReadsOut.at(y[8].append("2"));
+        string fh_tmp_str = (pairing.find(y.query_name()) != pairing.end()) ? ReadsOut.at(y[8].append("1")) : ReadsOut.at(y[8].append("2"));
         ofstream fh;
         fh.open(fh_tmp_str.c_str(), ofstream::app);
-        pairing[y[0]] = 1;
+        pairing[y.query_name()] = 1;
         //Note that no transformation on read bases based on read orientation is done here
-        string str_tmp = "@" + y[0] + "\n" + y[9] + "\n" + "+\n" + y[10] + "\n";
+        string str_tmp = "@" + y.query_name() + "\n" + y[9] + "\n" + "+\n" + y[10] + "\n";
         fh << str_tmp;
         fh.close();
     }
