@@ -1,4 +1,3 @@
-#include "breakdancer/AlnParser.h"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/saminternals.h"
 
