@@ -79,8 +79,6 @@ TEST_F(TestRead, indexing) {
     ASSERT_EQ((*test_read)[6], "37");
     ASSERT_EQ((*test_read)[7], "2");
     ASSERT_EQ((*test_read)[8], "some_lib");
-    ASSERT_EQ((*test_read)[9], "CT");
-    ASSERT_EQ((*test_read)[10], "HB");
 }
 
 TEST_F(TestRead, copy_constructor) {

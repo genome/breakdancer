@@ -30,13 +30,6 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _string_record.push_back(boost::lexical_cast<string>(bdqual));
     _string_record.push_back(boost::lexical_cast<string>(_record->core.l_qseq));
     _string_record.push_back(library);
-
-    if(query_sequence() != "*") {
-        _string_record.push_back(query_sequence());
-    }
-    if(quality_string() != "*") {
-        _string_record.push_back(quality_string());
-    }
 }
 
 Read::Read(const Read& other) {
