@@ -1681,13 +1681,13 @@ void buildConnection(
                     map<string, breakdancer::Read> read_pair; //unpaired reads
                     map<string,int> type; // number of readpairs per each type/flag
                     map<string,map<string,int> > type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
-                    vector<map<string,int> > type_orient_counts; //vector of readcounts for each type/flag
+                    vector<map<char,int> > type_orient_counts; //vector of readcounts for each type/flag
                     map<string,map<string,int> > type_library_meanspan; //average ISIZE from BAM records
                     vector<breakdancer::Read> support_reads; //reads supporting the SV
                     for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
                         int node = *ii_snodes;
                         //cout << node << endl;
-                        map<string,int> orient_count; // number of reads per each orientation ('+' or '-')
+                        map<char,int> orient_count; // number of reads per each orientation ('+' or '-')
                         vector<breakdancer::Read> nonsupportives; // reads not supporting this SV
                         //debug
                         //int regs_size = regs[node].size();
@@ -1701,10 +1701,10 @@ void buildConnection(
                                 continue;
                             // initialize orient_count
                             // y[3] is the orientation. This is stored as a string value or - or +
-                            if(orient_count.find(y[3]) == orient_count.end())
-                                orient_count[y[3]] = 1;
+                            if(orient_count.find(y.ori()) == orient_count.end())
+                                orient_count[y.ori()] = 1;
                             else
-                                orient_count[y[3]]++;
+                                orient_count[y.ori()]++;
 
                             //START HERE
                             if(read_pair.find(y.query_name()) == read_pair.end()){
@@ -1789,7 +1789,7 @@ void buildConnection(
                                 int nrp = reg_name[node][3];
 
                                 //cout << " " << node << "\t" << start << "\t" << end << endl;
-                                map<string,int> ori_readcount = type_orient_counts.front();
+                                map<char,int> ori_readcount = type_orient_counts.front();
                                 if(type_orient_counts.size()!=0){
                                     type_orient_counts.erase(type_orient_counts.begin());
                                 }
@@ -1812,12 +1812,12 @@ void buildConnection(
                                     //sv_pos2 = start;
                                     string sv_ori2_tmp1 = "0";
                                     string sv_ori2_tmp2 = "0";
-                                    if(ori_readcount.find("+") != ori_readcount.end())
+                                    if(ori_readcount.find('+') != ori_readcount.end())
                                         //sprintf(sv_ori2_tmp1, "%s", ori_readcount["+"]);
-                                        sv_ori2_tmp1 = itos(ori_readcount["+"]);
-                                    if(ori_readcount.find("-") != ori_readcount.end())
+                                        sv_ori2_tmp1 = itos(ori_readcount['+']);
+                                    if(ori_readcount.find('-') != ori_readcount.end())
                                         //sprintf(sv_ori2_tmp2, "%s", ori_readcount["-"]);
-                                        sv_ori2_tmp2 = itos(ori_readcount["-"]);
+                                        sv_ori2_tmp2 = itos(ori_readcount['-']);
                                     sv_ori2 = sv_ori2_tmp1.append("+").append(sv_ori2_tmp2).append("-");
 
                                     // add up the read number
@@ -1862,10 +1862,10 @@ void buildConnection(
                                     sv_pos2 = end;
                                     string sv_ori2_tmp1 = "0";
                                     string sv_ori2_tmp2 = "0";
-                                    if(ori_readcount.find("+") != ori_readcount.end())
-                                        sv_ori2_tmp1 = itos(ori_readcount["+"]);
-                                    if(ori_readcount.find("-") != ori_readcount.end())
-                                        sv_ori2_tmp2 = itos(ori_readcount["-"]);
+                                    if(ori_readcount.find('+') != ori_readcount.end())
+                                        sv_ori2_tmp1 = itos(ori_readcount['+']);
+                                    if(ori_readcount.find('-') != ori_readcount.end())
+                                        sv_ori2_tmp2 = itos(ori_readcount['-']);
                                     sv_ori1 = sv_ori2_tmp1.append("+").append(sv_ori2_tmp2).append("-");
                                     sv_ori2 = sv_ori1;
                                     normal_rp = nrp;
@@ -2012,11 +2012,11 @@ void buildConnection(
                                         if(y.size() < 8 || y[5].compare(flag))
                                             continue;
                                         int aln_end = y.pos() - y.query_length() - 1;
-                                        string color = y[3].compare("+")?"0,0,255":"255,0,0";
+                                        string color = y.ori() == '+' ? "0,0,255" : "255,0,0";
                                         //fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t1\t" << y.query_name() << "\t" << y[3] << "\t" << y[4] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";//sprintf(fh_BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y.query_name(),y[3],y[4],y[2],aln_end,color);
                                         int aln_score = atoi(y[6].c_str()) * 10;
                                         //FIXME if the bam already used chr prefixed chromosome names this would duplicate them...
-                                        fh_BED << "chr" << bam_header->target_name[y.tid()] << "\t" << y.pos() << "\t" << aln_end << "\t" << y.query_name() << "|" << y[8] << "\t" << aln_score << "\t" << y[3] << "\t" << y.pos() << "\t" << aln_end << "\t" << color << "\n";
+                                        fh_BED << "chr" << bam_header->target_name[y.tid()] << "\t" << y.pos() << "\t" << aln_end << "\t" << y.query_name() << "|" << y[8] << "\t" << aln_score << "\t" << y.ori() << "\t" << y.pos() << "\t" << aln_end << "\t" << color << "\n";
                                     }
                                     fh_BED.close();
                                 }
