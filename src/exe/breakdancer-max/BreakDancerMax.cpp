@@ -423,24 +423,24 @@ int main(int argc, char *argv[]) {
             //It would be nice if this was pulled into the Read class as well
             //for now, let's just set the bdflag directly here since it is public
             if(opts.Illumina_long_insert){
-                if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_RF) {
+                if(aln2.abs_isize() > uppercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_RF);
                 }
-                if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag() == breakdancer::ARP_RF) {
+                if(aln2.abs_isize() < uppercutoff[lib] && aln2.bdflag() == breakdancer::ARP_RF) {
                     aln2.set_bdflag(breakdancer::NORMAL_RF);
                 }
-                if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_RF) {
+                if(aln2.abs_isize() < lowercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
                 }
             }
             else{
-                if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_FR) {
+                if(aln2.abs_isize() > uppercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_big_insert);
                 }
-                if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
+                if(aln2.abs_isize() < uppercutoff[lib] && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
                     aln2.set_bdflag(breakdancer::NORMAL_FR);
                 }
-                if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_FR) {
+                if(aln2.abs_isize() < lowercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert);
                 }
             }
