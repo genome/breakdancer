@@ -6,7 +6,7 @@ using namespace std;
 using namespace breakdancer;
 
 Read::Read(bam1_t const* record, string const& format, map<string, string> const& readgroup_platform, map<string, string> const& readgroup_library) :
-    _record(bam_init1()), _query_name_cached(false), _query_seq_cached(false), _quality_string_cached(false) {
+    _record(bam_init1()), _query_name_cached(false), _query_seq_cached(false), _quality_string_cached(false), _abs_isize_cached(false) {
     //create copy of bam record
     bam_copy1(_record, record);
     
@@ -31,7 +31,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _string_record.push_back(library);
 }
 
-Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _bdqual(other._bdqual), _ori(other._ori), _string_record(other._string_record), readgroup(other.readgroup), platform(other.platform), library(other.library) {
+Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _bdqual(other._bdqual), _ori(other._ori), _abs_isize(other._abs_isize), _abs_isize_cached(other._abs_isize_cached), _string_record(other._string_record), readgroup(other.readgroup), platform(other.platform), library(other.library) {
     if(other._record) {
         _record = bam_init1();
         bam_copy1(_record, other._record);
@@ -69,6 +69,8 @@ Read& Read::operator=(const Read& other) {
         _bdflag = other._bdflag;
         _bdqual = other._bdqual;
         _ori = other._ori;
+        _abs_isize = other._abs_isize;
+        _abs_isize_cached = other._abs_isize_cached;
         platform = other.platform;
         library = other.library;
         readgroup = other.readgroup;
@@ -275,4 +277,16 @@ int const& Read::query_length() {
 
 char const& Read::ori() {
     return  _ori;
+}
+
+int const& Read::isize() {
+    return _record->core.isize;
+}
+
+int const& Read::abs_isize() {
+    if(!_abs_isize_cached) {
+        _abs_isize = abs(_record->core.isize);
+        _abs_isize_cached = true;
+    }
+    return _abs_isize;
 }

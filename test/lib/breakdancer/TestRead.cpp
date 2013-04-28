@@ -22,7 +22,7 @@ class TestRead : public ::testing::Test {
             core.l_qseq = 2;
             core.mtid = 22;
             core.mpos = 29185299;
-            core.isize = 478;
+            core.isize = -478;
             bam_record.core = core;
             bam_record.l_aux = 11;
             bam_record.data_len = 23;
@@ -62,6 +62,26 @@ TEST_F(TestRead, ori) {
     ASSERT_EQ(test_read->ori(), '+');
 }
 
+TEST_F(TestRead, tid) {
+    ASSERT_EQ(test_read->tid(), 22);
+}
+
+TEST_F(TestRead, pos) {
+    ASSERT_EQ(test_read->pos(), 29184911);
+}
+
+TEST_F(TestRead, query_length) {
+    ASSERT_EQ(test_read->query_length(), 2);
+}
+
+TEST_F(TestRead, isize) {
+    ASSERT_EQ(test_read->isize(), -478);
+}
+
+TEST_F(TestRead, abs_isize) {
+    ASSERT_EQ(test_read->abs_isize(), 478);
+}
+
 TEST_F(TestRead, set_bdflag) {
     test_read->set_bdflag(breakdancer::ARP_CTX);
     ASSERT_EQ((*test_read)[5],"32");
@@ -74,7 +94,7 @@ TEST_F(TestRead, indexing) {
     ASSERT_EQ((*test_read)[1], "22");
     ASSERT_EQ((*test_read)[2], "29184911");
     ASSERT_EQ((*test_read)[3], "+");
-    ASSERT_EQ((*test_read)[4], "478");
+    ASSERT_EQ((*test_read)[4], "-478");
     ASSERT_EQ((*test_read)[5], "18");
     ASSERT_EQ((*test_read)[6], "37");
     ASSERT_EQ((*test_read)[7], "2");

@@ -41,6 +41,8 @@ namespace breakdancer {
             int _bdqual;
             char _ori;
             
+            int _abs_isize;
+            bool _abs_isize_cached;
 
             std::vector<std::string> _string_record;
 
@@ -56,7 +58,7 @@ namespace breakdancer {
             std::string library;
 
             Read(bam1_t const* record, std::string const& format, std::map<std::string, std::string> const& readgroup_platform, std::map<std::string, std::string> const& readgroup_library);
-            Read() : _record(NULL), _bdflag(NA), _bdqual(0) {};
+            Read() : _record(NULL), _bdflag(NA), _bdqual(0), _ori(0), _abs_isize() {};
             Read(const Read& other);
             ~Read();
 
@@ -76,6 +78,8 @@ namespace breakdancer {
             int const& pos();
             int const& query_length();
             char const& ori();
+            int const& isize();
+            int const& abs_isize();
 
             /* Other things we will need in our interface
              * isize
