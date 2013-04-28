@@ -80,12 +80,5 @@ namespace breakdancer {
             char const& ori();
             int const& isize();
             int const& abs_isize();
-
-            /* Other things we will need in our interface
-             * isize
-             * abs(size) - should be cached
-             * flag_accessor
-             * qual accessor
-             */
     };
 }

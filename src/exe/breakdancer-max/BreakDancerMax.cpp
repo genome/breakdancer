@@ -147,21 +147,21 @@ int main(int argc, char *argv[]) {
     Options opts = parseArguments(argc, argv);
 
     // define the map SVtype
-    map<string, string> SVtype;
+    map<breakdancer::pair_orientation_flag, string> SVtype;
     if(opts.Illumina_long_insert) {
-        SVtype["1"] = "INV";
-        SVtype["3"] = "INS";
-        SVtype["4"] = "DEL";
-        SVtype["8"] = "INV";
-        SVtype["32"] = "CTX";
+        SVtype[breakdancer::ARP_FF] = "INV";
+        SVtype[breakdancer::ARP_FR_small_insert] = "INS";
+        SVtype[breakdancer::ARP_RF] = "DEL";
+        SVtype[breakdancer::ARP_RR] = "INV";
+        SVtype[breakdancer::ARP_CTX] = "CTX";
     }
     else{
-        SVtype["1"] = "INV";
-        SVtype["2"] = "DEL";
-        SVtype["3"] = "INS";
-        SVtype["4"] = "ITX";
-        SVtype["8"] = "INV";
-        SVtype["32"] = "CTX";
+        SVtype[breakdancer::ARP_FF] = "INV";
+        SVtype[breakdancer::ARP_FR_big_insert] = "DEL";
+        SVtype[breakdancer::ARP_FR_small_insert] = "INS";
+        SVtype[breakdancer::ARP_RF] = "ITX";
+        SVtype[breakdancer::ARP_RR] = "INV";
+        SVtype[breakdancer::ARP_CTX] = "CTX";
     }
 
     // AP; no AP
@@ -1103,7 +1103,7 @@ void do_break_func(
     int fisher,
     map<string, string> &ReadsOut,
     map<string, float> &mean_insertsize,
-    map<string, string> &SVtype,
+    map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, int> &mapQual,
     map<string, float> &uppercutoff,
     map<string, float> &lowercutoff,
@@ -1209,7 +1209,7 @@ void Analysis (
     uint32_t reference_len,
     map<string, string> &ReadsOut,
     map<string, float> &mean_insertsize,
-    map<string, string> &SVtype,
+    map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, int> &mapQual,
     map<string, float> &uppercutoff,
     map<string, float> &lowercutoff,
@@ -1546,7 +1546,7 @@ void buildConnection(
     int max_readlen,
     string prefix_fastq,
     map<string, string> &ReadsOut,
-    map<string, string> &SVtype,
+    map<breakdancer::pair_orientation_flag, string> &SVtype,
     map<string, float> &mean_insertsize,
     bam_header_t* bam_header,
     map<string, float> &read_density,
@@ -1679,10 +1679,10 @@ void buildConnection(
 
                     int nread_pairs = 0;
                     map<string, breakdancer::Read> read_pair; //unpaired reads
-                    map<string,int> type; // number of readpairs per each type/flag
-                    map<string,map<string,int> > type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
+                    map<breakdancer::pair_orientation_flag, int> type; // number of readpairs per each type/flag
+                    map<breakdancer::pair_orientation_flag, map<string,int> > type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
                     vector<map<char,int> > type_orient_counts; //vector of readcounts for each type/flag
-                    map<string,map<string,int> > type_library_meanspan; //average ISIZE from BAM records
+                    map<breakdancer::pair_orientation_flag, map<string,int> > type_library_meanspan; //average ISIZE from BAM records
                     vector<breakdancer::Read> support_reads; //reads supporting the SV
                     for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
                         int node = *ii_snodes;
@@ -1715,24 +1715,24 @@ void buildConnection(
                             else{
                                 // see if initialized 'type' or not
                                 // y[5] is our bastardized "flag" describing the pair orientation
-                                if(type.find(y[5]) != type.end())
-                                    type[y[5]]++;
+                                breakdancer::pair_orientation_flag bdflag = y.bdflag();
+                                string libname = y.library;
+                                if(type.find(bdflag) != type.end())
+                                    type[bdflag]++;
                                 else
-                                    type[y[5]] = 1;
+                                    type[bdflag] = 1;
                                 // see if initialized 'type_library_readcount' or not
                                 // as you might guess, y[8] is the lib name
-                                if(type_library_readcount.find(y[5]) != type_library_readcount.end() && type_library_readcount[y[5]].find(y[8]) != type_library_readcount[y[5]].end())
-                                    type_library_readcount[y[5]][y[8]]++;
+                                if(type_library_readcount.find(bdflag) != type_library_readcount.end() && type_library_readcount[bdflag].find(libname) != type_library_readcount[bdflag].end())
+                                    type_library_readcount[bdflag][libname]++;
                                 else
-                                    type_library_readcount[y[5]][y[8]] = 1;
+                                    type_library_readcount[bdflag][libname] = 1;
 
-                                // y[4] is the insert size (as a string of course)
-                                int y4_tmp = atoi(y[4].c_str());
-                                if(type_library_meanspan.find(y[5]) != type_library_meanspan.end() && type_library_meanspan[y[5]].find(y[8]) != type_library_meanspan[y[5]].end()){
-                                    type_library_meanspan[y[5]][y[8]]+=abs(y4_tmp);
+                                if(type_library_meanspan.find(bdflag) != type_library_meanspan.end() && type_library_meanspan[bdflag].find(libname) != type_library_meanspan[bdflag].end()){
+                                    type_library_meanspan[bdflag][libname] += y.abs_isize();
                                 }
                                 else
-                                    type_library_meanspan[y[5]][y[8]] = abs(y4_tmp);
+                                    type_library_meanspan[bdflag][libname] = y.abs_isize();
                                 nread_pairs++;
                                 free_reads.push_back(y.query_name());
                                 //cout << y.query_name() << endl;
@@ -1768,9 +1768,11 @@ void buildConnection(
                     //int bestIndelSize;//don't know if int; no usage actually
                     // START HERE
                     if(nread_pairs >= min_read_pair){
-                        map<string, int> diffspans;
-                        map<string, string> sptypes;
-                        string flag = choose_sv_flag(nread_pairs, type);
+                        map<breakdancer::pair_orientation_flag, int> diffspans;
+                        map<breakdancer::pair_orientation_flag, string> sptypes;
+                        //FIXME lots of references to this below as a string
+                        breakdancer::pair_orientation_flag flag = choose_sv_flag(nread_pairs, type);
+
                         if(type[flag] >= min_read_pair) {
                             // print out result
                             int sv_chr1 = -1, sv_pos1 = 0, sv_chr2 = -1, sv_pos2 = 0;
@@ -1794,13 +1796,13 @@ void buildConnection(
                                     type_orient_counts.erase(type_orient_counts.begin());
                                 }
                                 if(sv_chr1 != -1 && sv_chr2 != -1){
-                                    if(flag.compare("4") == 0)
+                                    if(flag == breakdancer::ARP_RF)
                                         sv_pos2 = end + max_readlen - 5;
-                                    else if(flag.compare("1") == 0){
+                                    else if(flag == breakdancer::ARP_FF){
                                         sv_pos1 = sv_pos2;
                                         sv_pos2 = end + max_readlen - 5;
                                     }
-                                    else if(flag.compare("8") == 0)
+                                    else if(flag == breakdancer::ARP_RR)
                                         sv_pos2 = start;
                                     else{
                                         sv_pos1 = sv_pos2;
@@ -1889,7 +1891,7 @@ void buildConnection(
                             }
                             copy_number_sum /= (2.0*(float)read_count.size());
 
-                            if(flag.compare("4") && flag.compare("8") && sv_pos1 + max_readlen - 5 < sv_pos2)
+                            if(flag != breakdancer::ARP_RF && flag != breakdancer::ARP_RR && sv_pos1 + max_readlen - 5 < sv_pos2)
                                 sv_pos1 += max_readlen - 5; // apply extra padding to the start coordinates
 
                             // deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
@@ -1903,7 +1905,7 @@ void buildConnection(
                                     // intialize to be zero, in case of no library, or DEL, or ITX.
 
                                     string copy_number_str = "NA";
-                                    if(flag.compare("32")!=0){
+                                    if(flag != breakdancer::ARP_CTX){
                                         float copy_number_ = 0;
 
                                         if(copy_number.find(sp) != copy_number.end()){
@@ -1958,8 +1960,7 @@ void buildConnection(
                             sptypes[flag] = sptype;
 
 
-                            int flag_int = atoi(flag.c_str());
-                            real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag_int), x_readcounts, reference_len, fisher, reg_name);
+                            real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag), x_readcounts, reference_len, fisher, reg_name);
                             real_type PhredQ_tmp = -10*LogPvalue/log(10);
                             int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
                             //float AF = float(type[flag])/float(type[flag]+normal_rp);
@@ -1980,7 +1981,7 @@ void buildConnection(
                                 //printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
                                 if(print_AF == 1)
                                     cout <<  "\t" << AF;
-                                if(CN_lib == 0 && flag.compare("32")!=0){
+                                if(CN_lib == 0 && flag != breakdancer::ARP_CTX){
                                     for(vector<string>::const_iterator iter = maps.begin(); iter != maps.end(); ++iter) {
                                         if(copy_number.find(*iter) == copy_number.end())
                                             cout << "\tNA";
@@ -2009,14 +2010,15 @@ void buildConnection(
                                     fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv_chr1] << " " << sv_pos1 << " " << SVT << " " << diffspans[flag] << "\"\tuseScore=0\n";// fh_BED is a file handle of BED
                                     for(vector<breakdancer::Read>::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
                                         breakdancer::Read y = *ii_support_reads;
-                                        if(y.size() < 8 || y[5].compare(flag))
+                                        //FIXME want to eventually remove lexical cast
+                                        if(y.size() < 8 || y.bdflag() != flag)
                                             continue;
                                         int aln_end = y.pos() - y.query_length() - 1;
                                         string color = y.ori() == '+' ? "0,0,255" : "255,0,0";
                                         //fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t1\t" << y.query_name() << "\t" << y[3] << "\t" << y[4] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";//sprintf(fh_BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y.query_name(),y[3],y[4],y[2],aln_end,color);
                                         int aln_score = atoi(y[6].c_str()) * 10;
                                         //FIXME if the bam already used chr prefixed chromosome names this would duplicate them...
-                                        fh_BED << "chr" << bam_header->target_name[y.tid()] << "\t" << y.pos() << "\t" << aln_end << "\t" << y.query_name() << "|" << y[8] << "\t" << aln_score << "\t" << y.ori() << "\t" << y.pos() << "\t" << aln_end << "\t" << color << "\n";
+                                        fh_BED << "chr" << bam_header->target_name[y.tid()] << "\t" << y.pos() << "\t" << aln_end << "\t" << y.query_name() << "|" << y.library << "\t" << aln_score << "\t" << y.ori() << "\t" << y.pos() << "\t" << aln_end << "\t" << color << "\n";
                                     }
                                     fh_BED.close();
                                 }
@@ -2385,14 +2387,14 @@ string get_string(uint8_t *pt, int32_t length){
     return seq;
 }
 
-void write_fastq_for_flag(const string &flag, const vector<breakdancer::Read> &support_reads, const map<string, string> &ReadsOut) {
+void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const vector<breakdancer::Read> &support_reads, const map<string, string> &ReadsOut) {
     map<string,int> pairing;
     for( vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
         breakdancer::Read y = *ii_support_reads;
-        if(y.query_sequence() == "*" || y.quality_string() == "*" || y[5].compare(flag))
+        if(y.query_sequence() == "*" || y.quality_string() == "*" || y.bdflag() != flag)
             continue;
         //Paradoxically, the first read seen is put in file 2 and the second in file 1
-        string fh_tmp_str = (pairing.find(y.query_name()) != pairing.end()) ? ReadsOut.at(y[8].append("1")) : ReadsOut.at(y[8].append("2"));
+        string fh_tmp_str = (pairing.find(y.query_name()) != pairing.end()) ? ReadsOut.at(y.library.append("1")) : ReadsOut.at(y.library.append("2"));
         ofstream fh;
         fh.open(fh_tmp_str.c_str(), ofstream::app);
         pairing[y.query_name()] = 1;
@@ -2403,11 +2405,11 @@ void write_fastq_for_flag(const string &flag, const vector<breakdancer::Read> &s
     }
 }
 
-string choose_sv_flag(const int num_readpairs, const map<string, int> reads_per_type) {
-    string flag = "0";
+breakdancer::pair_orientation_flag choose_sv_flag(const int num_readpairs, const map<breakdancer::pair_orientation_flag, int> reads_per_type) {
+    breakdancer:: pair_orientation_flag flag = breakdancer::NA;
     float max_type_pct = 0.0;
-    for(map<string,int>::const_iterator type_iter = reads_per_type.begin(); type_iter != reads_per_type.end(); ++type_iter){
-        string current_flag = (*type_iter).first;
+    for(map<breakdancer::pair_orientation_flag, int>::const_iterator type_iter = reads_per_type.begin(); type_iter != reads_per_type.end(); ++type_iter){
+        breakdancer::pair_orientation_flag current_flag = (*type_iter).first;
         float type_pct = static_cast<float>((*type_iter).second) / static_cast<float>(num_readpairs);
         if(max_type_pct < type_pct) {
             max_type_pct = type_pct;
