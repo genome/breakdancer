@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
             //
             // Indeed. Having looked over the flags, my comment above does not apply...
             // -dlarson
-            if(aln2.bdqual > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
+            if(aln2.bdqual() > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
                     ++nreads_[libmaps[lib]];
@@ -408,11 +408,11 @@ int main(int argc, char *argv[]) {
             //calculations before this is applied?
             //-dlarson
             if(mapQual.find(lib) != mapQual.end()){
-                if(aln2.bdqual <= mapQual[lib])
+                if(aln2.bdqual() <= mapQual[lib])
                     continue;
             }
             else{
-                if(aln2.bdqual <= opts.min_map_qual)
+                if(aln2.bdqual() <= opts.min_map_qual)
                     continue;
             }
             if(aln2.bdflag() == breakdancer::NA)
@@ -1256,7 +1256,7 @@ void Analysis (
     // region between last and next begin
     // Store readdepth in nread_ROI by bam name (no per library calc) or by library
     // I believe this only counts normally mapped reads
-    if(aln.bdqual > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
+    if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
         if(CN_lib == 1){
             if(nread_ROI.find(lib) == nread_ROI.end())
                 nread_ROI[lib] = 1;
@@ -1300,13 +1300,13 @@ void Analysis (
     }
     // mapQual is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
   if(mapQual.find(lib) != mapQual.end()){
-      if(aln.bdqual <= mapQual[lib])
+      if(aln.bdqual() <= mapQual[lib])
           return;
   }
   else{
       //here filter out if mapping quality is less than or equal to the min_map_qual.
       //Note that this doesn't make sense as a cutoff of 0 would still exclude reads with qual 0
-      if(aln.bdqual <= min_map_qual)
+      if(aln.bdqual() <= min_map_qual)
           return;
   }
 
@@ -2116,9 +2116,9 @@ void EstimatePriorParameters(
             //if(readlen_stat.find(lib) == readlen_stat.end())    // don't need to issue a new stat
             //readlen_stat[lib] = ; // Statistics::Descriptive::Sparse->new() // don't need to issue a new stat
             readlen_stat[lib].push_back(b->core.isize);
-            if(aln2.bdqual <= opts.min_map_qual)    // skip low quality mapped reads
+            if(aln2.bdqual() <= opts.min_map_qual)    // skip low quality mapped reads
                 continue;
-            if((aln2.bdqual != breakdancer::NORMAL_FR && aln2.bdqual != breakdancer::NORMAL_RF) || b->core.isize <= 0)
+            if((aln2.bdqual() != breakdancer::NORMAL_FR && aln2.bdqual() != breakdancer::NORMAL_RF) || b->core.isize <= 0)
                 continue;
             //if(insert_stat.find(lib) == insert_stat.end())    // don't need to issue a new stat
             insert_stat[lib].push_back(b->core.isize);

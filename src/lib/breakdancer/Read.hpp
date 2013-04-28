@@ -38,23 +38,24 @@ namespace breakdancer {
             bool _quality_string_cached;
 
             pair_orientation_flag _bdflag;
+            int _bdqual;
+            
 
             std::vector<std::string> _string_record;
 
+            std::string _readgroup();
             std::string _library(std::map<std::string, std::string> const& readgroup_library);
             std::string _platform(std::map<std::string, std::string> const& readgroup_platform);
-            std::string _readgroup();
             int _determine_bdqual();
             pair_orientation_flag _determine_bdflag();
 
         public:
-            int bdqual;
             std::string readgroup;
             std::string platform;
             std::string library;
 
             Read(bam1_t const* record, std::string const& format, std::map<std::string, std::string> const& readgroup_platform, std::map<std::string, std::string> const& readgroup_library);
-            Read() : _record(NULL), _bdflag(NA), bdqual(0) {};
+            Read() : _record(NULL), _bdflag(NA), _bdqual(0) {};
             Read(const Read& other);
             ~Read();
 
@@ -68,6 +69,7 @@ namespace breakdancer {
             std::string const& query_sequence();
             std::string const& quality_string();
             pair_orientation_flag const& bdflag();
+            int const& bdqual();
             void set_bdflag(pair_orientation_flag const& new_flag);
             std::string ori();
 

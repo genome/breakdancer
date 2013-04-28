@@ -12,7 +12,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     
     //set flag and qualities
     _bdflag = _determine_bdflag();
-    bdqual = _determine_bdqual();
+    _bdqual = _determine_bdqual();
 
     //Be careful below. These must be in this order as _platform and _library depend on readgroup
     readgroup = _readgroup();
@@ -25,12 +25,12 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _string_record.push_back(ori());
     _string_record.push_back(boost::lexical_cast<string>(_record->core.isize));
     _string_record.push_back(boost::lexical_cast<string>(_bdflag));
-    _string_record.push_back(boost::lexical_cast<string>(bdqual));
+    _string_record.push_back(boost::lexical_cast<string>(_bdqual));
     _string_record.push_back(boost::lexical_cast<string>(_record->core.l_qseq));
     _string_record.push_back(library);
 }
 
-Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _string_record(other._string_record), bdqual(other.bdqual), readgroup(other.readgroup), platform(other.platform), library(other.library) {
+Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _bdqual(other._bdqual), _string_record(other._string_record), readgroup(other.readgroup), platform(other.platform), library(other.library) {
     if(other._record) {
         _record = bam_init1();
         bam_copy1(_record, other._record);
@@ -66,7 +66,7 @@ Read& Read::operator=(const Read& other) {
             _record = NULL;
         }
         _bdflag = other._bdflag;
-        bdqual = other.bdqual;
+        _bdqual = other._bdqual;
         platform = other.platform;
         library = other.library;
         readgroup = other.readgroup;
@@ -253,6 +253,10 @@ void Read::set_bdflag(pair_orientation_flag const& new_flag) {
 
 pair_orientation_flag const& Read::bdflag() {
     return _bdflag;
+}
+
+int const& Read::bdqual() {
+    return _bdqual;
 }
 
 string Read::ori() {
