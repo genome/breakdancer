@@ -259,6 +259,18 @@ int const& Read::bdqual() {
     return _bdqual;
 }
 
+int const& Read::tid() {
+    return _record->core.tid;
+}
+
+int const& Read::pos() {
+    return _record->core.pos;
+}
+
+int const& Read::query_length() {
+    return _record->core.l_qseq;
+}
+
 string Read::ori() {
     return  _record->core.flag & 0x0010 ? "-" : "+";
 }

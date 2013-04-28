@@ -2011,17 +2011,11 @@ void buildConnection(
                                         breakdancer::Read y = *ii_support_reads;
                                         if(y.size() < 8 || y[5].compare(flag))
                                             continue;
-                                        if(y[1].find("chr")!=string::npos)
-                                            y[1].erase(y[1].find("chr"),3);
-                                        int y1_int = atoi(y[1].c_str());
-                                        int y2_int, y7_int;
-                                        y2_int = atoi(y[2].c_str()) + 1;
-                                        y7_int = atoi(y[7].c_str());
-                                        int aln_end = y2_int + y7_int - 1;
+                                        int aln_end = y.pos() - y.query_length() - 1;
                                         string color = y[3].compare("+")?"0,0,255":"255,0,0";
                                         //fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t1\t" << y.query_name() << "\t" << y[3] << "\t" << y[4] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";//sprintf(fh_BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y.query_name(),y[3],y[4],y[2],aln_end,color);
                                         int aln_score = atoi(y[6].c_str()) * 10;
-                                        fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t" << y.query_name() << "|" << y[8] << "\t" << aln_score << "\t" << y[3] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";
+                                        fh_BED << "chr" << bam_header->target_name[y.tid()] << "\t" << y.pos() << "\t" << aln_end << "\t" << y.query_name() << "|" << y[8] << "\t" << aln_score << "\t" << y[3] << "\t" << y.pos() << "\t" << aln_end << "\t" << color << "\n";
                                     }
                                     fh_BED.close();
                                 }

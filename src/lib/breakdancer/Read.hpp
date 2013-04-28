@@ -71,16 +71,16 @@ namespace breakdancer {
             pair_orientation_flag const& bdflag();
             int const& bdqual();
             void set_bdflag(pair_orientation_flag const& new_flag);
+            int const& tid();
+            int const& pos();
+            int const& query_length();
             std::string ori();
 
             /* Other things we will need in our interface
-             * tid
-             * pos
              * isize
              * abs(size) - should be cached
              * flag_accessor
              * qual accessor
-             * l_qseq (really?)
              */
     };
 }
