@@ -6,14 +6,17 @@ using namespace std;
 using namespace breakdancer;
 
 Read::Read(bam1_t const* record, string const& format, map<string, string> const& readgroup_platform, map<string, string> const& readgroup_library) {
+    //create copy of bam record
     _record = bam_init1(); 
     bam_copy1(_record, record);
     
+    //set caching operators (could be an initializer list)
     _query_name_cached = false;
     _query_seq_cached = false;
     _quality_string_cached = false;
 
-    bdflag = _determine_bdflag();
+    //set flag and qualities
+    _bdflag = _determine_bdflag();
     bdqual = _determine_bdqual();
 
     //Be careful below. These must be in this order as _platform and _library depend on readgroup
@@ -26,7 +29,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _string_record.push_back(boost::lexical_cast<string>(_record->core.pos));
     _string_record.push_back(ori());
     _string_record.push_back(boost::lexical_cast<string>(_record->core.isize));
-    _string_record.push_back(boost::lexical_cast<string>(bdflag));
+    _string_record.push_back(boost::lexical_cast<string>(_bdflag));
     _string_record.push_back(boost::lexical_cast<string>(bdqual));
     _string_record.push_back(boost::lexical_cast<string>(_record->core.l_qseq));
     _string_record.push_back(library);
@@ -46,7 +49,7 @@ Read::Read(const Read& other) {
     _query_seq_cached = other._query_seq_cached;
     _quality_string = other._quality_string;
     _quality_string_cached = other._quality_string_cached;
-    bdflag = other.bdflag;
+    _bdflag = other._bdflag;
     bdqual = other.bdqual;
     platform = other.platform;
     library = other.library;
@@ -75,7 +78,7 @@ Read& Read::operator=(const Read& other) {
             _record = bam_init1();
             bam_copy1(_record, other._record);
         }
-        bdflag = other.bdflag;
+        _bdflag = other._bdflag;
         bdqual = other.bdqual;
         platform = other.platform;
         library = other.library;
@@ -262,7 +265,11 @@ vector<string>::size_type Read::size() {
     return _string_record.size();
 }
 
-void Read::set_bdflag(pair_orientation_flag new_flag) {
-    bdflag = new_flag;
+void Read::set_bdflag(pair_orientation_flag const& new_flag) {
+    _bdflag = new_flag;
     _string_record[5] = boost::lexical_cast<string>(new_flag); //this may need a check
+}
+
+pair_orientation_flag const& Read::bdflag() {
+    return _bdflag;
 }

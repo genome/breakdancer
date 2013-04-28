@@ -350,7 +350,7 @@ int main(int argc, char *argv[]) {
 
         while (reader->next(b) > 0) {
             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-            b->core.flag = aln2.bdflag; //FIXME as soon as we have moved off this bam parsing code
+            b->core.flag = aln2.bdflag(); //FIXME as soon as we have moved off this bam parsing code
 
             string& readgroup = aln2.readgroup;
 
@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
             //
             // Indeed. Having looked over the flags, my comment above does not apply...
             // -dlarson
-            if(aln2.bdqual > opts.min_map_qual && (aln2.bdflag == breakdancer::NORMAL_FR || aln2.bdflag == breakdancer::NORMAL_RF)) {
+            if(aln2.bdqual > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
                     ++nreads_[libmaps[lib]];
@@ -415,44 +415,44 @@ int main(int argc, char *argv[]) {
                 if(aln2.bdqual <= opts.min_map_qual)
                     continue;
             }
-            if(aln2.bdflag == breakdancer::NA)
+            if(aln2.bdflag() == breakdancer::NA)
                 continue;
-            if((opts.transchr_rearrange && aln2.bdflag != breakdancer::ARP_CTX) || aln2.bdflag == breakdancer::MATE_UNMAPPED || aln2.bdflag == breakdancer::UNMAPPED)
+            if((opts.transchr_rearrange && aln2.bdflag() != breakdancer::ARP_CTX) || aln2.bdflag() == breakdancer::MATE_UNMAPPED || aln2.bdflag() == breakdancer::UNMAPPED)
                 continue;
 
             //It would be nice if this was pulled into the Read class as well
             //for now, let's just set the bdflag directly here since it is public
             if(opts.Illumina_long_insert){
-                if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_RF) {
+                if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_RF);
                 }
-                if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag == breakdancer::ARP_RF) {
+                if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag() == breakdancer::ARP_RF) {
                     aln2.set_bdflag(breakdancer::NORMAL_RF);
                 }
-                if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_RF) {
+                if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
                 }
             }
             else{
-                if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_FR) {
+                if(abs(b->core.isize) > uppercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_big_insert);
                 }
-                if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag == breakdancer::ARP_FR_big_insert) {
+                if(abs(b->core.isize) < uppercutoff[lib] && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
                     aln2.set_bdflag(breakdancer::NORMAL_FR);
                 }
-                if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag == breakdancer::NORMAL_FR) {
+                if(abs(b->core.isize) < lowercutoff[lib] && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert);
                 }
             }
 
-            if(aln2.bdflag == breakdancer::NORMAL_FR || aln2.bdflag == breakdancer::NORMAL_RF) {
+            if(aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF) {
                 continue;
             }
 
-            if(x_readcounts.find(aln2.bdflag) != x_readcounts.end() && x_readcounts[aln2.bdflag].find(lib) != x_readcounts[aln2.bdflag].end())
-                x_readcounts[aln2.bdflag][lib] ++;
+            if(x_readcounts.find(aln2.bdflag()) != x_readcounts.end() && x_readcounts[aln2.bdflag()].find(lib) != x_readcounts[aln2.bdflag()].end())
+                x_readcounts[aln2.bdflag()][lib] ++;
             else
-                x_readcounts[aln2.bdflag][lib] = 1;
+                x_readcounts[aln2.bdflag()][lib] = 1;
         }
         reader.reset(); // free bam reader
 
@@ -579,7 +579,7 @@ int main(int argc, char *argv[]) {
             if(b->core.tid < 0)
                 continue;
             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-            b->core.flag = aln2.bdflag; //FIXME
+            b->core.flag = aln2.bdflag(); //FIXME
             string& readgroup = aln2.readgroup;
             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
 
@@ -708,7 +708,7 @@ int main(int argc, char *argv[]) {
 
                     if(skip_previous == 0){
                         breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-                        b->core.flag = aln2.bdflag; //FIXME
+                        b->core.flag = aln2.bdflag(); //FIXME
                         string& readgroup = aln2.readgroup;
                         string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                         //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
@@ -910,7 +910,7 @@ int main(int argc, char *argv[]) {
                     if(skip_previous == 0){
                         if( b->core.tid == tid && b->core.pos < reg_end) {
                             breakdancer::Read aln2(b, format_, readgroup_platform, readgroup_library);
-                            b->core.flag = aln2.bdflag; //FIXME
+                            b->core.flag = aln2.bdflag(); //FIXME
                             string& readgroup = aln2.readgroup;
                             string library = (!readgroup.empty())?readgroup_library[readgroup]:((*(fmaps.begin())).second);
                             //if(chr.empty() || chr.compare(b->core.tid)!=0) //this statement actually does nothing
@@ -1256,7 +1256,7 @@ void Analysis (
     // region between last and next begin
     // Store readdepth in nread_ROI by bam name (no per library calc) or by library
     // I believe this only counts normally mapped reads
-    if(aln.bdqual > opts.min_map_qual && (aln.bdflag == breakdancer::NORMAL_FR || aln.bdflag == breakdancer::NORMAL_RF)) {
+    if(aln.bdqual > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
         if(CN_lib == 1){
             if(nread_ROI.find(lib) == nread_ROI.end())
                 nread_ROI[lib] = 1;
@@ -1314,54 +1314,54 @@ void Analysis (
     if(strcmp(bam_header->target_name[b->core.tid],"*")==0) // need to figure out how to compare a char and int //#ignore reads that failed to associate with a reference
         return;
 
-    if(aln.bdflag == breakdancer::NA)
+    if(aln.bdflag() == breakdancer::NA)
         return; // return fragment reads and other bad ones
 
-  if((transchr_rearrange && aln.bdflag != breakdancer::ARP_CTX) || aln.bdflag == breakdancer::MATE_UNMAPPED || aln.bdflag == breakdancer::UNMAPPED) // only care flag 32 for CTX
+  if((transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED) // only care flag 32 for CTX
         return;
     // for long insert
     // Mate pair libraries have different expected orientations so adjust
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
     if(Illumina_long_insert){
-        if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag == breakdancer::NORMAL_RF) {
+        if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
             aln.set_bdflag(breakdancer::ARP_RF);
         }
-        if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag == breakdancer::ARP_RF) {
+        if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag() == breakdancer::ARP_RF) {
             aln.set_bdflag(breakdancer::NORMAL_RF);
         }
-        if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag == breakdancer::NORMAL_RF) {
+        if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
             aln.set_bdflag(breakdancer::ARP_FR_small_insert);
         }
     }
     else{
-        if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag == breakdancer::NORMAL_FR) {
+        if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_FR) {
             aln.set_bdflag(breakdancer::ARP_FR_big_insert);
         }
-        if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag == breakdancer::ARP_FR_big_insert) {
+        if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
             aln.set_bdflag(breakdancer::NORMAL_FR);
         }
-        if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag == breakdancer::NORMAL_FR) {
+        if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_FR) {
             aln.set_bdflag(breakdancer::ARP_FR_small_insert);
         }
-        if(aln.bdflag == breakdancer::NORMAL_RF) {
+        if(aln.bdflag() == breakdancer::NORMAL_RF) {
             aln.set_bdflag(breakdancer::ARP_RF);
         }
     }
     // This makes FF and RR the same thing
-    if(aln.bdflag == breakdancer::ARP_RR) {
+    if(aln.bdflag() == breakdancer::ARP_RR) {
         aln.set_bdflag(breakdancer::ARP_FF);
     }
     //this isn't an exact match to what was here previously
     //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
-    if(aln.bdflag != breakdancer::ARP_CTX && abs(b->core.isize) > max_sd) {// skip read pairs mapped too distantly on the same chromosome
+    if(aln.bdflag() != breakdancer::ARP_CTX && abs(b->core.isize) > max_sd) {// skip read pairs mapped too distantly on the same chromosome
         return;
     }
 
     //count reads mapped by SW, FR and RF reads, but only if normal_switch is true
     //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
     //I suspect this is to include those reads in the fastq dump for assembly!
-    if(aln.bdflag == breakdancer::NORMAL_FR || aln.bdflag == breakdancer::NORMAL_RF) {
+    if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
         if(*normal_switch == 1 && b->core.isize > 0){
             (*nnormal_reads)++;
         }
@@ -2103,7 +2103,7 @@ void EstimatePriorParameters(
             string format = "sam";
             string alt = "";
             breakdancer::Read aln2(b, format, readgroup_platform, readgroup_library);
-            b->core.flag = aln2.bdflag; //FIXME
+            b->core.flag = aln2.bdflag(); //FIXME
             string& readgroup = aln2.readgroup;
 
             // analyze the bam file line by line

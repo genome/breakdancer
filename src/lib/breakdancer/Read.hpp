@@ -24,6 +24,8 @@ namespace breakdancer {
             std::string _quality_string;
             bool _quality_string_cached;
 
+            pair_orientation_flag _bdflag;
+
             std::vector<std::string> _string_record;
             std::string _library(std::map<std::string, std::string> const& readgroup_library);
             std::string _platform(std::map<std::string, std::string> const& readgroup_platform);
@@ -33,13 +35,12 @@ namespace breakdancer {
 
         public:
             int bdqual;
-            pair_orientation_flag bdflag;
             std::string readgroup;
             std::string platform;
             std::string library;
 
             Read(bam1_t const* record, std::string const& format, std::map<std::string, std::string> const& readgroup_platform, std::map<std::string, std::string> const& readgroup_library);
-            Read() : _record(NULL), bdqual(0), bdflag(NA) {};
+            Read() : _record(NULL), _bdflag(NA), bdqual(0) {};
             Read(const Read& other);
             ~Read();
             //not really sure where the optimaly location for this const is or even what it's modifying.
@@ -47,11 +48,12 @@ namespace breakdancer {
             std::string operator[](std::vector<std::string>::size_type idx) const;
             Read& operator=(const Read& other);
 
-            void set_bdflag(pair_orientation_flag new_flag);
+            void set_bdflag(pair_orientation_flag const& new_flag);
             std::vector<std::string>::size_type size();
             std::string const& query_name();
             std::string const& query_sequence();
             std::string const& quality_string();
+            pair_orientation_flag const& bdflag();
             std::string ori();
 
             /* Other things we will need in our interface
