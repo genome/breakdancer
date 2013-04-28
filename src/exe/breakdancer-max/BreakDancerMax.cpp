@@ -1324,24 +1324,24 @@ void Analysis (
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
     if(Illumina_long_insert){
-        if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
+        if(aln.abs_isize() > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
             aln.set_bdflag(breakdancer::ARP_RF);
         }
-        if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag() == breakdancer::ARP_RF) {
+        if(aln.abs_isize() < uppercutoff[lib] && aln.bdflag() == breakdancer::ARP_RF) {
             aln.set_bdflag(breakdancer::NORMAL_RF);
         }
-        if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
+        if(aln.abs_isize() < lowercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_RF) {
             aln.set_bdflag(breakdancer::ARP_FR_small_insert);
         }
     }
     else{
-        if(abs(b->core.isize) > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_FR) {
+        if(aln.abs_isize() > uppercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_FR) {
             aln.set_bdflag(breakdancer::ARP_FR_big_insert);
         }
-        if(abs(b->core.isize) < uppercutoff[lib] && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
+        if(aln.abs_isize() < uppercutoff[lib] && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
             aln.set_bdflag(breakdancer::NORMAL_FR);
         }
-        if(abs(b->core.isize) < lowercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_FR) {
+        if(aln.abs_isize() < lowercutoff[lib] && aln.bdflag() == breakdancer::NORMAL_FR) {
             aln.set_bdflag(breakdancer::ARP_FR_small_insert);
         }
         if(aln.bdflag() == breakdancer::NORMAL_RF) {
@@ -1354,7 +1354,7 @@ void Analysis (
     }
     //this isn't an exact match to what was here previously
     //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
-    if(aln.bdflag() != breakdancer::ARP_CTX && abs(b->core.isize) > max_sd) {// skip read pairs mapped too distantly on the same chromosome
+    if(aln.bdflag() != breakdancer::ARP_CTX && aln.abs_isize() > max_sd) {// skip read pairs mapped too distantly on the same chromosome
         return;
     }
 
