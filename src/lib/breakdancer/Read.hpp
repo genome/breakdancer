@@ -44,8 +44,6 @@ namespace breakdancer {
             int _abs_isize;
             bool _abs_isize_cached;
 
-            std::vector<std::string> _string_record;
-
             std::string _readgroup();
             std::string _library(std::map<std::string, std::string> const& readgroup_library);
             std::string _platform(std::map<std::string, std::string> const& readgroup_platform);
@@ -62,12 +60,8 @@ namespace breakdancer {
             Read(const Read& other);
             ~Read();
 
-            //not really sure where the optimaly location for this const is or even what it's modifying.
-            //Need to talk to Travis :(
-            std::string operator[](std::vector<std::string>::size_type idx) const;
             Read& operator=(const Read& other);
 
-            std::vector<std::string>::size_type size();
             std::string const& query_name();
             std::string const& query_sequence();
             std::string const& quality_string();

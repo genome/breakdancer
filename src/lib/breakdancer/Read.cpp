@@ -19,19 +19,9 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     readgroup = _readgroup();
     platform = _platform(readgroup_platform);
     library = _library(readgroup_library);
-    
-    _string_record.push_back("NA");
-    _string_record.push_back(boost::lexical_cast<string>(_record->core.tid));
-    _string_record.push_back(boost::lexical_cast<string>(_record->core.pos));
-    _string_record.push_back(string(&_ori));
-    _string_record.push_back(boost::lexical_cast<string>(_record->core.isize));
-    _string_record.push_back(boost::lexical_cast<string>(_bdflag));
-    _string_record.push_back(boost::lexical_cast<string>(_bdqual));
-    _string_record.push_back(boost::lexical_cast<string>(_record->core.l_qseq));
-    _string_record.push_back(library);
 }
 
-Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _bdqual(other._bdqual), _ori(other._ori), _abs_isize(other._abs_isize), _abs_isize_cached(other._abs_isize_cached), _string_record(other._string_record), readgroup(other.readgroup), platform(other.platform), library(other.library) {
+Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _bdqual(other._bdqual), _ori(other._ori), _abs_isize(other._abs_isize), _abs_isize_cached(other._abs_isize_cached), readgroup(other.readgroup), platform(other.platform), library(other.library) {
     if(other._record) {
         _record = bam_init1();
         bam_copy1(_record, other._record);
@@ -45,13 +35,6 @@ Read::~Read() {
     if(_record != NULL) {
         bam_destroy1(_record);
     }
-}
-
-string Read::operator[](std::vector<std::string>::size_type idx) const {
-    if(idx == 0) {
-        throw "Accessing query name through index now unsupported";
-    }
-    return _string_record[idx];
 }
 
 Read& Read::operator=(const Read& other) {
@@ -80,7 +63,6 @@ Read& Read::operator=(const Read& other) {
         _query_seq_cached = other._query_seq_cached;
         _quality_string = other._quality_string;
         _quality_string_cached = other._quality_string_cached;
-        _string_record = other._string_record;
     }
     return *this;
 }
@@ -200,10 +182,6 @@ pair_orientation_flag Read::_determine_bdflag() {
     return flag;
 }
 
-vector<string>::size_type Read::size() {
-    return _string_record.size();
-}
-
 string const& Read::query_name() {
     if(!_query_name_cached) {
         _query_name = string(bam1_qname(_record));
@@ -252,7 +230,6 @@ string const& Read::quality_string() {
 
 void Read::set_bdflag(pair_orientation_flag const& new_flag) {
     _bdflag = new_flag;
-    _string_record[5] = boost::lexical_cast<string>(new_flag); //this may need a check
 }
 
 pair_orientation_flag const& Read::bdflag() {
