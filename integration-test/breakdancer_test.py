@@ -48,5 +48,28 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
         self.assertEqual(0, rv)
         self.assertFilesEqual(expected_file, output_file, filter_regex="#Command|#Software")
 
+    def test_breakdancer_fastq_dump(self):
+        expected_files = ["expected_output", 
+                "expected.H_IJ-NA19238-NA19238-extlibs.1.fastq", 
+                "expected.H_IJ-NA19238-NA19238-extlibs.2.fastq", 
+                "expected.H_IJ-NA19240-NA19240-extlibs.1.fastq", 
+                "expected.H_IJ-NA19240-NA19240-extlibs.2.fastq", ]
+        config_file = "inv_del_bam_config"
+        output_file = self.tempFile("output")
+        fastq_prefix = os.path.join(self.tmp_dir,"actual")
+        actual_files = [ output_file, 
+                fastq_prefix + ".H_IJ-NA19238-NA19238-extlibs.1.fastq", 
+                fastq_prefix + ".H_IJ-NA19238-NA19238-extlibs.2.fastq", 
+                fastq_prefix + ".H_IJ-NA19240-NA19240-extlibs.1.fastq", 
+                fastq_prefix + ".H_IJ-NA19240-NA19240-extlibs.2.fastq", ]
+        cmdline = " ".join([self.exe_path, '-o', '21', '-d', fastq_prefix, config_file, '>', output_file])
+        print "Executing", cmdline
+        print "CWD", os.getcwd()
+        rv = subprocess.call(cmdline, shell=True)
+        print "Return value:", rv
+        self.assertEqual(0, rv)
+        for expected, actual in zip(expected_files, actual_files):
+            self.assertFilesEqual(expected, actual, filter_regex="#Command|#Software")
+
 if __name__ == "__main__":
     main()
