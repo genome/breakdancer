@@ -13,6 +13,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     //set flag and qualities
     _bdflag = _determine_bdflag();
     _bdqual = _determine_bdqual();
+    _ori =  _record->core.flag & BAM_FREVERSE ? '-' : '+';
 
     //Be careful below. These must be in this order as _platform and _library depend on readgroup
     readgroup = _readgroup();
@@ -22,7 +23,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _string_record.push_back("NA");
     _string_record.push_back(boost::lexical_cast<string>(_record->core.tid));
     _string_record.push_back(boost::lexical_cast<string>(_record->core.pos));
-    _string_record.push_back(ori());
+    _string_record.push_back(string(&_ori));
     _string_record.push_back(boost::lexical_cast<string>(_record->core.isize));
     _string_record.push_back(boost::lexical_cast<string>(_bdflag));
     _string_record.push_back(boost::lexical_cast<string>(_bdqual));
@@ -30,7 +31,7 @@ Read::Read(bam1_t const* record, string const& format, map<string, string> const
     _string_record.push_back(library);
 }
 
-Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _bdqual(other._bdqual), _string_record(other._string_record), readgroup(other.readgroup), platform(other.platform), library(other.library) {
+Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _bdqual(other._bdqual), _ori(other._ori), _string_record(other._string_record), readgroup(other.readgroup), platform(other.platform), library(other.library) {
     if(other._record) {
         _record = bam_init1();
         bam_copy1(_record, other._record);
@@ -67,6 +68,7 @@ Read& Read::operator=(const Read& other) {
         }
         _bdflag = other._bdflag;
         _bdqual = other._bdqual;
+        _ori = other._ori;
         platform = other.platform;
         library = other.library;
         readgroup = other.readgroup;
@@ -271,6 +273,6 @@ int const& Read::query_length() {
     return _record->core.l_qseq;
 }
 
-string Read::ori() {
-    return  _record->core.flag & 0x0010 ? "-" : "+";
+char const& Read::ori() {
+    return  _ori;
 }

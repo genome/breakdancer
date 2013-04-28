@@ -39,6 +39,7 @@ namespace breakdancer {
 
             pair_orientation_flag _bdflag;
             int _bdqual;
+            char _ori;
             
 
             std::vector<std::string> _string_record;
@@ -74,7 +75,7 @@ namespace breakdancer {
             int const& tid();
             int const& pos();
             int const& query_length();
-            std::string ori();
+            char const& ori();
 
             /* Other things we will need in our interface
              * isize
