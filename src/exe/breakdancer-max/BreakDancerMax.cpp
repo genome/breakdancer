@@ -187,7 +187,7 @@ namespace {
         map<uint32_t, map<string,int> > &x_readcounts,
         uint32_t reference_len,
         int max_readlen,
-        map<string, string> &SVtype,
+        map<breakdancer::pair_orientation_flag, string> &SVtype,
         bam_header_t* bam_header,
         map<string, float> &read_density,
         vector<string> maps // FIXME: should be constref
@@ -708,7 +708,7 @@ namespace {
         int *reg_idx,
         map<uint32_t, map<string, int> > &x_readcounts,
         uint32_t reference_len,
-        map<string, string> &SVtype,
+        map<breakdancer::pair_orientation_flag, string> &SVtype,
         int max_read_window_size,
         int *max_readlen,
         bam_header_t* bam_header,
@@ -1466,7 +1466,7 @@ void do_break_func(
         reg_name[k].push_back(*nnormal_reads);
 
         vector<breakdancer::Read> p;
-        for(vector<breakdancer::Read>::iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
+        for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
             p.push_back(*it_reg_seq);
             string s = it_reg_seq->query_name();
             read[s].push_back(k);

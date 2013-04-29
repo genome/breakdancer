@@ -85,9 +85,9 @@ string Read::_readgroup() {
     }
 }
 
-string Read::_library(map<string, string> const& readgroup_library) {
+string Read::_library(ConfigMap<string, string>::type const& readgroup_library) {
     //contrary to the regular code, let's assume we've fixed things so that the map returns the filename if the readgroup is empty.
-    map<string, string>::const_iterator lib = readgroup_library.find(readgroup);
+    ConfigMap<string, string>::type::const_iterator lib = readgroup_library.find(readgroup);
     if(lib != readgroup_library.end()) {
         return lib->second;
     }
@@ -97,7 +97,6 @@ string Read::_library(map<string, string> const& readgroup_library) {
 }
 
 string Read::_platform(ConfigMap<string, string>::type const& readgroup_platform) {
-    map<string, string>::const_iterator platform_it = readgroup_platform.find(readgroup);
     ConfigMap<string, string>::type::const_iterator platform_it = readgroup_platform.find(readgroup);
     if(platform_it != readgroup_platform.end()) {
         return platform_it->second;
@@ -192,7 +191,7 @@ pair_orientation_flag Read::_determine_bdflag() {
     return flag;
 }
 
-string const& Read::query_name() {
+string const& Read::query_name() const {
     if(!_query_name_cached) {
         _query_name = string(bam1_qname(_record));
         _query_name_cached = true;

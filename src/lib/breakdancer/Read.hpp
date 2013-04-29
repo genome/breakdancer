@@ -29,8 +29,8 @@ namespace breakdancer {
     class Read {
         private:
             bam1_t* _record;
-            std::string _query_name;
-            bool _query_name_cached;
+            mutable std::string _query_name;
+            mutable bool _query_name_cached;
 
             std::string _query_sequence;
             bool _query_seq_cached;
@@ -57,7 +57,7 @@ namespace breakdancer {
             std::string platform;
             std::string library;
 
-            Read::Read(bam1_t const* record,
+            Read(bam1_t const* record,
                 std::string const& format,
                 ConfigMap<std::string, std::string>::type const& readgroup_platform,
                 ConfigMap<std::string, std::string>::type const& readgroup_library);
@@ -69,7 +69,7 @@ namespace breakdancer {
 
             Read& operator=(const Read& other);
 
-            std::string const& query_name();
+            std::string const& query_name() const;
             std::string const& query_sequence();
             std::string const& quality_string();
             pair_orientation_flag const& bdflag();
