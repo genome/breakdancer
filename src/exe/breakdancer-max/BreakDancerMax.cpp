@@ -97,85 +97,6 @@ namespace {
     }
 
 
-    // estimate prior parameters (not being used now)
-    // I think bam2cfg.pl does this? Can we remove this code?
-    // -ta
-/*
-    void EstimatePriorParameters(
-        Options const& opts,
-        ConfigMap<string, string>::type const& fmaps,
-        map<string,string> &readgroup_library,
-        ConfigMap<string, float>::type const& mean_insertsize,
-        map<string, float> &std_insertsize,
-        map<string,float> &uppercutoff,
-        map<string,float> &lowercutoff,
-        map<string,float> &readlens,
-        map<string, string> &readgroup_platform
-        )
-    {
-        map<string,float> es_means;
-        map<string,float> es_stds;
-        map<string,float> es_readlens;
-        map<string,float> es_uppercutoff;
-        map<string,float> es_lowercutoff;
-        map<string,vector<int> > insert_stat;
-        map<string,vector<int> > readlen_stat;
-
-        bam1_t *b = bam_init1();
-        typedef ConfigMap<string, string>::type::const_iterator CFGSSIter;
-        for(CFGSSIter ii=fmaps.begin(); ii!=fmaps.end(); ++ii){
-            string bam_name = (*ii).first;
-            RegionLimitedBamReader reader(bam_name, opts.chr.c_str());
-            bam_header_t* header = reader.header();
-            while (reader.next(b) > 0) {
-                string format = "sam";
-                string alt = "";
-
-                breakdancer::Read aln2(b, format, readgroup_platform, readgroup_library);
-                string const& readgroup = aln2.readgroup;
-
-                // analyze the bam file line by line
-                string lib = readgroup.empty()?(*ii).second:readgroup_library[readgroup];// when multiple libraries are in a BAM file
-                if(lib.empty())
-                    continue;
-                // analyze 1 chromosome
-                if(opts.chr != "0" && opts.chr != header->target_name[b->core.tid])
-                    continue;
-                //if(readlen_stat.find(lib) == readlen_stat.end())    // don't need to issue a new stat
-                //readlen_stat[lib] = ; // Statistics::Descriptive::Sparse->new() // don't need to issue a new stat
-                readlen_stat[lib].push_back(b->core.isize);
-                if(aln2.bdqual <= opts.min_map_qual)    // skip low quality mapped reads
-                    continue;
-                if((aln2.bdqual != breakdancer::NORMAL_FR && aln2.bdqual != breakdancer::NORMAL_RF) || b->core.isize <= 0)
-                    continue;
-                //if(insert_stat.find(lib) == insert_stat.end())    // don't need to issue a new stat
-                insert_stat[lib].push_back(b->core.isize);
-            }
-        }
-        bam_destroy1(b);
-        for(map<string,vector<int> >::const_iterator ii_readlen_stat = readlen_stat.begin(); ii_readlen_stat != readlen_stat.end(); ii_readlen_stat ++){
-            string lib = (*ii_readlen_stat).first;
-            //double res = accumulate(insert_stat[lib].begin(), insert_stat[lib].end(), 0);
-            //double mean = res/insert_stat[lib].size();
-            float mean_insert = mean(insert_stat[lib]);
-            float std_insert = standard_deviation(insert_stat[lib],mean_insert);
-            float uppercutoff = mean_insert + std_insert*opts.cut_sd;
-            float lowercutoff = mean_insert - std_insert*opts.cut_sd;
-            es_readlens[lib] = mean(readlen_stat[lib]);
-            es_means[lib] = mean_insert;
-            es_stds[lib] = std_insert;
-            es_uppercutoff.at(lib) = uppercutoff;
-            es_lowercutoff.at(lib) = lowercutoff;
-        }
-        mean_insertsize = es_means;
-        std_insertsize = es_stds;
-        uppercutoff = es_uppercutoff;
-        lowercutoff = es_lowercutoff;
-        readlens = es_readlens;
-        return;
-    }
-*/
-
     // pair up reads and print out results (SV estimation)
     void buildConnection(
         Options const& opts,
@@ -1101,14 +1022,6 @@ int main(int argc, char *argv[]) {
 
     map<uint32_t, map<string,int> > x_readcounts;
 
-
-    // I think bam2cfg.pl does this, can we remove this code?
-    // -ta
-/*
-    if(opts.learn_par) {
-        EstimatePriorParameters(opts, fmaps, readgroup_library, mean_insertsize, std_insertsize, uppercutoff, lowercutoff, readlens, readgroup_platform);
-    }
-*/
 
     uint32_t reference_len = 1;
     map<string, int> nreads;
