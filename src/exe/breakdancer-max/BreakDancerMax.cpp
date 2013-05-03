@@ -15,6 +15,7 @@
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <assert.h>
 
@@ -111,7 +112,7 @@ namespace {
         map<breakdancer::pair_orientation_flag, string> &SVtype,
         bam_header_t* bam_header,
         map<string, float> &read_density,
-        vector<string> maps // FIXME: should be constref
+        vector<string> const& maps
         )
     {
         map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
@@ -127,7 +128,7 @@ namespace {
         for(ii_read = read.begin(); ii_read != read.end(); ii_read++){
             // test
             //string tmp_str = (*ii_read).first;
-            vector<int> p = (*ii_read).second;
+            vector<int> const& p = ii_read->second;
             assert( p.size() < 3);
             if(p.size() != 2) // skip singleton read (non read pairs)
                 continue;
@@ -145,7 +146,7 @@ namespace {
             //cout << p[0] << "\t" << p[1] << "\t" << link[p[0]][p[1]] << endl;
         }
         // segregate graph, find nodes that have connections
-        map<int,int> free_nodes;
+        set<int> free_nodes;
         map<int, map<int, int> >::iterator ii_clink;
         //  int tmp_size = clink.size();
         vector<int> s0_vec;
@@ -250,7 +251,7 @@ namespace {
                             //int regs_size = regs[node].size();
                             //NOTE regs contains an array of information about the reads supporting the region (info is stored as a string array)
                             for(vector<breakdancer::Read>::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
-                                breakdancer::Read y = *ii_regs;
+                                breakdancer::Read const& y = *ii_regs;
                                 //cout << y.ori() << "\t" << y.query_name() << "\t" << y[2] << "\t" << orient_count[y.ori()] << endl;
                                 //skip things where the read name is no longer in our list of read names
                                 //WHY ARE THESE CHECKS EVERYWHERE
@@ -301,7 +302,7 @@ namespace {
                             int node = *ii_snodes;
                             vector<breakdancer::Read> nonsupportives;
                             for(vector<breakdancer::Read>::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
-                                breakdancer::Read y = *ii_regs;
+                                breakdancer::Read const& y = *ii_regs;
                                 if(read_pair.find(y.query_name()) == read_pair.end())
                                     continue;
                                 nonsupportives.push_back(y);
@@ -334,7 +335,7 @@ namespace {
                                     int nrp = reg_name[node][3];
 
                                     //cout << " " << node << "\t" << start << "\t" << end << endl;
-                                    map<char, int> ori_readcount = type_orient_counts.front();
+                                    map<char, int> ori_readcount = type_orient_counts.front(); // FIXME: wrong data structure, int ori_readcount[2]; is better
                                     if(type_orient_counts.size()!=0){
                                         type_orient_counts.erase(type_orient_counts.begin());
                                     }
@@ -367,15 +368,16 @@ namespace {
 
                                         // add up the read number
                                         for(int i_node = first_node; i_node < node; i_node++){
-                                            map<string, uint32_t> read_count_ROI_map_second = read_count_ROI_map[i_node];
-                                            map<string, uint32_t> read_count_FR_map_second = read_count_FR_map[i_node];
+                                            map<string, uint32_t> const& read_count_ROI_map_second = read_count_ROI_map[i_node];
+                                            map<string, uint32_t> const& read_count_FR_map_second = read_count_FR_map[i_node];
+                                            typedef map<string, uint32_t>::const_iterator IterType;
                                             //cout << "\nROI:" << reg_name[i_node][2] << "\t" << reg_name[i_node + 1][1] << "\n";
-                                            for(map<string, uint32_t>::iterator read_count_ROI_map_second_it = read_count_ROI_map_second.begin(); read_count_ROI_map_second_it != read_count_ROI_map_second.end(); read_count_ROI_map_second_it ++){
-                                                string lib = (*read_count_ROI_map_second_it).first;
-                                                if(read_count.find(lib) == read_count.end())
-                                                    read_count[lib] = read_count_ROI_map[i_node][lib];
-                                                else
-                                                    read_count[lib] += read_count_ROI_map[i_node][lib];
+                                            for(IterType read_count_ROI_map_second_it = read_count_ROI_map_second.begin();
+                                                read_count_ROI_map_second_it != read_count_ROI_map_second.end();
+                                                ++read_count_ROI_map_second_it ++)
+                                            {
+                                                string const& lib = read_count_ROI_map_second_it->first;
+                                                read_count[lib] += read_count_ROI_map[i_node][lib];
 
                                                 //for(map<string, int>::iterator i_debug = read_count_ROI_debug[i_node][lib].begin(); i_debug != read_count_ROI_debug[i_node][lib].end(); i_debug++){
                                                 //      cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
@@ -386,12 +388,12 @@ namespace {
                                             if(i_node == first_node)
                                                 continue;
                                             //cout << "\nFR:" << reg_name[i_node][1] << "\t" << reg_name[i_node][2] << "\n";
-                                            for(map<string, uint32_t>::iterator read_count_FR_map_second_it = read_count_FR_map_second.begin(); read_count_FR_map_second_it != read_count_FR_map_second.end(); read_count_FR_map_second_it ++){
-                                                string lib = (*read_count_FR_map_second_it).first;
-                                                if(read_count.find(lib) == read_count.end())
-                                                    read_count[lib] = read_count_FR_map[i_node][lib];
-                                                else
-                                                    read_count[lib] += read_count_FR_map[i_node][lib];
+                                            for(IterType read_count_FR_map_second_it = read_count_FR_map_second.begin();
+                                                read_count_FR_map_second_it != read_count_FR_map_second.end();
+                                                read_count_FR_map_second_it ++)
+                                            {
+                                                string const& lib = read_count_FR_map_second_it->first;
+                                                read_count[lib] += read_count_FR_map[i_node][lib];
 
                                                 //  for(map<string, int>::iterator i_debug = read_count_FR_debug[i_node][lib].begin(); i_debug != read_count_FR_debug[i_node][lib].end(); i_debug++){
                                                 //      cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
@@ -425,8 +427,8 @@ namespace {
                                 // get the copy_number from read_count
                                 map<string, float> copy_number;
                                 float copy_number_sum = 0;
-                                for(map<string, uint32_t>:: iterator read_count_it = read_count.begin(); read_count_it != read_count.end(); read_count_it ++){
-                                    string lib = (*read_count_it).first;
+                                for(map<string, uint32_t>::const_iterator read_count_it = read_count.begin(); read_count_it != read_count.end(); read_count_it ++){
+                                    string const& lib = read_count_it->first;
                                     copy_number[lib] = (float)((*read_count_it).second)/((float)read_density[lib] * float(sv_pos2 - sv_pos1))*2;
                                     copy_number_sum += copy_number[lib];
                                     //cout << lib << "\t" << (*read_count_it).second << "\t" << read_density[lib] << "\t" << sv_pos2-sv_pos1 << "\t" << copy_number[lib] << endl;
@@ -443,8 +445,8 @@ namespace {
                                 //debug
                                 //int tmp_size_tlr = type_library_readcount[fl].size();
                                 if(opts.CN_lib == 1){
-                                    for(map<string,int>::iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
-                                        string sp = (*ii_type_lib_rc).first;
+                                    for(map<string,int>::const_iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
+                                        string const& sp = ii_type_lib_rc->first;
                                         // intialize to be zero, in case of no library, or DEL, or ITX.
 
                                         string copy_number_str = "NA";
@@ -462,35 +464,30 @@ namespace {
                                         //string str_num_tmp;
                                         //sprintf(str_num_tmp, "%s", (*ii_type_lib_rc).second);
                                         if(!sptype.empty())
-                                            sptype += ":" +  sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
-                                        else
-                                            sptype = sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
+                                            sptype += ":";
+
+                                        sptype += sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
+
                                         diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*cfg.mean_insertsize.at(sp);
                                     }
                                 } // do lib for copy number and support reads
                                 else{
                                     map<string, int> type_bam_readcount;
-                                    for(map<string, int>::iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
-                                        string sp = (*ii_type_lib_rc).first;
+                                    for(map<string, int>::const_iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
+                                        string const& sp = ii_type_lib_rc->first;
                                         if(cfg.libmaps.find(sp) != cfg.libmaps.end()){
-                                            string sp_bam = cfg.libmaps.at(sp);
-                                            if(type_bam_readcount.find(sp_bam)!= type_bam_readcount.end()){
-                                                type_bam_readcount[sp_bam] += (*ii_type_lib_rc).second;
-                                            }
-                                            else{
-                                                type_bam_readcount[sp_bam] = (*ii_type_lib_rc).second;
-                                            }
+                                            string const& sp_bam = cfg.libmaps.at(sp);
+                                            type_bam_readcount[sp_bam] += ii_type_lib_rc->second;
                                         }
                                         diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*cfg.mean_insertsize.at(sp);
                                     }
-                                    for(map<string, int>::iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
-                                        string sp = (*ii_type_bam_rc).first;
+                                    for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
+                                        string const& sp = ii_type_bam_rc->first;
                                         if(!sptype.empty())
-                                            sptype += ":" + sp + "|" + itos((*ii_type_bam_rc).second);
-                                        else
-                                            sptype = sp + "|" + itos((*ii_type_bam_rc).second);
+                                            sptype += ":";
+                                        sptype += sp + "|" + itos((*ii_type_bam_rc).second);
                                     }
-                                    if(sptype.length() == 0){
+                                    if(sptype.empty()) {
                                         sptype = "NA";
                                     }
                                 } // do bam for support reads; copy number will be done later
@@ -518,25 +515,36 @@ namespace {
                                  int k = 0;
                                  k++;
                                  }*/
-                                //cout << bam_header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << bam_header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag] << "\t" << AF << "\t" << version << "\t" << options << endl;
                                 if(PhredQ > opts.score_threshold){
-                                    cout << bam_header->target_name[sv_chr1] << "\t" << sv_pos1 << "\t"  << sv_ori1 << "\t" << bam_header->target_name[sv_chr2] << "\t" << sv_pos2 << "\t" << sv_ori2 << "\t" << SVT << "\t" << diffspans[flag] << "\t" << PhredQ << "\t" << type[flag] << "\t" << sptypes[flag];// << endl;
-                                    //printf("%d\t%d\t%s\t%d\t%d\t%s\t%s\t%d\t%d\t%d\t%s\t%.2f\t%s\t%s\n",sv_chr1,sv_pos1,sv_ori1,sv_chr2,sv_pos2,sv_ori2,SVT,diffspans[flag],PhredQ,type[flag],sptypes[flag],AF,version,options);// version and options should be figured out. Should do it later.
+                                    cout << bam_header->target_name[sv_chr1]
+                                        << "\t" << sv_pos1
+                                        << "\t"  << sv_ori1
+                                        << "\t" << bam_header->target_name[sv_chr2]
+                                        << "\t" << sv_pos2
+                                        << "\t" << sv_ori2
+                                        << "\t" << SVT
+                                        << "\t" << diffspans[flag]
+                                        << "\t" << PhredQ
+                                        << "\t" << type[flag]
+                                        << "\t" << sptypes[flag];
+
                                     if(opts.print_AF == 1)
                                         cout <<  "\t" << AF;
+
                                     if(opts.CN_lib == 0 && flag != breakdancer::ARP_CTX){
                                         for(vector<string>::const_iterator iter = maps.begin(); iter != maps.end(); ++iter) {
-                                            if(copy_number.find(*iter) == copy_number.end())
+                                            map<string, float>::const_iterator cniter = copy_number.find(*iter);
+
+                                            if(cniter  == copy_number.end())
                                                 cout << "\tNA";
                                             else {
                                                 cout << "\t";
                                                 cout << fixed;
-                                                cout << setprecision(2) << copy_number[*iter];
+                                                cout << setprecision(2) << cniter->second;
                                             }
                                         }
                                     }
-                                    cout << endl;
-
+                                    cout << "\n";
 
 
                                     if(!opts.prefix_fastq.empty()){ // print out supporting read pairs
@@ -544,20 +552,17 @@ namespace {
                                     }
 
                                     if(!opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
-                                        ofstream fh_BED;
-                                        fh_BED.open(opts.dump_BED.c_str(), ofstream::app);
+                                        ofstream fh_BED(opts.dump_BED.c_str(), ofstream::app);
 
                                         string trackname(bam_header->target_name[sv_chr1]);
                                         trackname = trackname.append("_").append(itos(sv_pos1)).append("_").append(SVT).append("_").append(itos(diffspans[flag]));
-                                        //string fh_BED_tmp = "track name=".append(trackname).append("\tdescription=\"BreakDancer ").append(itoa(sv_chr1)).append(" ").append(itoa(sv_pos1)).append(" ").append(SVT).append(" ").append(itoa(diffspans[flag]));
-                                        fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv_chr1] << " " << sv_pos1 << " " << SVT << " " << diffspans[flag] << "\"\tuseScore=0\n";// fh_BED is a file handle of BED
+                                        fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv_chr1] << " " << sv_pos1 << " " << SVT << " " << diffspans[flag] << "\"\tuseScore=0\n";
                                         for(vector<breakdancer::Read>::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
-                                            breakdancer::Read y = *ii_support_reads;
+                                            breakdancer::Read const& y = *ii_support_reads;
                                             if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
                                                 continue;
                                             int aln_end = y.pos() - y.query_length() - 1;
                                             string color = y.ori() == '+' ? "0,0,255" : "255,0,0";
-                                            //fh_BED << "chr" << bam_header->target_name[y1_int] << "\t" << y2_int << "\t" << aln_end << "\t1\t" << y.query_name() << "\t" << y[3] << "\t" << y[4] << "\t" << y2_int << "\t" << aln_end << "\t" << color << "\n";//sprintf(fh_BED, "chr%s\t%s\t%s\t%s\t1\t%s\t%s\t%s\t%d\t%s\n",y[1],y[2],aln_end,y.query_name(),y[3],y[4],y[2],aln_end,color);
                                             //FIXME if the bam already used chr prefixed chromosome names this would duplicate them...
                                             fh_BED << "chr" << bam_header->target_name[y.tid()] << "\t" << y.pos() << "\t" << aln_end << "\t" << y.query_name() << "|" << y.library << "\t" << y.bdqual() * 10 << "\t" << y.ori() << "\t" << y.pos() << "\t" << aln_end << "\t" << color << "\n";
                                         }
@@ -567,45 +572,34 @@ namespace {
                             }
                             // free reads
                             for(vector<string>::iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
-                                if(read.find(*ii_free_reads) != read.end()){
-                                    read.erase(read.find(*ii_free_reads));
-                                }
+                                read.erase(*ii_free_reads);
                             }
                             //free_reads.clear();
                             //record list of nodes that can be potentially freed
-                            free_nodes[node1] = 1;
-                            free_nodes[node2] = 1;
+                            free_nodes.insert(node1);
+                            free_nodes.insert(node2);
                         }
                     }
-                    if(clink.find(tail)!=clink.end()){
-                        clink.erase(clink.find(tail));
-                    }
+                    clink.erase(tail);
                 }
                 tails = newtails;
             }
         }
 
         // free nodes
-        for(map<int,int>::iterator ii_free_nodes = free_nodes.begin(); ii_free_nodes != free_nodes.end(); ii_free_nodes++){
+        for(set<int>::const_iterator ii_free_nodes = free_nodes.begin(); ii_free_nodes != free_nodes.end(); ii_free_nodes++){
             // remove reads in the regions
-            int node = (*ii_free_nodes).first;
-            vector<breakdancer::Read> reads = regs[node];
+            int const& node = *ii_free_nodes;
+            vector<breakdancer::Read> const& reads = regs[node];
             if(reads.size() < unsigned(opts.min_read_pair)){
-                for(vector<breakdancer::Read>::iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
-                    breakdancer::Read y = *ii_reads;
-                    string readname = y.query_name();
-                    //cout << readname << endl;
-                    if(read.find(readname)!=read.end()){
-                        read.erase(read.find(readname));
-                    }
+                for(vector<breakdancer::Read>::const_iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
+                    breakdancer::Read const& y = *ii_reads;
+                    string const& readname = y.query_name();
+                    read.erase(readname);
                 }
                 // remove regions
-                if(regs.find(node) != regs.end()){
-                    regs.erase(regs.find(node));
-                }
-                if(reg_name.find(node) != reg_name.end()){
-                    reg_name.erase(reg_name.find(node));
-                }
+                regs.erase(node);
+                reg_name.erase(node);
             }
         }
     }
@@ -636,7 +630,7 @@ namespace {
         uint32_t *ntotal_nucleotides,
         map<string, float> &read_density,
         map<string, uint32_t> &possible_fake_data,
-        vector<string> maps
+        vector<string> const& maps
         )
     {
         // for now, we can just set up references to the data struct so we
@@ -774,33 +768,32 @@ namespace {
                 // track number of FR reads from the region.
                 // From earlier, these numbers seem like they shoudl be the same unless they are being added to in multiple places
                 for(map<string, uint32_t>::const_iterator nread_FR_it = nread_FR.begin(); nread_FR_it != nread_FR.end(); nread_FR_it ++){
-                    string lib_ = (*nread_FR_it).first;
-                    if(read_count_ROI_map[k].find(lib_) == read_count_ROI_map[k].end())
-                        read_count_FR_map[k][lib_] = (*nread_FR_it).second;
+                    string const& lib_ = nread_FR_it->first;
+                    map<string, uint32_t>::const_iterator found = read_count_ROI_map[k].find(lib_);
+
+                    if(found == read_count_ROI_map[k].end())
+                        read_count_FR_map[k][lib_] = nread_FR_it->second;
                     else{
                         // based on the variable names the ROI reads should contain ARPs as well as standard FR reads
                         // not sure where that would happen still
-                        uint32_t diff = (*nread_FR_it).second - read_count_ROI_map[k][lib_];
-                        if(diff < 0)
+                        if(found->second > nread_FR_it->second) {
                             cout << "wrong, the subtraction is negative";
-                        else if(diff >= 0){
+                        }
+                        else {
+                            uint32_t diff = nread_FR_it->second - found->second;
                             read_count_FR_map[k][lib_] = diff;//(*nread_FR_it).second - read_count_ROI_map[k][lib_];
                         }
-                        //else
-                        //    cout << "lib only exist in ROI rather than FR";
                     }
 
                 }
 
-                // reg_seq is an array of arrays of information about the reads. The first value is the read name.
                 // This adds the region id to an array of region ids
-                vector<breakdancer::Read> p;
+                vector<breakdancer::Read>& p = regs[k];
                 for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq++){
                     p.push_back(*it_reg_seq);
                     read[it_reg_seq->query_name()].push_back(k);
                 }
 
-                regs[k] = p;    //store the array of reads at the region
                 (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
@@ -816,27 +809,27 @@ namespace {
                 // I don't understand exactly what this is doing. It is only hitting here to store the info if flanking region is too short or the coverage is too high
                 // It appears to be used to pull in nearby neighboring regions to the last region identified if the distance between them is too short
                 if(/* *possible_fake == 1 &&*/ *reg_idx >= 1){
-                     for(map<string, uint32_t>::const_iterator possible_fake_data_it = possible_fake_data.begin(); possible_fake_data_it != possible_fake_data.end(); possible_fake_data_it ++){
-                         string lib_ = (*possible_fake_data_it).first;
-                         if(read_count_ROI_map.find(*reg_idx-1) == read_count_ROI_map.end()){
-                             read_count_ROI_map[*reg_idx-1][lib_] = possible_fake_data[lib_];
-                             //read_count_ROI_debug[*reg_idx-1][lib_] = possible_fake_data_debug[lib_];
-                         }
-                         else if(read_count_ROI_map[*reg_idx-1].find(lib_) == read_count_ROI_map[*reg_idx-1].end()){
-                             read_count_ROI_map[*reg_idx-1][lib_] = possible_fake_data[lib_];
-                             //read_count_ROI_debug[*reg_idx-1][lib_] = possible_fake_data_debug[lib_];
-                         }
-                         else{
-                             read_count_ROI_map[*reg_idx-1][lib_] += possible_fake_data[lib_];
-                         }
-                     }
+                    typedef map<string, uint32_t>::const_iterator IterType;
+                    for(IterType iter = possible_fake_data.begin(); iter != possible_fake_data.end(); ++iter) {
+                        string const& lib_ = iter->first;
+                        uint32_t const& count = iter->second;
+                        int last_reg_idx = *reg_idx - 1;
+
+                        typedef map<string, uint32_t>::iterator RegionIterType;
+                        pair<RegionIterType, bool> inserted = read_count_ROI_map[last_reg_idx].insert(
+                                make_pair(lib_, count)
+                                );
+
+                        // If the region already existed, then add to its count
+                        if (!inserted.second) {
+                            inserted.first->second += count;
+                        }
+                    }
                 }
 
                 // remove any reads that are linking the last region with this new, merged in region
-                if(reg_seq.size()>0){
-                    for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
-                        read.erase(it_reg_seq->query_name());
-                    }
+                for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); ++it_reg_seq) {
+                    read.erase(it_reg_seq->query_name());
                 }
             }
             // clear out this node
@@ -877,18 +870,6 @@ namespace {
     }
 
 }
-
-real_type ComputeProbScore(
-    vector<int> &rnode,
-    map<string,int> &rlibrary_readcount,
-    uint32_t type,
-    map<uint32_t,
-    map<string,int> > &x_readcounts,
-    uint32_t reference_len,
-    int fisher,
-    map<int,
-    vector<int> > &reg_name
-);
 
 namespace {
     IBamReader* openBam(std::string const& path, Options const& opts) {
@@ -1378,7 +1359,7 @@ void do_break_func(
         reg_name[k].push_back(lastc);
         reg_name[k].push_back(*nnormal_reads);
 
-        vector<breakdancer::Read> p;
+        vector<breakdancer::Read>& p = regs[k];
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
             p.push_back(*it_reg_seq);
             string s = it_reg_seq->query_name();
@@ -1388,7 +1369,6 @@ void do_break_func(
         //this should replace both regs and reg_name
         //region::Region new_region(begins, beginc, lastc, *nnormal_reads, reg_seq);
 
-        regs[k] = p;
         (*idx_buff)++;
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
@@ -1468,11 +1448,14 @@ string get_string(uint8_t *pt, int32_t length){
 void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const vector<breakdancer::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
     map<string,int> pairing;
     for( vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
-        breakdancer::Read y = *ii_support_reads;
+        breakdancer::Read const& y = *ii_support_reads;
+
         if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
             continue;
+
         //Paradoxically, the first read seen is put in file 2 and the second in file 1
-        string fh_tmp_str = (pairing.find(y.query_name()) != pairing.end()) ? ReadsOut.at(y.library.append("1")) : ReadsOut.at(y.library.append("2"));
+        string suffix = pairing.count(y.query_name()) ? "1" : "2";
+        string fh_tmp_str = ReadsOut.at(y.library + suffix);
         ofstream fh;
         fh.open(fh_tmp_str.c_str(), ofstream::app);
         pairing[y.query_name()] = 1;
