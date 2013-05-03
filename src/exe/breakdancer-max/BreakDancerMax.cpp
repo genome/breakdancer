@@ -553,7 +553,7 @@ namespace {
                                         fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv_chr1] << " " << sv_pos1 << " " << SVT << " " << diffspans[flag] << "\"\tuseScore=0\n";// fh_BED is a file handle of BED
                                         for(vector<breakdancer::Read>::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
                                             breakdancer::Read y = *ii_support_reads;
-                                            if(y.query_sequence() == "*" || y.quality_string() == "*" || y.bdflag() != flag)
+                                            if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
                                                 continue;
                                             int aln_end = y.pos() - y.query_length() - 1;
                                             string color = y.ori() == '+' ? "0,0,255" : "255,0,0";
@@ -1469,7 +1469,7 @@ void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const 
     map<string,int> pairing;
     for( vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
         breakdancer::Read y = *ii_support_reads;
-        if(y.query_sequence() == "*" || y.quality_string() == "*" || y.bdflag() != flag)
+        if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
             continue;
         //Paradoxically, the first read seen is put in file 2 and the second in file 1
         string fh_tmp_str = (pairing.find(y.query_name()) != pairing.end()) ? ReadsOut.at(y.library.append("1")) : ReadsOut.at(y.library.append("2"));
