@@ -1,4 +1,6 @@
 #include "Read.hpp"
+#include "LegacyConfig.hpp"
+
 #include <cstdlib>
 #include <boost/lexical_cast.hpp>
 
@@ -8,29 +10,45 @@ using namespace breakdancer;
 Read::Read(
         bam1_t const* record,
         string const& format,
-        ConfigMap<string, string>::type const& readgroup_platform,
-        ConfigMap<string, string>::type const& readgroup_library)
+        LegacyConfig const& cfg
+        )
     : _record(bam_init1())
-    ,_query_name_cached(false)
-    ,_query_seq_cached(false)
-    ,_quality_string_cached(false)
-    ,_abs_isize_cached(false)
+    , _query_name_cached(false)
+    , _query_seq_cached(false)
+    , _quality_string_cached(false)
+    , _tid(record->core.tid)
+    , _pos(record->core.pos)
+    , _isize(record->core.isize)
+    , _abs_isize_cached(false)
+    , _query_length(record->core.l_qseq)
+    , _ori(record->core.flag & BAM_FREVERSE ? '-' : '+')
+    , _bdqual(determine_bdqual(record))
 {
     //create copy of bam record
     bam_copy1(_record, record);
 
-    //set flag and qualities
-    _bdflag = _determine_bdflag();
-    _bdqual = _determine_bdqual();
-    _ori =  _record->core.flag & BAM_FREVERSE ? '-' : '+';
-
     //Be careful below. These must be in this order as _platform and _library depend on readgroup
     readgroup = _readgroup();
-    platform = _platform(readgroup_platform);
-    library = _library(readgroup_library);
+    library = _library(cfg.readgroup_library);
+    _bdflag = determine_bdflag(record, cfg.platform_for_readgroup(readgroup));
 }
 
-Read::Read(const Read& other) : _query_name(other._query_name), _query_name_cached(other._query_name_cached), _query_sequence(other._query_sequence), _query_seq_cached(other._query_seq_cached), _quality_string(other._quality_string), _quality_string_cached(other._quality_string_cached), _bdflag(other._bdflag), _bdqual(other._bdqual), _ori(other._ori), _abs_isize(other._abs_isize), _abs_isize_cached(other._abs_isize_cached), readgroup(other.readgroup), platform(other.platform), library(other.library) {
+Read::Read(const Read& other)
+    : _query_name(other._query_name)
+    , _query_name_cached(other._query_name_cached)
+    , _query_sequence(other._query_sequence)
+    , _query_seq_cached(other._query_seq_cached)
+    , _quality_string(other._quality_string)
+    , _quality_string_cached(other._quality_string_cached)
+    , _bdflag(other._bdflag)
+    , _ori(other._ori)
+    , _bdqual(other._bdqual)
+    , _abs_isize(other._abs_isize)
+    , _abs_isize_cached(other._abs_isize_cached)
+    , readgroup(other.readgroup)
+    , library(other.library)
+    , platform(other.platform)
+{
     if(other._record) {
         _record = bam_init1();
         bam_copy1(_record, other._record);
@@ -96,101 +114,10 @@ string Read::_library(ConfigMap<string, string>::type const& readgroup_library) 
     }
 }
 
-string Read::_platform(ConfigMap<string, string>::type const& readgroup_platform) {
-    ConfigMap<string, string>::type::const_iterator platform_it = readgroup_platform.find(readgroup);
-    if(platform_it != readgroup_platform.end()) {
-        return platform_it->second;
-    }
-    else {
-        return "illumina";
-    }
-}
-
-int Read::_determine_bdqual() {
-    //Breakdancer always takes the alternative mapping quality, if available
-    //it originally contained support for AQ, but the newer tag appears to be AM. Dropping support for AQ.
-    if(uint8_t* alt_qual = bam_aux_get(_record, "AM")) {
-         return bam_aux2i(alt_qual);
-    }
-    else {
-        return _record->core.qual;  //if no alternative mapping quality, use core quality
-    }
-}
-
 //FIXME This is practically illegible and there are many flag definitions that need to be added
 //In addition, there is some caching that could happen to make this whole thing shorter
 //and less computationally expensive
 //ideally the majority of this code could be pulled into another class.
-pair_orientation_flag Read::_determine_bdflag() {
-    pair_orientation_flag flag = NA;
-    int read_reversed = _record->core.flag & BAM_FREVERSE;
-    int mate_reversed = _record->core.flag & BAM_FMREVERSE;
-    if(!(_record->core.flag & BAM_FDUP)) { //this should probably include QCfail as well
-        if(_record->core.flag & BAM_FPAIRED) {
-            if(_record->core.flag & BAM_FUNMAP) {
-                flag = UNMAPPED;
-            }
-            else if(_record->core.flag & BAM_FMUNMAP) {
-                flag = MATE_UNMAPPED;
-            }
-            else if(_record->core.tid != _record->core.mtid) {
-                flag = ARP_CTX;
-            }
-            else if(_record->core.flag & BAM_FPROPER_PAIR) {
-                if(platform == "solid") { //assuming config parser has normalized this for me
-                    flag = NORMAL_FR; //normal insert size
-                }
-                else {
-                    if(_record->core.pos < _record->core.mpos) {
-                        flag = (read_reversed) ? NORMAL_RF : NORMAL_FR;
-                    }
-                    else {
-                        flag = (read_reversed) ? NORMAL_FR : NORMAL_RF;
-                    }
-                }
-            }
-            else {
-                if(platform == "solid") {
-                    if( ((read_reversed) && !(mate_reversed)) ||
-                        (!(read_reversed) && (mate_reversed))) { //do the mates have different orientation?
-                        flag = (read_reversed) ? ARP_RR : ARP_FF;
-                    }
-                    else if( !(read_reversed)) {
-                        if(_record->core.flag & BAM_FREAD1) {
-                            flag = (_record->core.pos < _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
-                        }
-                        else {
-                            flag = (_record->core.pos > _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
-                        }
-                    }
-                    else {
-                        if(_record->core.flag & BAM_FREAD1) {
-                            flag = (_record->core.pos > _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
-                        }
-                        else {
-                            flag = (_record->core.pos < _record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
-                        }
-                    }
-                }
-                else {
-                    if( ((read_reversed) && (mate_reversed)) ||
-                        (!(read_reversed) && !(mate_reversed))) { //do the mates have the same orientation?
-
-                        flag = (mate_reversed) ? ARP_RR : ARP_FF;
-                    }
-                    else if((_record->core.mpos > _record->core.pos && (read_reversed)) || (_record->core.pos > _record->core.mpos && !(read_reversed))) {
-                        flag = ARP_RF;
-                    }
-                    else {
-                        flag = ARP_FR_big_insert;
-                    }
-                }
-            }
-        }
-    }
-    return flag;
-}
-
 string const& Read::query_name() const {
     if(!_query_name_cached) {
         _query_name = string(bam1_qname(_record));

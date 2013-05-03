@@ -1051,7 +1051,7 @@ int main(int argc, char *argv[]) {
         auto_ptr<IBamReader> reader(openBam(bam_name, opts));
 
         while (reader->next(b) > 0) {
-            breakdancer::Read aln2(b, format_, cfg.readgroup_platform, cfg.readgroup_library);
+            breakdancer::Read aln2(b, format_, cfg);
             string const& readgroup = aln2.readgroup;
 
             //FIXME this could be filtered out on reading the BAM
@@ -1300,7 +1300,7 @@ int main(int argc, char *argv[]) {
         if(b->core.tid < 0)
             continue;
 
-        breakdancer::Read aln2(b, format_, cfg.readgroup_platform, cfg.readgroup_library);
+        breakdancer::Read aln2(b, format_, cfg);
         string const& readgroup = aln2.readgroup;
 // string library = (!readgroup.empty())?readgroup_library.at(readgroup):((*(fmaps.begin())).second);
         string library;

@@ -14,6 +14,7 @@ struct ConfigMap {
 
 class LegacyConfig {
 public:
+    LegacyConfig();
     LegacyConfig(std::istream& in, Options const& opts);
 
     ConfigMap<std::string, std::string>::type exes;
@@ -31,4 +32,17 @@ public:
 
     int max_read_window_size;
     int max_readlen;
+
+
+    std::string const& platform_for_readgroup(std::string const& readgroup) const {
+        using std::string;
+        static string illumina("illumina");
+        ConfigMap<string, string>::type::const_iterator it = readgroup_platform.find(readgroup);
+        if(it != readgroup_platform.end()) {
+            return it->second;
+        }
+        else {
+            return illumina;
+        }
+    }
 };

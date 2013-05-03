@@ -31,16 +31,15 @@ class TestRead : public ::testing::Test {
             bam_record.data_len = 23;
             bam_record.m_data = 32;
             bam_record.data = &data[0];
-            readgroup_platform["rg3"] = "helicos";
-            readgroup_library["rg3"] = "some_lib";
-            test_read.reset(new Read(&bam_record, "sam", readgroup_platform, readgroup_library));
+            cfg.readgroup_platform["rg3"] = "helicos";
+            cfg.readgroup_library["rg3"] = "some_lib";
+            test_read.reset(new Read(&bam_record, "sam", cfg));
         }
 
         bam1_core_t core;
         bam1_t bam_record;
         auto_ptr<Read> test_read;
-        ConfigMap<string, string>::type readgroup_platform;
-        ConfigMap<string, string>::type readgroup_library;
+        LegacyConfig cfg;
 };
 
 TEST_F(TestRead, readgroup) {
