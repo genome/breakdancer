@@ -35,7 +35,7 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
         self.assertFilesEqual(expected_file, output_file, filter_regex="#Command|#Software")
 
     def test_breakdancer_all_seqs(self):
-        expected_file = "expected_output.allseqs"
+        expected_file = "expected_output"
         config_file = "inv_del_bam_config"
         output_file = self.tempFile("output")
         cmdline = " ".join([self.exe_path, config_file, '>', output_file])
