@@ -61,9 +61,10 @@ real_type _max_kahan_err = 0.0;
 
 namespace {
     // compute the probability score
-    real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, map<int, vector<int> > &reg_name) {
+    real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, BreakDancerData const& bdancer)
+    {
         // rnode, rlibrary_readcount, type
-        int total_region_size = PutativeRegion(rnode, reg_name);
+        int total_region_size = PutativeRegion(rnode, bdancer);
 
         real_type lambda;
         real_type logpvalue = 0.0;
@@ -104,7 +105,6 @@ namespace {
         BreakDancerData& bdancer,
         LegacyConfig const& cfg,
         map<string, vector<int> > &read,
-        map<int, vector<int> > &reg_name,
         map<uint32_t, map<string,int> > &x_readcounts,
         uint32_t reference_len,
         int max_readlen,
@@ -116,6 +116,7 @@ namespace {
     {
         map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
         map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
+        BreakDancerData::RegionData& reg_name = bdancer.region_data;
 
         // build connections
         // find paired regions that are supported by paired reads
@@ -182,8 +183,8 @@ namespace {
                     //assert(clink.find(*it_tails) != clink.end()); THIS ASSERT TRIPS
                     if(clink.find(*it_tails) == clink.end())
                         continue;
-                    assert(reg_name.find(*it_tails) != reg_name.end());
-                    if(reg_name.find(*it_tails) == reg_name.end())
+                    assert(bdancer.region_exists(*it_tails));
+                    if(!bdancer.region_exists(*it_tails))
                         continue;
                     vector<int> s1s; //accumulate all linked nodes for a  single node
                     for(map<int, int>::iterator ii_clink_ = clink[tail].begin(); ii_clink_ != clink[tail].end(); ii_clink_++){
@@ -201,8 +202,8 @@ namespace {
                         assert(nodepair.find(s1) == nodepair.end()); // a node only appear once in a pair
                         if(nodepair.find(s1) != nodepair.end()) // a node only appear once in a pair
                             continue;
-                        assert(reg_name.find(s1) != reg_name.end()); // a node must be defined
-                        if(reg_name.find(s1) == reg_name.end()) // a node must be defined
+                        assert(bdancer.region_exists(s1));
+                        if(!bdancer.region_exists(s1)) // a node must be defined
                             continue;
                         nodepair[tail][s1] = clink[tail][s1];
                         nodepair[s1][tail] = clink[s1][tail];
@@ -328,10 +329,11 @@ namespace {
                                 for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes ++){
                                     int node = *ii_snodes;
                                     //cout << node << "\t";
-                                    int chr = reg_name[node][0];
-                                    int start = reg_name[node][1];
-                                    int end = reg_name[node][2];
-                                    int nrp = reg_name[node][3];
+                                    BasicRegion const& region = reg_name[node];
+                                    int chr = region.chr;
+                                    int start = region.start;
+                                    int end = region.end;
+                                    int nrp = region.normal_read_pairs;
 
                                     //cout << " " << node << "\t" << start << "\t" << end << endl;
                                     map<char, int> ori_readcount = type_orient_counts.front(); // FIXME: wrong data structure, int ori_readcount[2]; is better
@@ -497,7 +499,7 @@ namespace {
                                 sptypes[flag] = sptype;
 
 
-                                real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag), x_readcounts, reference_len, opts.fisher, reg_name);
+                                real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag), x_readcounts, reference_len, opts.fisher, bdancer);
                                 real_type PhredQ_tmp = -10*LogPvalue/log(10);
                                 int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
                                 //float AF = float(type[flag])/float(type[flag]+normal_rp);
@@ -595,8 +597,7 @@ namespace {
                     read.erase(readname);
                 }
                 // remove regions
-                bdancer.clear_reads_in_region(node);
-                reg_name.erase(node);
+                bdancer.clear_region(node);
             }
         }
     }
@@ -611,7 +612,6 @@ namespace {
         bam1_t *b,
         breakdancer::Read &aln,
         vector<breakdancer::Read> &reg_seq,
-        map<int, vector<int> > &reg_name,
         map<string, vector<int> > &read,
         int *idx_buff,
         int *nnormal_reads,
@@ -639,6 +639,7 @@ namespace {
         map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
         map<string, uint32_t>& nread_FR = bdancer.nread_FR;
         map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
+        BreakDancerData::RegionData& reg_name = bdancer.region_data;
 
 
         string const& bam_name = cfg.libmaps.at(lib);
@@ -747,10 +748,13 @@ namespace {
             {
                 // register reliable region and supporting reads across gaps
                 int k = (*reg_idx) ++;  //assign an id to this region
+                reg_name[k] = BasicRegion(begins, beginc, lastc, *nnormal_reads);
+/*
                 reg_name[k].push_back(begins); //chromosome
                 reg_name[k].push_back(beginc); //starting coord
                 reg_name[k].push_back(lastc);   //last coordinate
                 reg_name[k].push_back(*nnormal_reads); //number of normal reads
+*/
 
                 // never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
                 // record nread_ROI
@@ -794,7 +798,7 @@ namespace {
                 (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
-                    buildConnection(opts, bdancer, cfg, read, reg_name, x_readcounts,
+                    buildConnection(opts, bdancer, cfg, read, x_readcounts,
                         reference_len, *max_readlen, SVtype, bam_header, read_density, maps);
                     *idx_buff = 0;
                 }
@@ -1240,7 +1244,6 @@ int main(int argc, char *argv[]) {
 
     map<string, uint32_t > possible_fake_data;
     map<string, vector<int> > read;// global in analysis
-    map<int,vector<int> > reg_name;// global in analysis
     vector<breakdancer::Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
 
     int idx_buff = 0;// global
@@ -1287,7 +1290,7 @@ int main(int argc, char *argv[]) {
             library = cfg.fmaps.begin()->second;
 
         if(!library.empty()){
-            Analysis(opts, bdancer, cfg, library, b, aln2, reg_seq, reg_name, read,
+            Analysis(opts, bdancer, cfg, library, b, aln2, reg_seq, read,
                 &idx_buff, &nnormal_reads, &normal_switch, &reg_idx,
                 x_readcounts, reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides, read_density,
@@ -1298,14 +1301,14 @@ int main(int argc, char *argv[]) {
 
     if (reg_seq.size() != 0) {
         do_break_func(
-            opts, bdancer, cfg, reg_seq, reg_name, read, &idx_buff,
+            opts, bdancer, cfg, reg_seq, read, &idx_buff,
             &nnormal_reads, &reg_idx, x_readcounts, reference_len, SVtype,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides,
             read_density, maps
             );
     }
 
-    buildConnection(opts, bdancer, cfg, read, reg_name, x_readcounts,
+    buildConnection(opts, bdancer, cfg, read, x_readcounts,
         reference_len, max_readlen, SVtype, merged_reader.header(),
         read_density, maps);
 
@@ -1322,7 +1325,6 @@ void do_break_func(
     BreakDancerData& bdancer,
     LegacyConfig const& cfg,
     vector<breakdancer::Read> const& reg_seq,
-    map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
     int *idx_buff,
     int *nnormal_reads,
@@ -1341,6 +1343,7 @@ void do_break_func(
     int& begins = bdancer.begins;
     int& beginc = bdancer.beginc;
     int& lastc = bdancer.lastc;
+    BreakDancerData::RegionData& reg_name = bdancer.region_data;
 
     float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
     if (lastc - beginc > opts.min_len
@@ -1349,10 +1352,13 @@ void do_break_func(
     {
         // register reliable region and supporting reads across gaps
         int k = (*reg_idx) ++;
+        reg_name[k] = BasicRegion(begins, beginc, lastc, *nnormal_reads);
+/*
         reg_name[k].push_back(begins);
         reg_name[k].push_back(beginc);
         reg_name[k].push_back(lastc);
         reg_name[k].push_back(*nnormal_reads);
+*/
 
         vector<breakdancer::Read> p;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
@@ -1368,7 +1374,7 @@ void do_break_func(
         (*idx_buff)++;
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
-            buildConnection(opts, bdancer, cfg, read, reg_name, x_readcounts,
+            buildConnection(opts, bdancer, cfg, read, x_readcounts,
                 reference_len, *max_readlen, SVtype, bam_header, read_density,
                 maps);
 
@@ -1404,12 +1410,13 @@ float standard_deviation(vector<int> &stat, float mean){
 }
 
 // putative region
-int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name){
+int PutativeRegion(vector<int> &rnode, BreakDancerData const& bdancer) {
+    BreakDancerData::RegionData const& reg_name = bdancer.region_data;
     int total_region_size = 0;
     for(vector<int>::const_iterator ii_node = rnode.begin(); ii_node < rnode.end(); ii_node++){
-        int node = *ii_node;
-        int clust_start = reg_name[node][1];
-        int clust_end = reg_name[node][2];
+        BasicRegion const& region = reg_name.at(*ii_node);
+        int clust_start = region.start;
+        int clust_end = region.end;
         total_region_size += clust_end - clust_start + 1;
     }
     return total_region_size;

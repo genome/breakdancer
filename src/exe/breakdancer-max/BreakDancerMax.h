@@ -32,10 +32,27 @@ using namespace std;
 
 class Options;
 
+struct BasicRegion {
+    BasicRegion() {}
+    BasicRegion(int chr, int start, int end, int normal_read_pairs)
+        : chr(chr)
+        , start(start)
+        , end(end)
+        , normal_read_pairs(normal_read_pairs)
+    {
+    }
+
+    int chr;
+    int start;
+    int end;
+    int normal_read_pairs;
+};
+
 struct BreakDancerData {
 // Types
     typedef std::vector<breakdancer::Read> ReadVector;
     typedef std::vector<ReadVector> ReadsByRegion;
+    typedef map<int, BasicRegion > RegionData;
 
     BreakDancerData()
         : begins(-1)
@@ -66,11 +83,22 @@ struct BreakDancerData {
     }
 
     void clear_reads_in_region(size_t region_idx) {
-        reads_by_region[region_idx].clear();
+        if (region_idx < reads_by_region.size())
+            reads_by_region[region_idx].clear();
     }
 
     ReadVector const& reads_in_region(size_t region_idx) const {
         return reads_by_region[region_idx];
+    }
+
+    RegionData region_data;
+    bool region_exists(size_t region_idx) {
+        return region_data.count(region_idx) > 0;
+    }
+
+    void clear_region(size_t region_idx) {
+        region_data.erase(region_idx);
+        clear_reads_in_region(region_idx);
     }
 
 private:
@@ -85,7 +113,6 @@ void do_break_func(
     BreakDancerData& bdancer,
     LegacyConfig const& cfg,
     vector<breakdancer::Read> const& reg_seq,
-    map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
     int *idx_buff,
     int *nnormal_reads,
@@ -104,7 +131,7 @@ float mean(vector<int> &stat);
 
 float standard_deviation(vector<int> &stat, float mean);
 
-int PutativeRegion(vector<int> &rnode, map<int,vector<int> > &reg_name);
+int PutativeRegion(vector<int> &rnode, BreakDancerData const& bdancer);
 
 /*string itoa(int i);
 
