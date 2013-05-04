@@ -1429,25 +1429,6 @@ string itos(int i){
     return i_str_stream.str();
 }
 
-// get the string of the quality of the sequence
-string get_string_qual(uint8_t *pt, int32_t length){
-    string seq;
-    seq.reserve(length);
-    for(int i = 0; i < length ; i++){
-        seq += char(pt[i] + 33);
-    }
-    return seq;
-}
-
-// get the string of the sequence
-string get_string(uint8_t *pt, int32_t length){
-    string seq;
-    seq.reserve(length);
-    for(int i = 0; i < length ; i++)
-        seq += bam_nt16_rev_table[bam1_seqi(pt, i)];
-    return seq;
-}
-
 void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const vector<breakdancer::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
     map<string,int> pairing;
     for( vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){

@@ -133,19 +133,7 @@ float standard_deviation(vector<int> &stat, float mean);
 
 int PutativeRegion(vector<int> &rnode, BreakDancerData const& bdancer);
 
-/*string itoa(int i);
-
-int atoi(string str);
-
-float atof(string str);*/
-
 string itos(int i);
-
-string get_string_qual(uint8_t *pt, int32_t length);
-
-string get_string(uint8_t *pt, int32_t length);
-
-string get_string_qual(uint8_t *pt, int32_t length);
 
 // refactoring functions
 // write out reads to fastq files
