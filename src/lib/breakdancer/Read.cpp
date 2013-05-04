@@ -117,6 +117,8 @@ Read::Read(
     , _query_name(bam1_qname(record))
     , _seq_converted(false)
     , _quality_converted(false)
+    // FIXME: if *bam1_qual(record) = 0xff, there is no quality string?
+    // we should test for that
     , _bam_data(reinterpret_cast<char const*>(bam1_seq(record)),
                 reinterpret_cast<char const*>(bam1_qual(record) + record->core.l_qseq))
 {
