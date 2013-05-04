@@ -60,6 +60,18 @@ typedef SCORE_FLOAT_TYPE real_type;
 real_type _max_kahan_err = 0.0;
 
 namespace {
+    int PutativeRegion(vector<int> const& rnode, BreakDancerData const& bdancer) {
+        int total_region_size = 0;
+        for(vector<int>::const_iterator ii_node = rnode.begin(); ii_node < rnode.end(); ii_node++){
+            BasicRegion const& region = bdancer.get_region_data(*ii_node);
+            int clust_start = region.start;
+            int clust_end = region.end;
+            total_region_size += clust_end - clust_start + 1;
+        }
+        return total_region_size;
+    }
+
+
     // compute the probability score
     real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, BreakDancerData const& bdancer)
     {
@@ -116,7 +128,6 @@ namespace {
     {
         map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
         map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
-        BreakDancerData::RegionData& reg_name = bdancer.region_data;
 
         // build connections
         // find paired regions that are supported by paired reads
@@ -329,7 +340,7 @@ namespace {
                                 for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes ++){
                                     int node = *ii_snodes;
                                     //cout << node << "\t";
-                                    BasicRegion const& region = reg_name[node];
+                                    BasicRegion const& region = bdancer.get_region_data(node);
                                     int chr = region.chr;
                                     int start = region.start;
                                     int end = region.end;
@@ -639,8 +650,6 @@ namespace {
         map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
         map<string, uint32_t>& nread_FR = bdancer.nread_FR;
         map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
-        BreakDancerData::RegionData& reg_name = bdancer.region_data;
-
 
         string const& bam_name = cfg.libmaps.at(lib);
         //main analysis code
@@ -748,13 +757,7 @@ namespace {
             {
                 // register reliable region and supporting reads across gaps
                 int k = (*reg_idx) ++;  //assign an id to this region
-                reg_name[k] = BasicRegion(begins, beginc, lastc, *nnormal_reads);
-/*
-                reg_name[k].push_back(begins); //chromosome
-                reg_name[k].push_back(beginc); //starting coord
-                reg_name[k].push_back(lastc);   //last coordinate
-                reg_name[k].push_back(*nnormal_reads); //number of normal reads
-*/
+                bdancer.add_region(k, BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
                 // never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
                 // record nread_ROI
@@ -1343,7 +1346,6 @@ void do_break_func(
     int& begins = bdancer.begins;
     int& beginc = bdancer.beginc;
     int& lastc = bdancer.lastc;
-    BreakDancerData::RegionData& reg_name = bdancer.region_data;
 
     float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
     if (lastc - beginc > opts.min_len
@@ -1352,13 +1354,7 @@ void do_break_func(
     {
         // register reliable region and supporting reads across gaps
         int k = (*reg_idx) ++;
-        reg_name[k] = BasicRegion(begins, beginc, lastc, *nnormal_reads);
-/*
-        reg_name[k].push_back(begins);
-        reg_name[k].push_back(beginc);
-        reg_name[k].push_back(lastc);
-        reg_name[k].push_back(*nnormal_reads);
-*/
+        bdancer.add_region(k, BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
         vector<breakdancer::Read> p;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
@@ -1407,19 +1403,6 @@ float standard_deviation(vector<int> &stat, float mean){
         all += (*ii_stat)*(*ii_stat);
     }
     return sqrt((float)all/(float)(stat.size()) - mean*mean);
-}
-
-// putative region
-int PutativeRegion(vector<int> &rnode, BreakDancerData const& bdancer) {
-    BreakDancerData::RegionData const& reg_name = bdancer.region_data;
-    int total_region_size = 0;
-    for(vector<int>::const_iterator ii_node = rnode.begin(); ii_node < rnode.end(); ii_node++){
-        BasicRegion const& region = reg_name.at(*ii_node);
-        int clust_start = region.start;
-        int clust_end = region.end;
-        total_region_size += clust_end - clust_start + 1;
-    }
-    return total_region_size;
 }
 
 // augmenting function from int to string

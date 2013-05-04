@@ -3,6 +3,8 @@
 #include "breakdancer/Read.hpp"
 #include "breakdancer/saminternals.h"
 
+#include <boost/format.hpp>
+
 #include <cstddef>
 #include <iostream>
 #include <fstream>
@@ -91,7 +93,6 @@ struct BreakDancerData {
         return reads_by_region[region_idx];
     }
 
-    RegionData region_data;
     bool region_exists(size_t region_idx) {
         return region_data.count(region_idx) > 0;
     }
@@ -101,7 +102,22 @@ struct BreakDancerData {
         clear_reads_in_region(region_idx);
     }
 
+    void add_region(size_t region_idx, BasicRegion const& r) {
+        region_data[region_idx] = r;
+    }
+
+    BasicRegion const& get_region_data(size_t region_idx) const {
+        using boost::format;
+        RegionData::const_iterator iter = region_data.find(region_idx);
+        if (iter == region_data.end()) {
+            throw std::runtime_error(str(format("Unknown region %1%")
+                % region_idx));
+        }
+        return iter->second;
+    }
+
 private:
+    RegionData region_data;
     ReadsByRegion reads_by_region;
 };
 
@@ -130,8 +146,6 @@ void do_break_func(
 float mean(vector<int> &stat);
 
 float standard_deviation(vector<int> &stat, float mean);
-
-int PutativeRegion(vector<int> &rnode, BreakDancerData const& bdancer);
 
 string itos(int i);
 
