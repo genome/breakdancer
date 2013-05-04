@@ -47,6 +47,7 @@ RegionLimitedBamReader::RegionLimitedBamReader(std::string const& path, char con
 }
 
 RegionLimitedBamReader::~RegionLimitedBamReader() {
+    bam_iter_destroy(_iter);
     bam_index_destroy(_index);
     _index = 0;
 }
