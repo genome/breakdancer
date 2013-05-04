@@ -2,6 +2,7 @@
 #include "breakdancer/LegacyConfig.hpp"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/saminternals.h"
+#include "breakdancer/BreakDancer.hpp"
 
 #include <boost/format.hpp>
 
@@ -34,99 +35,12 @@ using namespace std;
 
 class Options;
 
-struct BasicRegion {
-    BasicRegion() {}
-    BasicRegion(int chr, int start, int end, int normal_read_pairs)
-        : chr(chr)
-        , start(start)
-        , end(end)
-        , normal_read_pairs(normal_read_pairs)
-    {
-    }
-
-    int chr;
-    int start;
-    int end;
-    int normal_read_pairs;
-};
-
-struct BreakDancerData {
-// Types
-    typedef std::vector<breakdancer::Read> ReadVector;
-    typedef std::vector<ReadVector> ReadsByRegion;
-    typedef map<int, BasicRegion > RegionData;
-
-    BreakDancerData()
-        : begins(-1)
-        , beginc(-1)
-        , lasts(-1)
-        , lastc(-1)
-        , reads_by_region(1000)
-    {
-    }
-
-    int begins; // global (chr)
-    int beginc; // global
-    int lasts; // global (chr, should be int in samtools)
-    int lastc; // global
-    map<string, uint32_t> nread_ROI; // global
-    map<int, map<string, uint32_t> > read_count_ROI_map; // global
-    map<string, uint32_t> nread_FR;    // global
-    map<int, map<string, uint32_t> > read_count_FR_map; // global
-
-
-    // Ultimately, we'll want to be pushing onto this vector and
-    // returning new region indices as appropriate.
-    void swap_reads_in_region(size_t region_idx, ReadVector& reads) {
-        if (region_idx >= reads_by_region.size())
-            reads_by_region.resize(region_idx+1);
-
-        reads_by_region[region_idx].swap(reads);
-    }
-
-    void clear_reads_in_region(size_t region_idx) {
-        if (region_idx < reads_by_region.size())
-            reads_by_region[region_idx].clear();
-    }
-
-    ReadVector const& reads_in_region(size_t region_idx) const {
-        return reads_by_region[region_idx];
-    }
-
-    bool region_exists(size_t region_idx) {
-        return region_data.count(region_idx) > 0;
-    }
-
-    void clear_region(size_t region_idx) {
-        region_data.erase(region_idx);
-        clear_reads_in_region(region_idx);
-    }
-
-    void add_region(size_t region_idx, BasicRegion const& r) {
-        region_data[region_idx] = r;
-    }
-
-    BasicRegion const& get_region_data(size_t region_idx) const {
-        using boost::format;
-        RegionData::const_iterator iter = region_data.find(region_idx);
-        if (iter == region_data.end()) {
-            throw std::runtime_error(str(format("Unknown region %1%")
-                % region_idx));
-        }
-        return iter->second;
-    }
-
-private:
-    RegionData region_data;
-    ReadsByRegion reads_by_region;
-};
-
 /*template <class T>
 T from_string(const std::string& s,
                  std::ios_base& (*f)(std::ios_base&))*/
 void do_break_func(
     Options const& opts,
-    BreakDancerData& bdancer,
+    BreakDancer& bdancer,
     LegacyConfig const& cfg,
     vector<breakdancer::Read> const& reg_seq,
     map<string, vector<int> >& read,

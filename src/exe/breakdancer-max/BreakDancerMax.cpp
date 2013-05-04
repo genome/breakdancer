@@ -60,7 +60,7 @@ typedef SCORE_FLOAT_TYPE real_type;
 real_type _max_kahan_err = 0.0;
 
 namespace {
-    int PutativeRegion(vector<int> const& rnode, BreakDancerData const& bdancer) {
+    int PutativeRegion(vector<int> const& rnode, BreakDancer const& bdancer) {
         int total_region_size = 0;
         for(vector<int>::const_iterator ii_node = rnode.begin(); ii_node < rnode.end(); ii_node++){
             BasicRegion const& region = bdancer.get_region_data(*ii_node);
@@ -73,7 +73,7 @@ namespace {
 
 
     // compute the probability score
-    real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, BreakDancerData const& bdancer)
+    real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, BreakDancer const& bdancer)
     {
         // rnode, rlibrary_readcount, type
         int total_region_size = PutativeRegion(rnode, bdancer);
@@ -114,7 +114,7 @@ namespace {
     // pair up reads and print out results (SV estimation)
     void buildConnection(
         Options const& opts,
-        BreakDancerData& bdancer,
+        BreakDancer& bdancer,
         LegacyConfig const& cfg,
         map<string, vector<int> > &read,
         map<uint32_t, map<string,int> > &x_readcounts,
@@ -259,8 +259,8 @@ namespace {
                             map<char,int> orient_count; // number of reads per each orientation ('+' or '-')
                             vector<breakdancer::Read> nonsupportives; // reads not supporting this SV
                             //NOTE regs contains an array of information about the reads supporting the region (info is stored as a string array)
-                            BreakDancerData::ReadVector const& region_reads = bdancer.reads_in_region(node);
-                            for(BreakDancerData::ReadVector::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
+                            BasicRegion::ReadVector const& region_reads = bdancer.reads_in_region(node);
+                            for(BasicRegion::ReadVector::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
                                 breakdancer::Read const& y = *ii_regs;
                                 //cout << y.ori() << "\t" << y.query_name() << "\t" << y[2] << "\t" << orient_count[y.ori()] << endl;
                                 //skip things where the read name is no longer in our list of read names
@@ -310,8 +310,8 @@ namespace {
                         //if you tracked which node each read came from then you could just reassign after the fact
                         for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
                             int node = *ii_snodes;
-                            BreakDancerData::ReadVector nonsupportives;
-                            BreakDancerData::ReadVector const& region_reads = bdancer.reads_in_region(node);
+                            BasicRegion::ReadVector nonsupportives;
+                            BasicRegion::ReadVector const& region_reads = bdancer.reads_in_region(node);
                             for(vector<breakdancer::Read>::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
                                 breakdancer::Read const& y = *ii_regs;
                                 if(read_pair.find(y.query_name()) == read_pair.end())
@@ -385,7 +385,7 @@ namespace {
                                             typedef map<string, uint32_t>::const_iterator IterType;
                                             for(IterType read_count_ROI_map_second_it = read_count_ROI_map_second.begin();
                                                 read_count_ROI_map_second_it != read_count_ROI_map_second.end();
-                                                ++read_count_ROI_map_second_it ++)
+                                                ++read_count_ROI_map_second_it)
                                             {
                                                 string const& lib = read_count_ROI_map_second_it->first;
                                                 read_count[lib] += read_count_ROI_map[i_node][lib];
@@ -600,7 +600,7 @@ namespace {
         for(set<int>::const_iterator ii_free_nodes = free_nodes.begin(); ii_free_nodes != free_nodes.end(); ii_free_nodes++){
             // remove reads in the regions
             int const& node = *ii_free_nodes;
-            BreakDancerData::ReadVector const& reads = bdancer.reads_in_region(node);
+            BasicRegion::ReadVector const& reads = bdancer.reads_in_region(node);
             if(reads.size() < unsigned(opts.min_read_pair)){
                 for(vector<breakdancer::Read>::const_iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
                     breakdancer::Read const& y = *ii_reads;
@@ -617,7 +617,7 @@ namespace {
     // for each read, check if it is time to break and pair up the reads
     void Analysis (
         Options const& opts,
-        BreakDancerData& bdancer,
+        BreakDancer& bdancer,
         LegacyConfig const& cfg,
         string lib,
         bam1_t *b,
@@ -757,7 +757,7 @@ namespace {
             {
                 // register reliable region and supporting reads across gaps
                 int k = (*reg_idx) ++;  //assign an id to this region
-                bdancer.add_region(k, BasicRegion(begins, beginc, lastc, *nnormal_reads));
+                bdancer.add_region(k, new BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
                 // never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
                 // record nread_ROI
@@ -1243,7 +1243,7 @@ int main(int argc, char *argv[]) {
     cout << "\n";
 
 
-    BreakDancerData bdancer;
+    BreakDancer bdancer;
 
     map<string, uint32_t > possible_fake_data;
     map<string, vector<int> > read;// global in analysis
@@ -1325,7 +1325,7 @@ int main(int argc, char *argv[]) {
 // to take the rest of the reads and trying to pair up
 void do_break_func(
     Options const& opts,
-    BreakDancerData& bdancer,
+    BreakDancer& bdancer,
     LegacyConfig const& cfg,
     vector<breakdancer::Read> const& reg_seq,
     map<string, vector<int> >& read,
@@ -1354,7 +1354,7 @@ void do_break_func(
     {
         // register reliable region and supporting reads across gaps
         int k = (*reg_idx) ++;
-        bdancer.add_region(k, BasicRegion(begins, beginc, lastc, *nnormal_reads));
+        bdancer.add_region(k, new BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
         vector<breakdancer::Read> p;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
