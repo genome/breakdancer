@@ -3,6 +3,7 @@
 #include "breakdancer/Read.hpp"
 #include "breakdancer/saminternals.h"
 
+#include <cstddef>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -32,11 +33,16 @@ using namespace std;
 class Options;
 
 struct BreakDancerData {
+// Types
+    typedef std::vector<breakdancer::Read> ReadVector;
+    typedef std::vector<ReadVector> ReadsByRegion;
+
     BreakDancerData()
         : begins(-1)
         , beginc(-1)
         , lasts(-1)
         , lastc(-1)
+        , reads_by_region(1000)
     {
     }
 
@@ -48,15 +54,27 @@ struct BreakDancerData {
     map<int, map<string, uint32_t> > read_count_ROI_map; // global
     map<string, uint32_t> nread_FR;    // global
     map<int, map<string, uint32_t> > read_count_FR_map; // global
-};
 
-struct AnalysisData {
-    map<string, uint32_t > possible_fake_data;
-    map<int, vector<breakdancer::Read> > regs;//global in analysis
-    map<string, vector<int> > read;// global in analysis
-    map<int,vector<int> > reg_name;// global in analysis
-    vector<breakdancer::Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
-    vector<breakdancer::Read>::const_iterator it_reg_seq; // global
+
+    // Ultimately, we'll want to be pushing onto this vector and
+    // returning new region indices as appropriate.
+    void swap_reads_in_region(size_t region_idx, ReadVector& reads) {
+        if (region_idx >= reads_by_region.size())
+            reads_by_region.resize(region_idx+1);
+
+        reads_by_region[region_idx].swap(reads);
+    }
+
+    void clear_reads_in_region(size_t region_idx) {
+        reads_by_region[region_idx].clear();
+    }
+
+    ReadVector const& reads_in_region(size_t region_idx) const {
+        return reads_by_region[region_idx];
+    }
+
+private:
+    ReadsByRegion reads_by_region;
 };
 
 /*template <class T>
@@ -69,7 +87,6 @@ void do_break_func(
     vector<breakdancer::Read> const& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
-    map<int, vector<breakdancer::Read> > &regs,
     int *idx_buff,
     int *nnormal_reads,
     int *reg_idx,

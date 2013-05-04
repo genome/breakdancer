@@ -105,7 +105,6 @@ namespace {
         LegacyConfig const& cfg,
         map<string, vector<int> > &read,
         map<int, vector<int> > &reg_name,
-        map<int, vector<breakdancer::Read> > &regs,
         map<uint32_t, map<string,int> > &x_readcounts,
         uint32_t reference_len,
         int max_readlen,
@@ -247,10 +246,9 @@ namespace {
                             //cout << node << endl;
                             map<char,int> orient_count; // number of reads per each orientation ('+' or '-')
                             vector<breakdancer::Read> nonsupportives; // reads not supporting this SV
-                            //debug
-                            //int regs_size = regs[node].size();
                             //NOTE regs contains an array of information about the reads supporting the region (info is stored as a string array)
-                            for(vector<breakdancer::Read>::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
+                            BreakDancerData::ReadVector const& region_reads = bdancer.reads_in_region(node);
+                            for(BreakDancerData::ReadVector::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
                                 breakdancer::Read const& y = *ii_regs;
                                 //cout << y.ori() << "\t" << y.query_name() << "\t" << y[2] << "\t" << orient_count[y.ori()] << endl;
                                 //skip things where the read name is no longer in our list of read names
@@ -289,7 +287,7 @@ namespace {
                                     }
                                 }
                             }
-                            regs[node] = nonsupportives;
+                            bdancer.swap_reads_in_region(node, nonsupportives);
                             type_orient_counts.push_back(orient_count);
                         }
 
@@ -300,14 +298,15 @@ namespace {
                         //if you tracked which node each read came from then you could just reassign after the fact
                         for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
                             int node = *ii_snodes;
-                            vector<breakdancer::Read> nonsupportives;
-                            for(vector<breakdancer::Read>::iterator ii_regs = regs[node].begin(); ii_regs != regs[node].end(); ii_regs++){
+                            BreakDancerData::ReadVector nonsupportives;
+                            BreakDancerData::ReadVector const& region_reads = bdancer.reads_in_region(node);
+                            for(vector<breakdancer::Read>::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
                                 breakdancer::Read const& y = *ii_regs;
                                 if(read_pair.find(y.query_name()) == read_pair.end())
                                     continue;
                                 nonsupportives.push_back(y);
                             }
-                            regs[node] = nonsupportives;
+                            bdancer.swap_reads_in_region(node, nonsupportives);
                         }
 
                         //float score;//don't know if float; no usage actually
@@ -371,7 +370,6 @@ namespace {
                                             map<string, uint32_t> const& read_count_ROI_map_second = read_count_ROI_map[i_node];
                                             map<string, uint32_t> const& read_count_FR_map_second = read_count_FR_map[i_node];
                                             typedef map<string, uint32_t>::const_iterator IterType;
-                                            //cout << "\nROI:" << reg_name[i_node][2] << "\t" << reg_name[i_node + 1][1] << "\n";
                                             for(IterType read_count_ROI_map_second_it = read_count_ROI_map_second.begin();
                                                 read_count_ROI_map_second_it != read_count_ROI_map_second.end();
                                                 ++read_count_ROI_map_second_it ++)
@@ -387,7 +385,6 @@ namespace {
                                             // flanking region doesn't contain the first node
                                             if(i_node == first_node)
                                                 continue;
-                                            //cout << "\nFR:" << reg_name[i_node][1] << "\t" << reg_name[i_node][2] << "\n";
                                             for(IterType read_count_FR_map_second_it = read_count_FR_map_second.begin();
                                                 read_count_FR_map_second_it != read_count_FR_map_second.end();
                                                 read_count_FR_map_second_it ++)
@@ -590,7 +587,7 @@ namespace {
         for(set<int>::const_iterator ii_free_nodes = free_nodes.begin(); ii_free_nodes != free_nodes.end(); ii_free_nodes++){
             // remove reads in the regions
             int const& node = *ii_free_nodes;
-            vector<breakdancer::Read> const& reads = regs[node];
+            BreakDancerData::ReadVector const& reads = bdancer.reads_in_region(node);
             if(reads.size() < unsigned(opts.min_read_pair)){
                 for(vector<breakdancer::Read>::const_iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
                     breakdancer::Read const& y = *ii_reads;
@@ -598,7 +595,7 @@ namespace {
                     read.erase(readname);
                 }
                 // remove regions
-                regs.erase(node);
+                bdancer.clear_reads_in_region(node);
                 reg_name.erase(node);
             }
         }
@@ -616,7 +613,6 @@ namespace {
         vector<breakdancer::Read> &reg_seq,
         map<int, vector<int> > &reg_name,
         map<string, vector<int> > &read,
-        map<int, vector<breakdancer::Read> > &regs,
         int *idx_buff,
         int *nnormal_reads,
         int *normal_switch,
@@ -788,16 +784,17 @@ namespace {
                 }
 
                 // This adds the region id to an array of region ids
-                vector<breakdancer::Read>& p = regs[k];
+                vector<breakdancer::Read> p;
                 for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq++){
                     p.push_back(*it_reg_seq);
                     read[it_reg_seq->query_name()].push_back(k);
                 }
+                bdancer.swap_reads_in_region(k, p);
 
                 (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
-                    buildConnection(opts, bdancer, cfg, read, reg_name, regs, x_readcounts,
+                    buildConnection(opts, bdancer, cfg, read, reg_name, x_readcounts,
                         reference_len, *max_readlen, SVtype, bam_header, read_density, maps);
                     *idx_buff = 0;
                 }
@@ -1242,7 +1239,6 @@ int main(int argc, char *argv[]) {
     BreakDancerData bdancer;
 
     map<string, uint32_t > possible_fake_data;
-    map<int, vector<breakdancer::Read> > regs;//global in analysis
     map<string, vector<int> > read;// global in analysis
     map<int,vector<int> > reg_name;// global in analysis
     vector<breakdancer::Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
@@ -1292,7 +1288,7 @@ int main(int argc, char *argv[]) {
 
         if(!library.empty()){
             Analysis(opts, bdancer, cfg, library, b, aln2, reg_seq, reg_name, read,
-                regs, &idx_buff, &nnormal_reads, &normal_switch, &reg_idx,
+                &idx_buff, &nnormal_reads, &normal_switch, &reg_idx,
                 x_readcounts, reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides, read_density,
                 possible_fake_data, maps
@@ -1302,14 +1298,14 @@ int main(int argc, char *argv[]) {
 
     if (reg_seq.size() != 0) {
         do_break_func(
-            opts, bdancer, cfg, reg_seq, reg_name, read, regs, &idx_buff,
+            opts, bdancer, cfg, reg_seq, reg_name, read, &idx_buff,
             &nnormal_reads, &reg_idx, x_readcounts, reference_len, SVtype,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides,
             read_density, maps
             );
     }
 
-    buildConnection(opts, bdancer, cfg, read, reg_name, regs, x_readcounts,
+    buildConnection(opts, bdancer, cfg, read, reg_name, x_readcounts,
         reference_len, max_readlen, SVtype, merged_reader.header(),
         read_density, maps);
 
@@ -1328,7 +1324,6 @@ void do_break_func(
     vector<breakdancer::Read> const& reg_seq,
     map<int, vector<int> >& reg_name,
     map<string, vector<int> >& read,
-    map<int, vector<breakdancer::Read> > &regs,
     int *idx_buff,
     int *nnormal_reads,
     int *reg_idx,
@@ -1359,12 +1354,13 @@ void do_break_func(
         reg_name[k].push_back(lastc);
         reg_name[k].push_back(*nnormal_reads);
 
-        vector<breakdancer::Read>& p = regs[k];
+        vector<breakdancer::Read> p;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
             p.push_back(*it_reg_seq);
             string s = it_reg_seq->query_name();
             read[s].push_back(k);
         }
+        bdancer.swap_reads_in_region(k, p);
 
         //this should replace both regs and reg_name
         //region::Region new_region(begins, beginc, lastc, *nnormal_reads, reg_seq);
@@ -1372,7 +1368,7 @@ void do_break_func(
         (*idx_buff)++;
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
-            buildConnection(opts, bdancer, cfg, read, reg_name, regs, x_readcounts,
+            buildConnection(opts, bdancer, cfg, read, reg_name, x_readcounts,
                 reference_len, *max_readlen, SVtype, bam_header, read_density,
                 maps);
 
