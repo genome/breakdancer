@@ -31,7 +31,6 @@ KSORT_INIT(heap, heap1_t, heap_lt)
 + nread -> number of reads for each library
 + x_readcounts -> number of reads of each orientation, per library
 ## Analysis
-+ reg_idx -> region id generating variable
 + reg_name -> vector; contains coordinates of the region and the number of normal reads within it.
 + reg_seq -> array of read information underlying a region
 + read -> hash of readnames with array of region ids. Stores which two regions are associated with a readpair
@@ -126,9 +125,6 @@ namespace {
         vector<string> const& maps
         )
     {
-        map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
-        map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
-
         // build connections
         // find paired regions that are supported by paired reads
         //warn("-- link regions\n");
@@ -380,34 +376,40 @@ namespace {
 
                                         // add up the read number
                                         for(int i_node = first_node; i_node < node; i_node++){
-                                            map<string, uint32_t> const& read_count_ROI_map_second = read_count_ROI_map[i_node];
-                                            map<string, uint32_t> const& read_count_FR_map_second = read_count_FR_map[i_node];
-                                            typedef map<string, uint32_t>::const_iterator IterType;
-                                            for(IterType read_count_ROI_map_second_it = read_count_ROI_map_second.begin();
-                                                read_count_ROI_map_second_it != read_count_ROI_map_second.end();
-                                                ++read_count_ROI_map_second_it)
-                                            {
-                                                string const& lib = read_count_ROI_map_second_it->first;
-                                                read_count[lib] += read_count_ROI_map[i_node][lib];
+                                            typedef BreakDancer::RoiReadCounts::mapped_type MapType;
+                                            typedef MapType::const_iterator IterType;
+                                            MapType const* read_count_ROI_map_second = bdancer.region_read_counts_by_library(i_node);
+                                            if (read_count_ROI_map_second) {
+                                                for(IterType read_count_ROI_map_second_it = read_count_ROI_map_second->begin();
+                                                    read_count_ROI_map_second_it != read_count_ROI_map_second->end();
+                                                    ++read_count_ROI_map_second_it)
+                                                {
+                                                    string const& lib = read_count_ROI_map_second_it->first;
+                                                    read_count[lib] += read_count_ROI_map_second_it->second;
 
-                                                //for(map<string, int>::iterator i_debug = read_count_ROI_debug[i_node][lib].begin(); i_debug != read_count_ROI_debug[i_node][lib].end(); i_debug++){
-                                                //      cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
-                                                //}
+                                                    //for(map<string, int>::iterator i_debug = read_count_ROI_debug[i_node][lib].begin(); i_debug != read_count_ROI_debug[i_node][lib].end(); i_debug++){
+                                                    //      cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
+                                                    //}
+                                                }
                                             }
 
                                             // flanking region doesn't contain the first node
                                             if(i_node == first_node)
                                                 continue;
-                                            for(IterType read_count_FR_map_second_it = read_count_FR_map_second.begin();
-                                                read_count_FR_map_second_it != read_count_FR_map_second.end();
-                                                read_count_FR_map_second_it ++)
-                                            {
-                                                string const& lib = read_count_FR_map_second_it->first;
-                                                read_count[lib] += read_count_FR_map[i_node][lib];
 
-                                                //  for(map<string, int>::iterator i_debug = read_count_FR_debug[i_node][lib].begin(); i_debug != read_count_FR_debug[i_node][lib].end(); i_debug++){
-                                                //      cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
-                                                //  }
+                                            MapType const* read_count_FR_map_second = bdancer.region_FR_counts_by_library(i_node);
+                                            if (read_count_FR_map_second) {
+                                                for(IterType read_count_FR_map_second_it = read_count_FR_map_second->begin();
+                                                    read_count_FR_map_second_it != read_count_FR_map_second->end();
+                                                    read_count_FR_map_second_it ++)
+                                                {
+                                                    string const& lib = read_count_FR_map_second_it->first;
+                                                    read_count[lib] += read_count_FR_map_second_it->second;
+
+                                                    //  for(map<string, int>::iterator i_debug = read_count_FR_debug[i_node][lib].begin(); i_debug != read_count_FR_debug[i_node][lib].end(); i_debug++){
+                                                    //      cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
+                                                    //  }
+                                                }
                                             }
                                         }
                                     }
@@ -627,7 +629,6 @@ namespace {
         int *idx_buff,
         int *nnormal_reads,
         int *normal_switch,
-        int *reg_idx,
         map<uint32_t, map<string, int> > &x_readcounts,
         uint32_t reference_len,
         map<breakdancer::pair_orientation_flag, string> &SVtype,
@@ -647,9 +648,7 @@ namespace {
         int& lasts = bdancer.lasts;
         int& lastc = bdancer.lastc;
         map<string, uint32_t>& nread_ROI = bdancer.nread_ROI;
-        map<int, map<string, uint32_t> >& read_count_ROI_map = bdancer.read_count_ROI_map;
         map<string, uint32_t>& nread_FR = bdancer.nread_FR;
-        map<int, map<string, uint32_t> >& read_count_FR_map = bdancer.read_count_FR_map;
 
         string const& bam_name = cfg.libmaps.at(lib);
         //main analysis code
@@ -756,15 +755,15 @@ namespace {
                     && seq_coverage < opts.seq_coverage_lim) // skip short/unreliable flanking supporting regions
             {
                 // register reliable region and supporting reads across gaps
-                int k = (*reg_idx) ++;  //assign an id to this region
-                bdancer.add_region(k, new BasicRegion(begins, beginc, lastc, *nnormal_reads));
+                int k = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
                 // never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
                 // record nread_ROI
                 // track the number of reads from each library for the region
                 for(map<string, uint32_t>::const_iterator nread_ROI_it = nread_ROI.begin(); nread_ROI_it != nread_ROI.end(); nread_ROI_it ++){
                     string const& lib_ = nread_ROI_it->first;
-                    read_count_ROI_map[k][lib_] += nread_ROI[lib_];
+
+                    bdancer.increment_region_lib_read_count(k, lib_, nread_ROI[lib_]);
                 }
 
                 // compute nread_FR and record it
@@ -772,22 +771,8 @@ namespace {
                 // From earlier, these numbers seem like they shoudl be the same unless they are being added to in multiple places
                 for(map<string, uint32_t>::const_iterator nread_FR_it = nread_FR.begin(); nread_FR_it != nread_FR.end(); nread_FR_it ++){
                     string const& lib_ = nread_FR_it->first;
-                    map<string, uint32_t>::const_iterator found = read_count_ROI_map[k].find(lib_);
-
-                    if(found == read_count_ROI_map[k].end())
-                        read_count_FR_map[k][lib_] = nread_FR_it->second;
-                    else{
-                        // based on the variable names the ROI reads should contain ARPs as well as standard FR reads
-                        // not sure where that would happen still
-                        if(found->second > nread_FR_it->second) {
-                            cout << "wrong, the subtraction is negative";
-                        }
-                        else {
-                            uint32_t diff = nread_FR_it->second - found->second;
-                            read_count_FR_map[k][lib_] = diff;//(*nread_FR_it).second - read_count_ROI_map[k][lib_];
-                        }
-                    }
-
+                    uint32_t count = bdancer.region_lib_read_count(k, lib_);
+                    bdancer.set_region_lib_FR_count(k, lib_, nread_FR_it->second - count);
                 }
 
                 // This adds the region id to an array of region ids
@@ -812,22 +797,13 @@ namespace {
                 // possible fake is off, never gone to possible fake before, save the ROI
                 // I don't understand exactly what this is doing. It is only hitting here to store the info if flanking region is too short or the coverage is too high
                 // It appears to be used to pull in nearby neighboring regions to the last region identified if the distance between them is too short
-                if(/* *possible_fake == 1 &&*/ *reg_idx >= 1){
+                if(/* *possible_fake == 1 &&*/ bdancer.num_regions() > 0) {
+                    int last_reg_idx = bdancer.num_regions() - 1;
                     typedef map<string, uint32_t>::const_iterator IterType;
                     for(IterType iter = possible_fake_data.begin(); iter != possible_fake_data.end(); ++iter) {
                         string const& lib_ = iter->first;
                         uint32_t const& count = iter->second;
-                        int last_reg_idx = *reg_idx - 1;
-
-                        typedef map<string, uint32_t>::iterator RegionIterType;
-                        pair<RegionIterType, bool> inserted = read_count_ROI_map[last_reg_idx].insert(
-                                make_pair(lib_, count)
-                                );
-
-                        // If the region already existed, then add to its count
-                        if (!inserted.second) {
-                            inserted.first->second += count;
-                        }
+                        bdancer.increment_region_lib_read_count(last_reg_idx, lib_, count);
                     }
                 }
 
@@ -1250,7 +1226,6 @@ int main(int argc, char *argv[]) {
     vector<breakdancer::Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
 
     int idx_buff = 0;// global
-    int reg_idx = 0;// global  ################# node index here ###################
     int normal_switch = 0; // global
     int nnormal_reads = 0; // global
     uint32_t ntotal_nucleotides = 0; // global
@@ -1294,7 +1269,7 @@ int main(int argc, char *argv[]) {
 
         if(!library.empty()){
             Analysis(opts, bdancer, cfg, library, b, aln2, reg_seq, read,
-                &idx_buff, &nnormal_reads, &normal_switch, &reg_idx,
+                &idx_buff, &nnormal_reads, &normal_switch,
                 x_readcounts, reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides, read_density,
                 possible_fake_data, maps
@@ -1305,7 +1280,7 @@ int main(int argc, char *argv[]) {
     if (reg_seq.size() != 0) {
         do_break_func(
             opts, bdancer, cfg, reg_seq, read, &idx_buff,
-            &nnormal_reads, &reg_idx, x_readcounts, reference_len, SVtype,
+            &nnormal_reads, x_readcounts, reference_len, SVtype,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides,
             read_density, maps
             );
@@ -1331,7 +1306,6 @@ void do_break_func(
     map<string, vector<int> >& read,
     int *idx_buff,
     int *nnormal_reads,
-    int *reg_idx,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
@@ -1353,8 +1327,7 @@ void do_break_func(
         // skip short/unreliable flnaking supporting regions
     {
         // register reliable region and supporting reads across gaps
-        int k = (*reg_idx) ++;
-        bdancer.add_region(k, new BasicRegion(begins, beginc, lastc, *nnormal_reads));
+        int k = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
         vector<breakdancer::Read> p;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){

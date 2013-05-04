@@ -12,6 +12,7 @@ class BreakDancer {
 public:
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
+    typedef std::map<int, std::map<std::string, uint32_t> > RoiReadCounts;
 
     BreakDancer()
         : begins(-1)
@@ -22,8 +23,8 @@ public:
     }
 
     ~BreakDancer() {
-        for (size_t i = 0; i < region_data.size(); ++i) {
-            delete region_data[i];
+        for (size_t i = 0; i < _regions.size(); ++i) {
+            delete _regions[i];
         }
     }
 
@@ -32,51 +33,89 @@ public:
     int lasts; // global (chr, should be int in samtools)
     int lastc; // global
     std::map<std::string, uint32_t> nread_ROI; // global
-    std::map<int, std::map<std::string, uint32_t> > read_count_ROI_map; // global
     std::map<std::string, uint32_t> nread_FR;    // global
-    std::map<int, std::map<std::string, uint32_t> > read_count_FR_map; // global
+    RoiReadCounts read_count_ROI_map; // global
+    RoiReadCounts read_count_FR_map; // global
+
+    void increment_region_lib_read_count(int region_idx, std::string const& lib, uint32_t nreads) {
+        read_count_ROI_map[region_idx][lib] += nreads;
+    }
+
+    void set_region_lib_FR_count(int region_idx, std::string const& lib, uint32_t nreads) {
+        read_count_FR_map[region_idx][lib] = nreads;
+    }
+
+    RoiReadCounts::mapped_type const* region_read_counts_by_library(int region_idx) {
+        RoiReadCounts::const_iterator rfound = read_count_ROI_map.find(region_idx);
+        if (rfound == read_count_ROI_map.end())
+            return 0;
+        return &rfound->second;
+    }
+
+    RoiReadCounts::mapped_type const* region_FR_counts_by_library(int region_idx) {
+        RoiReadCounts::const_iterator rfound = read_count_FR_map.find(region_idx);
+        if (rfound == read_count_FR_map.end())
+            return 0;
+        return &rfound->second;
+    }
+
+    uint32_t region_lib_read_count(int region_idx, std::string const& lib) const {
+        RoiReadCounts::const_iterator rfound = read_count_ROI_map.find(region_idx);
+        if (rfound != read_count_ROI_map.end()) {
+            std::map<std::string, uint32_t>::const_iterator lfound = rfound->second.find(lib);
+            if (lfound != rfound->second.end())
+                return lfound->second;
+        }
+
+        return 0;
+    }
+
+    uint32_t region_lib_FR_count(int region_idx, std::string const& lib) const {
+        RoiReadCounts::const_iterator rfound = read_count_FR_map.find(region_idx);
+        if (rfound != read_count_FR_map.end()) {
+            std::map<std::string, uint32_t>::const_iterator lfound = rfound->second.find(lib);
+            if (lfound != rfound->second.end())
+                return lfound->second;
+        }
+
+        return 0;
+    }
 
 
     // Ultimately, we'll want to be pushing onto this vector and
     // returning new region indices as appropriate.
     void swap_reads_in_region(size_t region_idx, ReadVector& reads) {
-        region_data[region_idx]->swap_reads(reads);
+        _regions[region_idx]->swap_reads(reads);
     }
 
     ReadVector const& reads_in_region(size_t region_idx) const {
-        return region_data[region_idx]->reads();
+        return _regions[region_idx]->reads();
     }
 
     bool region_exists(size_t region_idx) const {
-        return (region_idx < region_data.size()) && region_data[region_idx];
+        return (region_idx < _regions.size()) && _regions[region_idx];
     }
 
     void clear_region(size_t region_idx) {
-        delete region_data[region_idx];
-        region_data[region_idx] = 0;
+        delete _regions[region_idx];
+        _regions[region_idx] = 0;
     }
 
-    void add_region(size_t region_idx, BasicRegion* r) {
-        // FIXME: ultimately, we'll want to push_back and return the region_idx
-        if (region_idx >= region_data.size())
-            region_data.resize((region_idx+1)*2);
-        else if (region_data[region_idx])
-            delete region_data[region_idx];
+    size_t num_regions() const {
+        return _regions.size();
+    }
 
-        region_data[region_idx] = r;
+    size_t add_region(BasicRegion* r) {
+        _regions.push_back(r);
+        return _regions.size() - 1;
     }
 
     BasicRegion const& get_region_data(size_t region_idx) const {
-        using boost::format;
-        if (!region_exists(region_idx)) {
-            throw std::runtime_error(str(format("Unknown region %1%")
-                % region_idx));
-        }
-        return *region_data[region_idx];
+        return *_regions[region_idx];
     }
 
 private:
-    RegionData region_data;
+    RegionData _regions;
 };
 
 

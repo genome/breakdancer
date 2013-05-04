@@ -46,7 +46,6 @@ void do_break_func(
     map<string, vector<int> >& read,
     int *idx_buff,
     int *nnormal_reads,
-    int *reg_idx,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
     map<breakdancer::pair_orientation_flag, string> &SVtype,
