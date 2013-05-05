@@ -43,7 +43,7 @@ void do_break_func(
     BreakDancer& bdancer,
     LegacyConfig const& cfg,
     vector<breakdancer::Read> const& reg_seq,
-    map<string, vector<int> >& read,
+    map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,
     map<uint32_t, map<string,int> > &x_readcounts,
@@ -52,7 +52,6 @@ void do_break_func(
     int *max_readlen,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,
-    map<string, float>& read_density,
     vector<string> maps
     );
 

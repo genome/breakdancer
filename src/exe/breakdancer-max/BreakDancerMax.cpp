@@ -125,10 +125,11 @@ namespace {
         int max_readlen,
         ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
         bam_header_t* bam_header,
-        map<string, float> &read_density,
         vector<string> const& maps
         )
     {
+        map<string, float> const& read_density = bdancer.read_density;
+
         // build connections
         // find paired regions that are supported by paired reads
         //warn("-- link regions\n");
@@ -159,7 +160,6 @@ namespace {
         // segregate graph, find nodes that have connections
         set<int> free_nodes;
         map<int, map<int, int> >::const_iterator ii_clink;
-        //  int tmp_size = clink.size();
         vector<int> s0_vec;
         //  int tmp_read_size = read.size();
         //cout << tmp_read_size << endl;
@@ -420,7 +420,7 @@ namespace {
                                 float copy_number_sum = 0;
                                 for(map<string, uint32_t>::const_iterator read_count_it = read_count.begin(); read_count_it != read_count.end(); read_count_it ++){
                                     string const& lib = read_count_it->first;
-                                    copy_number[lib] = (float)((*read_count_it).second)/((float)read_density[lib] * float(sv_pos2 - sv_pos1))*2;
+                                    copy_number[lib] = (float)((*read_count_it).second)/((float)read_density.at(lib) * float(sv_pos2 - sv_pos1))*2;
                                     copy_number_sum += copy_number[lib];
                                     //cout << lib << "\t" << (*read_count_it).second << "\t" << read_density[lib] << "\t" << sv_pos2-sv_pos1 << "\t" << copy_number[lib] << endl;
 
@@ -613,7 +613,6 @@ namespace {
         int *max_readlen,
         bam_header_t* bam_header,
         uint32_t *ntotal_nucleotides,
-        map<string, float> &read_density,
         map<string, uint32_t> &possible_fake_data,
         vector<string> const& maps
         )
@@ -764,7 +763,7 @@ namespace {
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
                     buildConnection(opts, bdancer, cfg, read_regions, x_readcounts,
-                        reference_len, *max_readlen, SVtype, bam_header, read_density, maps);
+                        reference_len, *max_readlen, SVtype, bam_header, maps);
                     *idx_buff = 0;
                 }
             }
@@ -904,6 +903,7 @@ namespace {
 // main function
 int main(int argc, char *argv[]) {
     Options opts = parseArguments(argc, argv);
+    BreakDancer bdancer;
 
     // define the map SVtype
     ConfigMap<breakdancer::pair_orientation_flag, string>::type SVtype;
@@ -957,6 +957,7 @@ int main(int argc, char *argv[]) {
     bam1_t *b = bam_init1();
     string format_ = "sam";
     vector<string> maps;
+
 
     for(ii=cfg.fmaps.begin(); ii!=cfg.fmaps.end(); ++ii)
     {
@@ -1099,7 +1100,6 @@ int main(int argc, char *argv[]) {
     cout << endl;
     cout << "#Library Statistics:" << endl;
     map<string,int>::const_iterator nreads_ii;
-    map<string,float> read_density;
     for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
     {
         string const& lib = nreads_ii->first;
@@ -1110,18 +1110,18 @@ int main(int argc, char *argv[]) {
         // compute read_density
         if(opts.CN_lib == 1){
             if(nreads.find(lib) != nreads.end())
-                read_density[lib] = float(nreads[lib])/float(reference_len);
+                bdancer.read_density[lib] = float(nreads[lib])/float(reference_len);
             else{
-                read_density[lib] = 0.000001;
+                bdancer.read_density[lib] = 0.000001;
                 cout << lib << " does not contain any normals" << endl;
             }
         }
         else{
             map<string, int>::const_iterator iter = nreads_per_bam.find(lib_info.bam_file);
             if(iter != nreads_per_bam.end())
-                read_density[lib_info.bam_file] = float(iter->second)/float(reference_len);
+                bdancer.read_density[lib_info.bam_file] = float(iter->second)/float(reference_len);
             else{
-                read_density[lib_info.bam_file] = 0.000001;
+                bdancer.read_density[lib_info.bam_file] = 0.000001;
                 cout << lib << " does not contain any normals" << endl;
             }
         }
@@ -1181,8 +1181,6 @@ int main(int argc, char *argv[]) {
     cout << "\n";
 
 
-    BreakDancer bdancer;
-
     map<string, uint32_t > possible_fake_data;
     map<string, vector<int> > read_regions;// global in analysis
     vector<breakdancer::Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
@@ -1233,7 +1231,7 @@ int main(int argc, char *argv[]) {
             Analysis(opts, bdancer, cfg, library, aln2, reg_seq, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
                 x_readcounts, reference_len, SVtype, max_read_window_size, &max_readlen,
-                merged_reader.header(), &ntotal_nucleotides, read_density,
+                merged_reader.header(), &ntotal_nucleotides,
                 possible_fake_data, maps
             );
         }
@@ -1244,13 +1242,13 @@ int main(int argc, char *argv[]) {
             opts, bdancer, cfg, reg_seq, read_regions, &idx_buff,
             &nnormal_reads, x_readcounts, reference_len, SVtype,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides,
-            read_density, maps
+            maps
             );
     }
 
     buildConnection(opts, bdancer, cfg, read_regions, x_readcounts,
         reference_len, max_readlen, SVtype, merged_reader.header(),
-        read_density, maps);
+        maps);
 
     bam_destroy1(b);
 
@@ -1274,11 +1272,9 @@ void do_break_func(
     int *max_readlen,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,
-    map<string, float>& read_density,
     vector<string> maps
     )
 {
-
     int& begins = bdancer.begins;
     int& beginc = bdancer.beginc;
     int& lastc = bdancer.lastc;
@@ -1305,7 +1301,7 @@ void do_break_func(
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
             buildConnection(opts, bdancer, cfg, read_regions, x_readcounts,
-                reference_len, *max_readlen, SVtype, bam_header, read_density,
+                reference_len, *max_readlen, SVtype, bam_header,
                 maps);
 
             *idx_buff = 0;

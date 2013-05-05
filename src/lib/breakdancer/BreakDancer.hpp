@@ -34,6 +34,7 @@ public:
     int lastc; // global
     std::map<std::string, uint32_t> nread_ROI; // global
     std::map<std::string, uint32_t> nread_FR;    // global
+    std::map<std::string, float> read_density;
 
     void increment_region_lib_read_count(size_t region_idx, std::string const& lib, uint32_t nreads) {
         if (region_idx >= _read_count_ROI_map.size())
