@@ -12,6 +12,26 @@ struct ConfigMap {
     typedef boost::container::flat_map<K, V> type;
 };
 
+struct LibraryInfo {
+    LibraryInfo()
+        : mean_insertsize(0)
+        , std_insertsize(0)
+        , uppercutoff(0)
+        , lowercutoff(0)
+        , readlens(0)
+        , min_mapping_quality(-1)
+    {
+    }
+
+    std::string bam_file;
+    float mean_insertsize;
+    float std_insertsize;
+    float uppercutoff;
+    float lowercutoff;
+    float readlens;
+    int min_mapping_quality;
+};
+
 class LegacyConfig {
 public:
     LegacyConfig();
@@ -19,13 +39,7 @@ public:
 
     ConfigMap<std::string, std::string>::type exes;
     ConfigMap<std::string, std::string>::type fmaps;
-    ConfigMap<std::string, std::string>::type libmaps;
-    ConfigMap<std::string, float>::type mean_insertsize;
-    ConfigMap<std::string, float>::type std_insertsize;
-    ConfigMap<std::string, float>::type uppercutoff;
-    ConfigMap<std::string, float>::type lowercutoff;
-    ConfigMap<std::string, float>::type readlens;
-    ConfigMap<std::string, int>::type mapQual;
+    ConfigMap<std::string, LibraryInfo>::type library_info;
     ConfigMap<std::string, std::string>::type readgroup_library;
     ConfigMap<std::string, std::string>::type readgroup_platform;
     ConfigMap<std::string, std::string>::type ReadsOut;

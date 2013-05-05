@@ -441,6 +441,7 @@ namespace {
                                 if(opts.CN_lib == 1){
                                     for(map<string,int>::const_iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
                                         string const& sp = ii_type_lib_rc->first;
+                                        LibraryInfo const& lib_info = cfg.library_info.at(sp);
                                         // intialize to be zero, in case of no library, or DEL, or ITX.
 
                                         string copy_number_str = "NA";
@@ -462,18 +463,16 @@ namespace {
 
                                         sptype += sp + "|" + itos((*ii_type_lib_rc).second) + "," + copy_number_str;
 
-                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*cfg.mean_insertsize.at(sp);
+                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*lib_info.mean_insertsize;
                                     }
                                 } // do lib for copy number and support reads
                                 else{
                                     map<string, int> type_bam_readcount;
                                     for(map<string, int>::const_iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
                                         string const& sp = ii_type_lib_rc->first;
-                                        if(cfg.libmaps.find(sp) != cfg.libmaps.end()){
-                                            string const& sp_bam = cfg.libmaps.at(sp);
-                                            type_bam_readcount[sp_bam] += ii_type_lib_rc->second;
-                                        }
-                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*cfg.mean_insertsize.at(sp);
+                                        LibraryInfo const& lib_info = cfg.library_info.at(sp);
+                                        type_bam_readcount[lib_info.bam_file] += ii_type_lib_rc->second;
+                                        diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*lib_info.mean_insertsize;
                                     }
                                     for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
                                         string const& sp = ii_type_bam_rc->first;
@@ -603,7 +602,7 @@ namespace {
         Options const& opts,
         BreakDancer& bdancer,
         LegacyConfig const& cfg,
-        string lib,
+        string const& lib,
         bam1_t *b,
         breakdancer::Read &aln,
         vector<breakdancer::Read> &reg_seq,
@@ -632,7 +631,8 @@ namespace {
         map<string, uint32_t>& nread_ROI = bdancer.nread_ROI;
         map<string, uint32_t>& nread_FR = bdancer.nread_FR;
 
-        string const& bam_name = cfg.libmaps.at(lib);
+        LibraryInfo const& lib_info = cfg.library_info.at(lib);
+
         //main analysis code
 
         // region between last and next begin
@@ -641,22 +641,22 @@ namespace {
         if(aln.bdqual() > opts.min_map_qual
             && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF))
         {
-            string const& key = opts.CN_lib == 1 ? lib : bam_name;
+            string const& key = opts.CN_lib == 1 ? lib : lib_info.bam_file;
             ++nread_ROI[key];
             ++possible_fake_data[key];
             ++nread_FR[key];
         }
 
-        // mapQual is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
-        ConfigMap<string, int>::type::const_iterator libraryMinMapq = cfg.mapQual.find(lib);
-        if (libraryMinMapq != cfg.mapQual.end()) {
-            if (aln.bdqual() <= libraryMinMapq->second)
-                return;
-        } else if(aln.bdqual() <= opts.min_map_qual) {
-            //here filter out if mapping quality is less than or equal to the min_map_qual.
-            //Note that this doesn't make sense as a cutoff of 0 would still exclude reads with qual 0
-                return;
-        }
+        // min_mapping_quality is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
+
+        // XXX: this value can be missing in the config (indicated by a value of -1),
+        // in which case we'll wan't to use the default from the cmdline rather than
+        // admit everything.
+        int min_mapq = lib_info.min_mapping_quality < 0 ?
+                opts.min_map_qual : lib_info.min_mapping_quality;
+
+        if (aln.bdqual() <= min_mapq)
+            return;
 
         //FIXME this is likely to have a special tid reserved in the spec. Go back and fix it.
         if(strcmp(bam_header->target_name[b->core.tid], "*")==0)
@@ -677,24 +677,24 @@ namespace {
         // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
         // Remark based on BD options
         if(opts.Illumina_long_insert){
-            if(aln.abs_isize() > cfg.uppercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_RF);
             }
-            if(aln.abs_isize() < cfg.uppercutoff.at(lib) && aln.bdflag() == breakdancer::ARP_RF) {
+            if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_RF) {
                 aln.set_bdflag(breakdancer::NORMAL_RF);
             }
-            if(aln.abs_isize() < cfg.lowercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
         }
         else{
-            if(aln.abs_isize() > cfg.uppercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_FR) {
+            if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_big_insert);
             }
-            if(aln.abs_isize() < cfg.uppercutoff.at(lib) && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
+            if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
                 aln.set_bdflag(breakdancer::NORMAL_FR);
             }
-            if(aln.abs_isize() < cfg.lowercutoff.at(lib) && aln.bdflag() == breakdancer::NORMAL_FR) {
+            if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
             if(aln.bdflag() == breakdancer::NORMAL_RF) {
@@ -1025,6 +1025,8 @@ int main(int argc, char *argv[]) {
             if(lib.empty())
                 continue;
 
+            LibraryInfo const& lib_info = cfg.library_info.at(lib);
+
             //Below seems like a bug to me. 18 means FR orientation plus paired end req met in MAQ
             //this would also allow 20 (RF and paired end req met) and 24 (RR and paired end req met)
             //the latter two are abnormal mappings and this would allow them but would skip 17 (FF and paired end req met)
@@ -1040,7 +1042,7 @@ int main(int argc, char *argv[]) {
             if(aln2.bdqual() > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
-                    ++nreads_[cfg.libmaps.at(lib)];
+                    ++nreads_[lib_info.bam_file];
                 }
             }
 
@@ -1049,14 +1051,13 @@ int main(int argc, char *argv[]) {
             //calculations before this is applied?
             //-dlarson
 
-            if(cfg.mapQual.find(lib) != cfg.mapQual.end()){
-                if(aln2.bdqual() <= cfg.mapQual.at(lib))
-                    continue;
-            }
-            else{
-                if(aln2.bdqual() <= opts.min_map_qual)
-                    continue;
-            }
+            int min_mapq = lib_info.min_mapping_quality < 0 ?
+                    opts.min_map_qual : lib_info.min_mapping_quality;
+
+            if (aln2.bdqual() <= min_mapq)
+                continue;
+
+
             if(aln2.bdflag() == breakdancer::NA)
                 continue;
             if((opts.transchr_rearrange && aln2.bdflag() != breakdancer::ARP_CTX) || aln2.bdflag() == breakdancer::MATE_UNMAPPED || aln2.bdflag() == breakdancer::UNMAPPED)
@@ -1065,24 +1066,24 @@ int main(int argc, char *argv[]) {
             //It would be nice if this was pulled into the Read class as well
             //for now, let's just set the bdflag directly here since it is public
             if(opts.Illumina_long_insert){
-                if(aln2.abs_isize() > cfg.uppercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_RF) {
+                if(aln2.abs_isize() > lib_info.uppercutoff && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_RF);
                 }
-                if(aln2.abs_isize() < cfg.uppercutoff.at(lib) && aln2.bdflag() == breakdancer::ARP_RF) {
+                if(aln2.abs_isize() < lib_info.uppercutoff && aln2.bdflag() == breakdancer::ARP_RF) {
                     aln2.set_bdflag(breakdancer::NORMAL_RF);
                 }
-                if(aln2.abs_isize() < cfg.lowercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_RF) {
+                if(aln2.abs_isize() < lib_info.lowercutoff && aln2.bdflag() == breakdancer::NORMAL_RF) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
                 }
             }
             else{
-                if(aln2.abs_isize() > cfg.uppercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_FR) {
+                if(aln2.abs_isize() > lib_info.uppercutoff && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_big_insert);
                 }
-                if(aln2.abs_isize() < cfg.uppercutoff.at(lib) && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
+                if(aln2.abs_isize() < lib_info.uppercutoff && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
                     aln2.set_bdflag(breakdancer::NORMAL_FR);
                 }
-                if(aln2.abs_isize() < cfg.lowercutoff.at(lib) && aln2.bdflag() == breakdancer::NORMAL_FR) {
+                if(aln2.abs_isize() < lib_info.lowercutoff && aln2.bdflag() == breakdancer::NORMAL_FR) {
                     aln2.set_bdflag(breakdancer::ARP_FR_small_insert);
                 }
             }
@@ -1123,7 +1124,8 @@ int main(int argc, char *argv[]) {
     for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
     {
         string const& lib = nreads_ii->first;
-        float sequence_coverage = float(nreads[lib]*cfg.readlens.at(lib))/float(reference_len);
+        LibraryInfo const& lib_info = cfg.library_info.at(lib);
+        float sequence_coverage = float(nreads[lib]*lib_info.readlens)/float(reference_len);
         total_seq_cov += sequence_coverage;
 
         // compute read_density
@@ -1136,15 +1138,15 @@ int main(int argc, char *argv[]) {
             }
         }
         else{
-            if(nreads_.find(cfg.libmaps.at(lib)) != nreads_.end())
-                read_density[cfg.libmaps.at(lib)] = float(nreads_[cfg.libmaps.at(lib)])/float(reference_len);
+            if(nreads_.find(lib_info.bam_file) != nreads_.end())
+                read_density[lib_info.bam_file] = float(nreads_[lib_info.bam_file])/float(reference_len);
             else{
-                read_density[cfg.libmaps.at(lib)] = 0.000001;
+                read_density[lib_info.bam_file] = 0.000001;
                 cout << lib << " does not contain any normals" << endl;
             }
         }
 
-        float physical_coverage = float(nreads[lib]*cfg.mean_insertsize.at(lib))/float(reference_len)/2;
+        float physical_coverage = float(nreads[lib]*lib_info.mean_insertsize)/float(reference_len)/2;
         total_phy_cov += physical_coverage;
 
         int nread_lengthDiscrepant = -1;
@@ -1160,12 +1162,12 @@ int main(int argc, char *argv[]) {
         max_read_window_size = std::min(max_read_window_size, tmp);
 
         //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff.at(lib),lowercutoff.at(lib),readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
-        cout << "#" << cfg.libmaps.at(lib)
-            << "\tmean:" << cfg.mean_insertsize.at(lib)
-            << "\tstd:" << cfg.std_insertsize.at(lib)
-            << "\tuppercutoff:" << cfg.uppercutoff.at(lib)
-            << "\tlowercutoff:" << cfg.lowercutoff.at(lib)
-            << "\treadlen:" << cfg.readlens.at(lib)
+        cout << "#" << lib_info.bam_file
+            << "\tmean:" << lib_info.mean_insertsize
+            << "\tstd:" << lib_info.std_insertsize
+            << "\tuppercutoff:" << lib_info.uppercutoff
+            << "\tlowercutoff:" << lib_info.lowercutoff
+            << "\treadlen:" << lib_info.readlens
             << "\tlibrary:" << lib
             << "\treflen:" << reference_len
             << "\tseqcov:" << sequence_coverage

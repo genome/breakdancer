@@ -186,14 +186,18 @@ LegacyConfig::LegacyConfig(std::istream& in, Options const& opts)
                 ReadsOutTmp.close();
             }
 
-            libmaps[lib] = fmap;
+            LibraryInfo lib_info;
+            lib_info.bam_file = fmap;
+
             if(mqual_.compare("NA")){
                 mqual = atoi(mqual_.c_str());
-                mapQual[lib] = mqual;
+                lib_info.min_mapping_quality = mqual;
+            } else {
+                lib_info.min_mapping_quality = -1;
             }
             fmaps[fmap] = lib;
 
-            if(mean_.compare("NA") && std_.compare("NA")){
+            if(mean_ != "NA" && std_ != "NA") {
                 mean = atof(mean_.c_str());
                 std = atof(std_.c_str());
                 if(!upper_.compare("NA") || !lower_.compare("NA")){
@@ -212,11 +216,14 @@ LegacyConfig::LegacyConfig(std::istream& in, Options const& opts)
             }
             max_readlen = max_readlen < readlen ? readlen:max_readlen;
 
-            mean_insertsize[lib] = mean;
-            std_insertsize[lib] = std;
-            uppercutoff[lib] = upper;
-            lowercutoff[lib] = lower;
-            readlens[lib] = readlen;
+            lib_info.mean_insertsize = mean;
+            lib_info.std_insertsize = std;
+            lib_info.uppercutoff = upper;
+            lib_info.lowercutoff = lower;
+            lib_info.readlens = readlen;
+
+            library_info[lib] = lib_info;
+
             if(exes.find(fmap) == exes.end())
                 exes[fmap] = exe.compare("NA")?exe:"cat";
             else if(exes[fmap].compare(exe) != 0){

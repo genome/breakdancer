@@ -69,11 +69,11 @@ TEST_F(TestConfig, legacyParse) {
     ASSERT_EQ("samtools view", cfg.exes.find("y.bam")->second);
 
     // test libmaps, mapping library names -> input files?
-    ASSERT_EQ(2, cfg.libmaps.size());
-    ASSERT_EQ(1, cfg.libmaps.count("lib1"));
-    ASSERT_EQ(1, cfg.libmaps.count("lib2"));
-    ASSERT_EQ("x.bam", cfg.libmaps.find("lib1")->second);
-    ASSERT_EQ("y.bam", cfg.libmaps.find("lib2")->second);
+    ASSERT_EQ(2, cfg.library_info.size());
+    ASSERT_EQ(1, cfg.library_info.count("lib1"));
+    ASSERT_EQ(1, cfg.library_info.count("lib2"));
+    ASSERT_EQ("x.bam", cfg.library_info.find("lib1")->second.bam_file);
+    ASSERT_EQ("y.bam", cfg.library_info.find("lib2")->second.bam_file);
 
     // ...
 }
