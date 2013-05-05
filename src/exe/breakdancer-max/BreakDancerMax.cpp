@@ -123,7 +123,7 @@ namespace {
         map<uint32_t, map<string,int> > &x_readcounts,
         uint32_t reference_len,
         int max_readlen,
-        map<breakdancer::pair_orientation_flag, string> &SVtype,
+        ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
         bam_header_t* bam_header,
         map<string, float> &read_density,
         vector<string> const& maps
@@ -497,7 +497,7 @@ namespace {
                                 float AF = 1 - copy_number_sum;
 
 
-                                string SVT = SVtype.find(flag)==SVtype.end()?"UN":SVtype[flag]; // UN stands for unknown
+                                string SVT = SVtype.find(flag)==SVtype.end()?"UN":SVtype.at(flag); // UN stands for unknown
                                 // make the coordinates with base 1
                                 sv_pos1 = sv_pos1 + 1;
                                 sv_pos2 = sv_pos2 + 1;
@@ -609,7 +609,7 @@ namespace {
         int *normal_switch,
         map<uint32_t, map<string, int> > &x_readcounts,
         uint32_t reference_len,
-        map<breakdancer::pair_orientation_flag, string> &SVtype,
+        ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
         int max_read_window_size,
         int *max_readlen,
         bam_header_t* bam_header,
@@ -918,7 +918,7 @@ int main(int argc, char *argv[]) {
     Options opts = parseArguments(argc, argv);
 
     // define the map SVtype
-    map<breakdancer::pair_orientation_flag, string> SVtype;
+    ConfigMap<breakdancer::pair_orientation_flag, string>::type SVtype;
     if(opts.Illumina_long_insert) {
         SVtype[breakdancer::ARP_FF] = "INV";
         SVtype[breakdancer::ARP_FR_small_insert] = "INS";
@@ -1285,7 +1285,7 @@ void do_break_func(
     int *nnormal_reads,
     map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
-    map<breakdancer::pair_orientation_flag, string> &SVtype,
+    ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
     int *max_readlen,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides,
