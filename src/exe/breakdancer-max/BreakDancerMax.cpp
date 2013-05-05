@@ -83,13 +83,15 @@ namespace {
         real_type logpvalue = 0.0;
         real_type err = 0.0;
         for(map<string,int>::const_iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
-            string lib = (*ii_rlibrary_readcount).first;
+            string const& lib = ii_rlibrary_readcount->first;
+            int const& readcount = ii_rlibrary_readcount->second;
+
             // debug
             //int db_x_rc = x_readcounts[type][lib];
             lambda = real_type(total_region_size)* (real_type(x_readcounts[type][lib])/real_type(reference_len));
             lambda = max(real_type(1.0e-10), lambda);
             poisson_distribution<real_type> poisson(lambda);
-            real_type tmp_a = log(cdf(complement(poisson, rlibrary_readcount[lib]))) - err;
+            real_type tmp_a = log(cdf(complement(poisson, readcount))) - err;
             real_type tmp_b = logpvalue + tmp_a;
             err = (tmp_b - logpvalue) - tmp_a;
             _max_kahan_err = max(_max_kahan_err, err);
@@ -187,7 +189,7 @@ namespace {
                 vector<int> newtails;
                 vector<int>::iterator it_tails;
                 for(it_tails = tails.begin(); it_tails != tails.end(); it_tails ++){
-                    int tail = *it_tails;
+                    int const& tail = *it_tails;
                     //cout << ",,,," << tail << endl;
                     //assert(clink.find(*it_tails) != clink.end()); THIS ASSERT TRIPS
                     if(clink.find(*it_tails) == clink.end())
@@ -378,7 +380,7 @@ namespace {
 
                                         // add up the read number
                                         for(int i_node = first_node; i_node < node; i_node++){
-                                            typedef BreakDancer::RoiReadCounts::mapped_type MapType;
+                                            typedef BreakDancer::RoiReadCounts::value_type MapType;
                                             typedef MapType::const_iterator IterType;
                                             MapType const* counts = bdancer.region_read_counts_by_library(i_node);
                                             if (counts)
@@ -742,8 +744,7 @@ namespace {
                 // track the number of reads from each library for the region
                 for(map<string, uint32_t>::const_iterator nread_ROI_it = nread_ROI.begin(); nread_ROI_it != nread_ROI.end(); nread_ROI_it ++){
                     string const& lib_ = nread_ROI_it->first;
-
-                    bdancer.increment_region_lib_read_count(k, lib_, nread_ROI[lib_]);
+                    bdancer.increment_region_lib_read_count(k, lib_, nread_ROI_it->second);
                 }
 
                 // compute nread_FR and record it
@@ -828,7 +829,6 @@ namespace {
         lastc = int(b->core.pos);
         nread_ROI.clear(); //Not sure why this is cleared here...
     }
-
 }
 
 namespace {
@@ -1122,7 +1122,7 @@ int main(int argc, char *argv[]) {
     map<string,float> read_density;
     for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
     {
-        string lib = (*nreads_ii).first;
+        string const& lib = nreads_ii->first;
         float sequence_coverage = float(nreads[lib]*cfg.readlens.at(lib))/float(reference_len);
         total_seq_cov += sequence_coverage;
 
@@ -1174,7 +1174,7 @@ int main(int argc, char *argv[]) {
 
         map<uint32_t,map<string,int> >::const_iterator x_readcounts_ii;
         for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){
-            uint32_t t = (*x_readcounts_ii).first;// get the first key out, which is a member of recflags
+            uint32_t const& t = x_readcounts_ii->first;// get the first key out, which is a member of recflags
 
             map<string,int>::const_iterator found = x_readcounts_ii->second.find(lib);
             if (found != x_readcounts_ii->second.end())
@@ -1188,7 +1188,7 @@ int main(int argc, char *argv[]) {
         printf("\tAllele_frequency");
     if(opts.CN_lib == 0){
         for(vector<string>::const_iterator it_map = maps.begin(); it_map != maps.end(); it_map++){
-            size_t tmp = (*it_map).rfind("/");
+            string::size_type tmp = it_map->rfind("/");
             if(tmp!=string::npos)
                 cout << "\t" << (*it_map).substr(tmp + 1);
             else
@@ -1312,8 +1312,7 @@ void do_break_func(
         vector<breakdancer::Read> p;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
             p.push_back(*it_reg_seq);
-            string s = it_reg_seq->query_name();
-            read[s].push_back(k);
+            read[it_reg_seq->query_name()].push_back(k);
         }
         bdancer.swap_reads_in_region(k, p);
 

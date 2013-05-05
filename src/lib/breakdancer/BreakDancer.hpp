@@ -12,7 +12,7 @@ class BreakDancer {
 public:
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
-    typedef std::map<int, std::map<std::string, uint32_t> > RoiReadCounts;
+    typedef std::vector<std::map<std::string, uint32_t> > RoiReadCounts;
 
     BreakDancer()
         : begins(-1)
@@ -34,51 +34,37 @@ public:
     int lastc; // global
     std::map<std::string, uint32_t> nread_ROI; // global
     std::map<std::string, uint32_t> nread_FR;    // global
-    RoiReadCounts read_count_ROI_map; // global
-    RoiReadCounts read_count_FR_map; // global
 
-    void increment_region_lib_read_count(int region_idx, std::string const& lib, uint32_t nreads) {
-        read_count_ROI_map[region_idx][lib] += nreads;
+    void increment_region_lib_read_count(size_t region_idx, std::string const& lib, uint32_t nreads) {
+        if (region_idx >= _read_count_ROI_map.size())
+            _read_count_ROI_map.resize(2*(region_idx+1));
+        _read_count_ROI_map[region_idx][lib] += nreads;
     }
 
-    void set_region_lib_FR_count(int region_idx, std::string const& lib, uint32_t nreads) {
-        read_count_FR_map[region_idx][lib] = nreads;
+    void set_region_lib_FR_count(size_t region_idx, std::string const& lib, uint32_t nreads) {
+        if (region_idx >= _read_count_FR_map.size())
+            _read_count_FR_map.resize(2*(region_idx+1));
+        _read_count_FR_map[region_idx][lib] = nreads;
     }
 
-    RoiReadCounts::mapped_type const* region_read_counts_by_library(int region_idx) {
-        RoiReadCounts::const_iterator rfound = read_count_ROI_map.find(region_idx);
-        if (rfound == read_count_ROI_map.end())
+    RoiReadCounts::value_type const* region_read_counts_by_library(size_t region_idx) {
+        if (region_idx >= _read_count_ROI_map.size())
             return 0;
-        return &rfound->second;
+        return &_read_count_ROI_map[region_idx];
     }
 
-    RoiReadCounts::mapped_type const* region_FR_counts_by_library(int region_idx) {
-        RoiReadCounts::const_iterator rfound = read_count_FR_map.find(region_idx);
-        if (rfound == read_count_FR_map.end())
+    RoiReadCounts::value_type const* region_FR_counts_by_library(size_t region_idx) {
+        if (region_idx >= _read_count_FR_map.size())
             return 0;
-        return &rfound->second;
+        return &_read_count_FR_map[region_idx];
     }
 
-    uint32_t region_lib_read_count(int region_idx, std::string const& lib) const {
-        RoiReadCounts::const_iterator rfound = read_count_ROI_map.find(region_idx);
-        if (rfound != read_count_ROI_map.end()) {
-            std::map<std::string, uint32_t>::const_iterator lfound = rfound->second.find(lib);
-            if (lfound != rfound->second.end())
-                return lfound->second;
-        }
-
-        return 0;
+    uint32_t region_lib_read_count(size_t region_idx, std::string const& lib) const {
+        return _region_lib_counts(region_idx, lib, _read_count_ROI_map);
     }
 
-    uint32_t region_lib_FR_count(int region_idx, std::string const& lib) const {
-        RoiReadCounts::const_iterator rfound = read_count_FR_map.find(region_idx);
-        if (rfound != read_count_FR_map.end()) {
-            std::map<std::string, uint32_t>::const_iterator lfound = rfound->second.find(lib);
-            if (lfound != rfound->second.end())
-                return lfound->second;
-        }
-
-        return 0;
+    uint32_t region_lib_FR_count(size_t region_idx, std::string const& lib) const {
+        return _region_lib_counts(region_idx, lib, _read_count_FR_map);
     }
 
 
@@ -114,7 +100,27 @@ public:
         return *_regions[region_idx];
     }
 
+    RoiReadCounts const& read_count_ROI_map() const {
+        return _read_count_ROI_map;
+    }
+
+    RoiReadCounts const& read_count_FR_map() const {
+        return _read_count_FR_map;
+    }
+
 private:
+    uint32_t _region_lib_counts(size_t region_idx, std::string const& lib, RoiReadCounts const& x) const {
+        if (region_idx >= x.size())
+            return 0;
+        RoiReadCounts::value_type::const_iterator found = x[region_idx].find(lib);
+        if (found != x[region_idx].end())
+            return found->second;
+        return 0;
+    }
+
+private:
+    RoiReadCounts _read_count_ROI_map;
+    RoiReadCounts _read_count_FR_map;
     RegionData _regions;
 };
 
