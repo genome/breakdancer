@@ -269,10 +269,7 @@ namespace {
                                     continue;
                                 // initialize orient_count
                                 // y.ori() is the orientation. This is stored as a string value or - or +
-                                if(orient_count.find(y.ori()) == orient_count.end())
-                                    orient_count[y.ori()] = 1;
-                                else
-                                    orient_count[y.ori()]++;
+                                orient_count[y.ori()]++;
 
                                 //START HERE
                                 if(read_pair.find(y.query_name()) == read_pair.end()){
@@ -1092,10 +1089,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
 
-            if(x_readcounts.find(aln2.bdflag()) != x_readcounts.end() && x_readcounts[aln2.bdflag()].find(lib) != x_readcounts[aln2.bdflag()].end())
-                x_readcounts[aln2.bdflag()][lib] ++;
-            else
-                x_readcounts[aln2.bdflag()][lib] = 1;
+            ++x_readcounts[aln2.bdflag()][lib];
         }
         reader.reset(); // free bam reader
 
