@@ -137,13 +137,24 @@ namespace {
         //read is a map of readnames, each is associated with a vector of region ids
         // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
         for(ii_read = read.begin(); ii_read != read.end(); ii_read++){
+            // test
+            //string tmp_str = (*ii_read).first;
             vector<int> const& p = ii_read->second;
             assert( p.size() < 3);
             if(p.size() != 2) // skip singleton read (non read pairs)
                 continue;
-            // track the number of links between two nodes
-            ++clink[p[0]][p[1]];
-            ++clink[p[1]][p[0]];
+            //cout << tmp_str << "\t" << p[0] << "\t" << p[1] << endl;
+            //track the number of links between two nodes
+            if(clink.find(p[0]) != clink.end() && clink[p[0]].find(p[1]) != clink[p[0]].end()){
+                ++clink[p[0]][p[1]];
+                ++clink[p[1]][p[0]];
+            }
+            else{
+                clink[p[0]][p[1]] = 1;
+                clink[p[1]][p[0]] = 1;
+            }
+            //cout << tmp_str << endl;
+            //cout << p[0] << "\t" << p[1] << "\t" << link[p[0]][p[1]] << endl;
         }
         // segregate graph, find nodes that have connections
         set<int> free_nodes;
@@ -258,7 +269,10 @@ namespace {
                                     continue;
                                 // initialize orient_count
                                 // y.ori() is the orientation. This is stored as a string value or - or +
-                                ++orient_count[y.ori()];
+                                if(orient_count.find(y.ori()) == orient_count.end())
+                                    orient_count[y.ori()] = 1;
+                                else
+                                    orient_count[y.ori()]++;
 
                                 //START HERE
                                 if(read_pair.find(y.query_name()) == read_pair.end()){
@@ -357,8 +371,10 @@ namespace {
                                         string sv_ori2_tmp1 = "0";
                                         string sv_ori2_tmp2 = "0";
                                         if(ori_readcount.find('+') != ori_readcount.end())
+                                            //sprintf(sv_ori2_tmp1, "%s", ori_readcount["+"]);
                                             sv_ori2_tmp1 = itos(ori_readcount['+']);
                                         if(ori_readcount.find('-') != ori_readcount.end())
+                                            //sprintf(sv_ori2_tmp2, "%s", ori_readcount["-"]);
                                             sv_ori2_tmp2 = itos(ori_readcount['-']);
                                         sv_ori2 = sv_ori2_tmp1.append("+").append(sv_ori2_tmp2).append("-");
 
@@ -1076,7 +1092,10 @@ int main(int argc, char *argv[]) {
                 continue;
             }
 
-            ++x_readcounts[aln2.bdflag()][lib];
+            if(x_readcounts.find(aln2.bdflag()) != x_readcounts.end() && x_readcounts[aln2.bdflag()].find(lib) != x_readcounts[aln2.bdflag()].end())
+                x_readcounts[aln2.bdflag()][lib] ++;
+            else
+                x_readcounts[aln2.bdflag()][lib] = 1;
         }
         reader.reset(); // free bam reader
 
