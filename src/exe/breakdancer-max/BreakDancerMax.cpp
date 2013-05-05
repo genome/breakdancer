@@ -133,7 +133,7 @@ namespace {
         // find paired regions that are supported by paired reads
         //warn("-- link regions\n");
         map<int, map<int, int> > clink;
-        map<string,vector<int> >::iterator ii_read;
+        map<string,vector<int> >::const_iterator ii_read;
         //read is a map of readnames, each is associated with a vector of region ids
         // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
         for(ii_read = read.begin(); ii_read != read.end(); ii_read++){
@@ -158,7 +158,7 @@ namespace {
         }
         // segregate graph, find nodes that have connections
         set<int> free_nodes;
-        map<int, map<int, int> >::iterator ii_clink;
+        map<int, map<int, int> >::const_iterator ii_clink;
         //  int tmp_size = clink.size();
         vector<int> s0_vec;
         //  int tmp_read_size = read.size();
@@ -176,7 +176,7 @@ namespace {
              value = (*ii_tmp_clink).second;
              }*/
         }
-        for(vector<int>::iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){
+        for(vector<int>::const_iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){
             int s0 = *ii_s0_vec;
             //cout << ",,,,," << s0 << endl;
             // assert( clink.find(s0) != clink.end() ); THIS ASSERT TRIPS
@@ -187,7 +187,7 @@ namespace {
             tails.push_back(s0);
             while(tails.size() > 0){
                 vector<int> newtails;
-                vector<int>::iterator it_tails;
+                vector<int>::const_iterator it_tails;
                 for(it_tails = tails.begin(); it_tails != tails.end(); it_tails ++){
                     int const& tail = *it_tails;
                     //cout << ",,,," << tail << endl;
@@ -198,11 +198,11 @@ namespace {
                     if(!bdancer.region_exists(*it_tails))
                         continue;
                     vector<int> s1s; //accumulate all linked nodes for a  single node
-                    for(map<int, int>::iterator ii_clink_ = clink[tail].begin(); ii_clink_ != clink[tail].end(); ii_clink_++){
+                    for(map<int, int>::const_iterator ii_clink_ = clink[tail].begin(); ii_clink_ != clink[tail].end(); ii_clink_++){
                         s1s.push_back((*ii_clink_).first);
                         //cout << ",,," << (*ii_clink_).first << endl;
                     }
-                    for(vector<int>::iterator ii_s1s = s1s.begin(); ii_s1s != s1s.end(); ii_s1s++){
+                    for(vector<int>::const_iterator ii_s1s = s1s.begin(); ii_s1s != s1s.end(); ii_s1s++){
                         int s1 = *ii_s1s;
                         //cout << ",," << s1 << endl;
                         vector<string> free_reads;
@@ -231,7 +231,7 @@ namespace {
 
                         // analysis a nodepair
                         vector<int> snodes;
-                        for(map<int,map<int,int> >::iterator ii_nodepair = nodepair.begin(); ii_nodepair != nodepair.end(); ii_nodepair ++){
+                        for(map<int,map<int,int> >::const_iterator ii_nodepair = nodepair.begin(); ii_nodepair != nodepair.end(); ii_nodepair ++){
                             snodes.push_back((*ii_nodepair).first);
                             //cout << "," << (*ii_nodepair).first << endl;
                         }
@@ -253,7 +253,7 @@ namespace {
                         vector<map<char,int> > type_orient_counts; //vector of readcounts for each type/flag
                         map<breakdancer::pair_orientation_flag,map<string,int> > type_library_meanspan; //average ISIZE from BAM records
                         vector<breakdancer::Read> support_reads; //reads supporting the SV
-                        for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
+                        for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
                             int node = *ii_snodes;
                             //cout << node << endl;
                             map<char,int> orient_count; // number of reads per each orientation ('+' or '-')
@@ -305,7 +305,7 @@ namespace {
                         //I think this must not be done because you don't know if the read pairs will occur on the other node or not
                         //so you build your list for each node and then go back and clean it up after the fact
                         //if you tracked which node each read came from then you could just reassign after the fact
-                        for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
+                        for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
                             int node = *ii_snodes;
                             BasicRegion::ReadVector nonsupportives;
                             BasicRegion::ReadVector const& region_reads = bdancer.reads_in_region(node);
@@ -334,7 +334,7 @@ namespace {
                                 int first_node = 0;
                                 map<string, uint32_t> read_count;
                                 // find inner most positions
-                                for(vector<int>::iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes ++){
+                                for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes ++){
                                     int node = *ii_snodes;
                                     //cout << node << "\t";
                                     BasicRegion const& region = bdancer.get_region_data(node);
@@ -547,7 +547,7 @@ namespace {
                                         string trackname(bam_header->target_name[sv_chr1]);
                                         trackname = trackname.append("_").append(itos(sv_pos1)).append("_").append(SVT).append("_").append(itos(diffspans[flag]));
                                         fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv_chr1] << " " << sv_pos1 << " " << SVT << " " << diffspans[flag] << "\"\tuseScore=0\n";
-                                        for(vector<breakdancer::Read>::iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
+                                        for(vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
                                             breakdancer::Read const& y = *ii_support_reads;
                                             if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
                                                 continue;
@@ -561,7 +561,7 @@ namespace {
                                 }
                             }
                             // free reads
-                            for(vector<string>::iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
+                            for(vector<string>::const_iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
                                 read.erase(*ii_free_reads);
                             }
                             //free_reads.clear();
@@ -1132,7 +1132,7 @@ int main(int argc, char *argv[]) {
             }
         }
         else{
-            map<string, int>::iterator iter = nreads_per_bam.find(lib_info.bam_file);
+            map<string, int>::const_iterator iter = nreads_per_bam.find(lib_info.bam_file);
             if(iter != nreads_per_bam.end())
                 read_density[lib_info.bam_file] = float(iter->second)/float(reference_len);
             else{
