@@ -600,7 +600,6 @@ namespace {
         BreakDancer& bdancer,
         LegacyConfig const& cfg,
         string const& lib,
-        bam1_t *b,
         breakdancer::Read &aln,
         vector<breakdancer::Read> &reg_seq,
         map<string, vector<int> > &read,
@@ -656,7 +655,7 @@ namespace {
             return;
 
         //FIXME this is likely to have a special tid reserved in the spec. Go back and fix it.
-        if(strcmp(bam_header->target_name[b->core.tid], "*")==0)
+        if(strcmp(bam_header->target_name[aln.tid()], "*")==0)
             return; // ignore reads that failed to associate with a reference
 
         if(aln.bdflag() == breakdancer::NA)
@@ -713,20 +712,20 @@ namespace {
         //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
         //I suspect this is to include those reads in the fastq dump for assembly!
         if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
-            if(*normal_switch == 1 && b->core.isize > 0){
+            if(*normal_switch == 1 && aln.isize() > 0){
                 ++(*nnormal_reads);
             }
             return;
         }
 
         if(*normal_switch == 1){
-            *ntotal_nucleotides += b->core.l_qseq;
-            *max_readlen = (*max_readlen < b->core.l_qseq) ? b->core.l_qseq : *max_readlen;
+            *ntotal_nucleotides += aln.query_length();
+            *max_readlen = (*max_readlen < aln.query_length()) ? aln.query_length() : *max_readlen;
         }
 
         //This appears to test that you've exited a window after your first abnormal read by either reading off the chromosome or exiting the the window
         // d appears to be 1e8 at max (seems big), 50 at minimum or the smallest mean - readlen*2 for a given library
-        bool do_break = (int(b->core.tid) != lasts || int(b->core.pos) - lastc > max_read_window_size);
+        bool do_break = aln.tid() != lasts || aln.pos() - lastc > max_read_window_size;
 
         if(do_break) { // breakpoint in the assembly
             float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
@@ -791,8 +790,8 @@ namespace {
                 }
             }
             // clear out this node
-            begins = int(b->core.tid);
-            beginc = int(b->core.pos);
+            begins = aln.tid();
+            beginc = aln.pos();
             reg_seq.clear();
             *normal_switch = 0;
             *nnormal_reads = 0;
@@ -806,24 +805,13 @@ namespace {
             nread_FR.clear();
         }
 
-        // deal with the name string
-        // this drops any trailing /1 or /2 strings on the read. Probably not necessary if the BAM is well formatted (but I'm not certain).
-        // //FIXME this can and should be dropped
-        string qname_tmp = bam1_qname(b);
-        size_t found1 = qname_tmp.rfind("/1");
-        size_t found2 = qname_tmp.rfind("/2");
-        if(found1 != string::npos || found2 != string::npos){
-            size_t found = (found1 == string::npos) ? found2 : found1;
-            qname_tmp.replace(found,2,"");
-        }
-
         reg_seq.push_back(aln); // store each read in the region_sequence buffer
         //
         //If we just added the first read, flip the flag that lets us collect all reads
         if(reg_seq.size() == 1)
             *normal_switch = 1;
-        lasts = int(b->core.tid);
-        lastc = int(b->core.pos);
+        lasts = aln.tid();
+        lastc = aln.pos();
         nread_ROI.clear(); //Not sure why this is cleared here...
     }
 }
@@ -989,25 +977,22 @@ int main(int argc, char *argv[]) {
         auto_ptr<IBamReader> reader(openBam(bam_name, opts));
 
         while (reader->next(b) > 0) {
+            if (b->core.tid < 0)
+                continue;
+
             breakdancer::Read aln2(b, format_, cfg);
             string const& readgroup = aln2.readgroup;
-
-            //FIXME this could be filtered out on reading the BAM
-            if(b->core.tid < 0){
-                //cout << b->core.tid << "\tError: no correspondence of the chromosome to the header file!" << endl;
-                continue;
-            }
 
             //This seems weird below, but it could allow for merging of differently sorted bams
             //If we don't care if we support this then we would need to check that they are the same elsewhere
             //and then this could switch to a tid comparison...
-            char const* new_seq_name = reader->header()->target_name[b->core.tid];
+            char const* new_seq_name = reader->header()->target_name[aln2.tid()];
             if (p_chr) {
                 if (strcmp(p_chr, new_seq_name) == 0) {
-                    ref_len += b->core.pos - p_pos;
+                    ref_len += aln2.pos() - p_pos;
                 }
             }
-            p_pos = b->core.pos;
+            p_pos = aln2.pos();
             p_chr = new_seq_name;
 
             //FIXME It would be better if this was done as part of the Read class
@@ -1245,7 +1230,7 @@ int main(int argc, char *argv[]) {
             library = cfg.fmaps.begin()->second;
 
         if(!library.empty()){
-            Analysis(opts, bdancer, cfg, library, b, aln2, reg_seq, read,
+            Analysis(opts, bdancer, cfg, library, aln2, reg_seq, read,
                 &idx_buff, &nnormal_reads, &normal_switch,
                 x_readcounts, reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides, read_density,
