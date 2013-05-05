@@ -107,7 +107,7 @@ Read::Read(
         LegacyConfig const& cfg
         )
     : _bdflag(determine_bdflag(record, cfg.platform_for_readgroup(readgroup)))
-    , _ori(record->core.flag & BAM_FREVERSE ? '-' : '+')
+    , _ori(record->core.flag & BAM_FREVERSE ? REV : FWD)
     , _abs_isize(abs(record->core.isize))
     , _bdqual(determine_bdqual(record))
     , _isize(record->core.isize)

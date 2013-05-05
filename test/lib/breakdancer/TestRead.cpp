@@ -59,7 +59,7 @@ TEST_F(TestRead, quality_string) {
 }
 
 TEST_F(TestRead, ori) {
-    ASSERT_EQ(test_read->ori(), '+');
+    ASSERT_EQ(test_read->ori(), FWD);
 }
 
 TEST_F(TestRead, tid) {
@@ -90,7 +90,7 @@ TEST_F(TestRead, set_bdflag) {
 
 TEST_F(TestRead, copy_constructor) {
     Read test_copy(*test_read);
-    ASSERT_EQ(test_copy.ori(), '+');
+    ASSERT_EQ(test_copy.ori(), FWD);
     ASSERT_EQ(test_copy.quality_string(), "HB");
     ASSERT_EQ(test_copy.query_sequence(), "CT");
     ASSERT_EQ(test_copy.query_name(), "junk");
@@ -99,7 +99,7 @@ TEST_F(TestRead, copy_constructor) {
 
 TEST_F(TestRead, assignment) {
     Read test_copy = *test_read;
-    ASSERT_EQ(test_copy.ori(), '+');
+    ASSERT_EQ(test_copy.ori(), FWD);
     ASSERT_EQ(test_copy.quality_string(), "HB");
     ASSERT_EQ(test_copy.query_sequence(), "CT");
     ASSERT_EQ(test_copy.query_name(), "junk");

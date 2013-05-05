@@ -13,6 +13,11 @@ extern "C" {
 
 class LegacyConfig;
 
+enum strand_e {
+    FWD = 0,
+    REV = 1
+};
+
 BEGIN_NAMESPACE(breakdancer)
 
 enum pair_orientation_flag {
@@ -42,7 +47,7 @@ public:
 
     Read()
         : _bdflag(NA)
-        , _ori(0)
+        , _ori(FWD)
         , _abs_isize(0)
         , _bdqual(0)
     {}
@@ -57,14 +62,14 @@ public:
     int const& tid() const;
     int const& pos() const;
     int const& query_length() const;
-    char const& ori() const;
+    strand_e const& ori() const;
     int const& isize() const;
     int const& abs_isize() const;
 
 private: // Data
     pair_orientation_flag _bdflag;
 
-    char _ori;
+    strand_e _ori;
     int _abs_isize;
     int _bdqual;
     int _isize;
@@ -114,7 +119,7 @@ int const& Read::query_length() const {
 }
 
 inline
-char const& Read::ori() const {
+strand_e const& Read::ori() const {
     return  _ori;
 }
 
