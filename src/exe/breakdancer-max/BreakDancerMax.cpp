@@ -7,6 +7,7 @@
 #include "breakdancer/LegacyConfig.hpp"
 #include "breakdancer/Options.hpp"
 #include "breakdancer/Read.hpp"
+#include "breakdancer/utility.hpp"
 
 #include "version.h"
 #include <stdio.h>
@@ -14,6 +15,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
+#include <functional>
 #include <memory>
 #include <set>
 #include <stdexcept>
@@ -378,39 +380,17 @@ namespace {
                                         for(int i_node = first_node; i_node < node; i_node++){
                                             typedef BreakDancer::RoiReadCounts::mapped_type MapType;
                                             typedef MapType::const_iterator IterType;
-                                            MapType const* read_count_ROI_map_second = bdancer.region_read_counts_by_library(i_node);
-                                            if (read_count_ROI_map_second) {
-                                                for(IterType read_count_ROI_map_second_it = read_count_ROI_map_second->begin();
-                                                    read_count_ROI_map_second_it != read_count_ROI_map_second->end();
-                                                    ++read_count_ROI_map_second_it)
-                                                {
-                                                    string const& lib = read_count_ROI_map_second_it->first;
-                                                    read_count[lib] += read_count_ROI_map_second_it->second;
-
-                                                    //for(map<string, int>::iterator i_debug = read_count_ROI_debug[i_node][lib].begin(); i_debug != read_count_ROI_debug[i_node][lib].end(); i_debug++){
-                                                    //      cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
-                                                    //}
-                                                }
-                                            }
+                                            MapType const* counts = bdancer.region_read_counts_by_library(i_node);
+                                            if (counts)
+                                                merge_maps(read_count, *counts, std::plus<uint32_t>());
 
                                             // flanking region doesn't contain the first node
                                             if(i_node == first_node)
                                                 continue;
 
-                                            MapType const* read_count_FR_map_second = bdancer.region_FR_counts_by_library(i_node);
-                                            if (read_count_FR_map_second) {
-                                                for(IterType read_count_FR_map_second_it = read_count_FR_map_second->begin();
-                                                    read_count_FR_map_second_it != read_count_FR_map_second->end();
-                                                    read_count_FR_map_second_it ++)
-                                                {
-                                                    string const& lib = read_count_FR_map_second_it->first;
-                                                    read_count[lib] += read_count_FR_map_second_it->second;
-
-                                                    //  for(map<string, int>::iterator i_debug = read_count_FR_debug[i_node][lib].begin(); i_debug != read_count_FR_debug[i_node][lib].end(); i_debug++){
-                                                    //      cout << (*i_debug).first << "\t" << (*i_debug).second << "\n";
-                                                    //  }
-                                                }
-                                            }
+                                            counts = bdancer.region_FR_counts_by_library(i_node);
+                                            if (counts)
+                                                merge_maps(read_count, *counts, std::plus<uint32_t>());
                                         }
                                     }
                                     else {
