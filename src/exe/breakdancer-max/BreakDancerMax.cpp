@@ -966,7 +966,7 @@ int main(int argc, char *argv[]) {
 
     uint32_t reference_len = 1;
     map<string, int> nreads;
-    map<string, int> nreads_;    // only to compute density per bam
+    map<string, int> nreads_per_bam;    // only to compute density per bam
 
     int i = 0;
     bam1_t *b = bam_init1();
@@ -1042,7 +1042,7 @@ int main(int argc, char *argv[]) {
             if(aln2.bdqual() > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
-                    ++nreads_[lib_info.bam_file];
+                    ++nreads_per_bam[lib_info.bam_file];
                 }
             }
 
@@ -1138,8 +1138,9 @@ int main(int argc, char *argv[]) {
             }
         }
         else{
-            if(nreads_.find(lib_info.bam_file) != nreads_.end())
-                read_density[lib_info.bam_file] = float(nreads_[lib_info.bam_file])/float(reference_len);
+            map<string, int>::iterator iter = nreads_per_bam.find(lib_info.bam_file);
+            if(iter != nreads_per_bam.end())
+                read_density[lib_info.bam_file] = float(iter->second)/float(reference_len);
             else{
                 read_density[lib_info.bam_file] = 0.000001;
                 cout << lib << " does not contain any normals" << endl;
