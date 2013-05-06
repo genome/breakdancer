@@ -23,7 +23,6 @@ public:
     std::string library;
 
     Read(bam1_t const* record,
-        std::string const& format,
         LegacyConfig const& cfg);
 
     Read()

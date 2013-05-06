@@ -103,7 +103,6 @@ pair_orientation_flag determine_bdflag(bam1_t const* record, std::string const& 
 
 Read::Read(
         bam1_t const* record,
-        string const& format,
         LegacyConfig const& cfg
         )
     : _bdflag(determine_bdflag(record, cfg.platform_for_readgroup(readgroup)))
@@ -128,6 +127,8 @@ Read::Read(
     ConfigMap<string, string>::type::const_iterator lib = cfg.readgroup_library.find(readgroup);
     if(lib != cfg.readgroup_library.end())
         library = lib->second;
+    else
+        library = cfg.fmaps.begin()->second;
 }
 
 END_NAMESPACE(breakdancer)

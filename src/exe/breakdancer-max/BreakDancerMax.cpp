@@ -609,7 +609,6 @@ namespace {
         Options const& opts,
         BreakDancer& bdancer,
         LegacyConfig const& cfg,
-        string const& lib,
         breakdancer::Read &aln,
         map<string, vector<int> > &read_regions,
         int *idx_buff,
@@ -634,7 +633,7 @@ namespace {
         map<string, uint32_t>& nread_FR = bdancer.nread_FR;
         vector<breakdancer::Read>& reads_in_current_region = bdancer.reads_in_current_region;
 
-        LibraryInfo const& lib_info = cfg.library_info.at(lib);
+        LibraryInfo const& lib_info = cfg.library_info.at(aln.library);
 
         //main analysis code
 
@@ -644,7 +643,7 @@ namespace {
         if(aln.bdqual() > opts.min_map_qual
             && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF))
         {
-            string const& key = opts.CN_lib == 1 ? lib : lib_info.bam_file;
+            string const& key = opts.CN_lib == 1 ? aln.library : lib_info.bam_file;
             ++nread_ROI[key];
             ++possible_fake_data[key];
             ++nread_FR[key];
@@ -960,7 +959,6 @@ int main(int argc, char *argv[]) {
 
     int i = 0;
     bam1_t *b = bam_init1();
-    string format_ = "sam";
 
     for(ii=cfg.fmaps.begin(); ii!=cfg.fmaps.end(); ++ii)
     {
@@ -983,28 +981,20 @@ int main(int argc, char *argv[]) {
             if (b->core.tid < 0)
                 continue;
 
-            breakdancer::Read aln2(b, format_, cfg);
-            string const& readgroup = aln2.readgroup;
-
-            if (last_tid >= 0 && last_tid == aln2.tid())
-                ref_len += aln2.pos() - last_pos;
-            last_pos = aln2.pos();
-            last_tid = aln2.tid();
-
-            //FIXME It would be better if this was done as part of the Read class
-            //doing it in a way in which the read class doesn't have to know about how we are
-            //reading the files would be key though
-            string const& lib = !readgroup.empty()
-                ? cfg.readgroup_library.at(readgroup)
-                : cfg.fmaps.at(ii->first);
-
-            if(lib.empty())
+            breakdancer::Read aln(b, cfg);
+            if(aln.library.empty())
                 continue;
 
-            LibraryInfo& lib_info = cfg.library_info.at(lib);
+            LibraryInfo& lib_info = cfg.library_info.at(aln.library);
 
-            if(aln2.bdqual() > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
-                ++nreads[lib];
+            if (last_tid >= 0 && last_tid == aln.tid())
+                ref_len += aln.pos() - last_pos;
+
+            last_pos = aln.pos();
+            last_tid = aln.tid();
+
+            if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
+                ++nreads[aln.library];
                 if(opts.CN_lib == 0){
                     ++nreads_per_bam[lib_info.bam_file];
                 }
@@ -1018,51 +1008,54 @@ int main(int argc, char *argv[]) {
             int min_mapq = lib_info.min_mapping_quality < 0 ?
                     opts.min_map_qual : lib_info.min_mapping_quality;
 
-            if (aln2.bdqual() <= min_mapq)
+            if (aln.bdqual() <= min_mapq)
                 continue;
 
-
-            if(aln2.bdflag() == breakdancer::NA)
+            if(aln.bdflag() == breakdancer::NA)
                 continue;
 
-            if((opts.transchr_rearrange && aln2.bdflag() != breakdancer::ARP_CTX) || aln2.bdflag() == breakdancer::MATE_UNMAPPED || aln2.bdflag() == breakdancer::UNMAPPED)
+            if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
                 continue;
 
             //It would be nice if this was pulled into the Read class as well
             //for now, let's just set the bdflag directly here since it is public
             if(opts.Illumina_long_insert){
-                if(aln2.abs_isize() > lib_info.uppercutoff && aln2.bdflag() == breakdancer::NORMAL_RF) {
-                    aln2.set_bdflag(breakdancer::ARP_RF);
+                if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
+                    aln.set_bdflag(breakdancer::ARP_RF);
                 }
-                if(aln2.abs_isize() < lib_info.uppercutoff && aln2.bdflag() == breakdancer::ARP_RF) {
-                    aln2.set_bdflag(breakdancer::NORMAL_RF);
+                if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_RF) {
+                    aln.set_bdflag(breakdancer::NORMAL_RF);
                 }
-                if(aln2.abs_isize() < lib_info.lowercutoff && aln2.bdflag() == breakdancer::NORMAL_RF) {
-                    aln2.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
+                if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
+                    aln.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
                 }
             }
             else{
-                if(aln2.abs_isize() > lib_info.uppercutoff && aln2.bdflag() == breakdancer::NORMAL_FR) {
-                    aln2.set_bdflag(breakdancer::ARP_FR_big_insert);
+                if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
+                    aln.set_bdflag(breakdancer::ARP_FR_big_insert);
                 }
-                if(aln2.abs_isize() < lib_info.uppercutoff && aln2.bdflag() == breakdancer::ARP_FR_big_insert) {
-                    aln2.set_bdflag(breakdancer::NORMAL_FR);
+                if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
+                    aln.set_bdflag(breakdancer::NORMAL_FR);
                 }
-                if(aln2.abs_isize() < lib_info.lowercutoff && aln2.bdflag() == breakdancer::NORMAL_FR) {
-                    aln2.set_bdflag(breakdancer::ARP_FR_small_insert);
+                if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
+                    aln.set_bdflag(breakdancer::ARP_FR_small_insert);
                 }
             }
 
-            if(aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
                 continue;
             }
 
-            ++lib_info.read_counts_by_flag[aln2.bdflag()];
+            ++lib_info.read_counts_by_flag[aln.bdflag()];
         }
         reader.reset(); // free bam reader
 
-        if(ref_len == 0)
-            cout << (*ii).second << " does not contain legitimate paired end alignment. Please check that you have the correct paths and the map/bam files are properly formated and indexed.";
+        if(ref_len == 0) {
+            cout << ii->second <<
+                " does not contain legitimate paired end alignment. "
+                "Please check that you have the correct paths and the "
+                "map/bam files are properly formated and indexed.";
+        }
 
         if(reference_len < ref_len)
             reference_len = ref_len;
@@ -1183,17 +1176,15 @@ int main(int argc, char *argv[]) {
 
     b = bam_init1();
     while (merged_reader.next(b) >= 0) {
+        // skip somewhat expensive construction of Read object if entry is not
+        // aligned.
         if(b->core.tid < 0)
             continue;
 
-        breakdancer::Read aln2(b, format_, cfg);
-        string const& readgroup = aln2.readgroup;
-        string const& library = !readgroup.empty()
-            ? cfg.readgroup_library.at(readgroup)
-            : cfg.fmaps.begin()->second;
+        breakdancer::Read aln(b, cfg);
 
-        if(!library.empty()){
-            Analysis(opts, bdancer, cfg, library, aln2, read_regions,
+        if(!aln.library.empty()){
+            Analysis(opts, bdancer, cfg, aln, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
                 reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides,

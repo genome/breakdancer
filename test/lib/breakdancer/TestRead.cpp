@@ -34,7 +34,7 @@ class TestRead : public ::testing::Test {
             bam_record.data = &data[0];
             cfg.readgroup_platform["rg3"] = "helicos";
             cfg.readgroup_library["rg3"] = "some_lib";
-            test_read.reset(new Read(&bam_record, "sam", cfg));
+            test_read.reset(new Read(&bam_record, cfg));
         }
 
         bam1_core_t core;
