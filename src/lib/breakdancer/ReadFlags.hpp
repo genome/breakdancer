@@ -7,12 +7,6 @@ enum strand_e {
     REV = 1
 };
 
-enum platform_e {
-    ILLUMINA = 0,
-    SOLID,
-    NUM_PLATFORMS
-};
-
 BEGIN_NAMESPACE(breakdancer)
 
 enum pair_orientation_flag {
