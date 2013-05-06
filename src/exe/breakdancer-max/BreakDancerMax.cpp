@@ -132,8 +132,7 @@ namespace {
         uint32_t reference_len,
         int max_readlen,
         ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
-        bam_header_t* bam_header,
-        vector<string> const& maps
+        bam_header_t* bam_header
         )
     {
         map<string, float> const& read_density = bdancer.read_density;
@@ -509,10 +508,6 @@ namespace {
                                 // make the coordinates with base 1
                                 sv_pos1 = sv_pos1 + 1;
                                 sv_pos2 = sv_pos2 + 1;
-                                /*if(sv_pos1 == 17535916){
-                                 int k = 0;
-                                 k++;
-                                 }*/
                                 if(PhredQ > opts.score_threshold){
                                     cout << bam_header->target_name[sv_chr1]
                                         << "\t" << sv_pos1
@@ -530,7 +525,8 @@ namespace {
                                         cout <<  "\t" << AF;
 
                                     if(opts.CN_lib == 0 && flag != breakdancer::ARP_CTX){
-                                        for(vector<string>::const_iterator iter = maps.begin(); iter != maps.end(); ++iter) {
+                                        vector<string> const& bams = cfg.bam_files();
+                                        for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
                                             map<string, float>::const_iterator cniter = copy_number.find(*iter);
 
                                             if(cniter  == copy_number.end())
@@ -562,7 +558,16 @@ namespace {
                                             int aln_end = y.pos() - y.query_length() - 1;
                                             string color = y.ori() == FWD ? "0,0,255" : "255,0,0";
                                             //FIXME if the bam already used chr prefixed chromosome names this would duplicate them...
-                                            fh_BED << "chr" << bam_header->target_name[y.tid()] << "\t" << y.pos() << "\t" << aln_end << "\t" << y.query_name() << "|" << y.library << "\t" << y.bdqual() * 10 << "\t" << y.ori() << "\t" << y.pos() << "\t" << aln_end << "\t" << color << "\n";
+                                            fh_BED << "chr" << bam_header->target_name[y.tid()]
+                                                << "\t" << y.pos()
+                                                << "\t" << aln_end
+                                                << "\t" << y.query_name() << "|" << y.library
+                                                << "\t" << y.bdqual() * 10
+                                                << "\t" << y.ori()
+                                                << "\t" << y.pos()
+                                                << "\t" << aln_end
+                                                << "\t" << color
+                                                << "\n";
                                         }
                                         fh_BED.close();
                                     }
@@ -620,8 +625,7 @@ namespace {
         int *max_readlen,
         bam_header_t* bam_header,
         uint32_t *ntotal_nucleotides,
-        map<string, uint32_t> &possible_fake_data,
-        vector<string> const& maps
+        map<string, uint32_t> &possible_fake_data
         )
     {
         // for now, we can just set up references to the data struct so we
@@ -770,7 +774,7 @@ namespace {
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
                     buildConnection(opts, bdancer, cfg, read_regions,
-                        reference_len, *max_readlen, SVtype, bam_header, maps);
+                        reference_len, *max_readlen, SVtype, bam_header);
                     *idx_buff = 0;
                 }
             }
@@ -960,12 +964,9 @@ int main(int argc, char *argv[]) {
     int i = 0;
     bam1_t *b = bam_init1();
     string format_ = "sam";
-    vector<string> maps;
-
 
     for(ii=cfg.fmaps.begin(); ii!=cfg.fmaps.end(); ++ii)
     {
-        maps.push_back((*ii).first);
         uint32_t ref_len = 0;
         ++i;
 
@@ -1144,7 +1145,8 @@ int main(int argc, char *argv[]) {
     if(opts.print_AF == 1)
         cout << "\tAllele_frequency";
     if(opts.CN_lib == 0){
-        for(vector<string>::const_iterator it_map = maps.begin(); it_map != maps.end(); it_map++){
+        vector<string> const& bams = cfg.bam_files();
+        for(vector<string>::const_iterator it_map = bams.begin(); it_map != bams.end(); it_map++){
             string::size_type tmp = it_map->rfind("/");
             if(tmp!=string::npos)
                 cout << "\t" << (*it_map).substr(tmp + 1);
@@ -1175,13 +1177,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    vector<string> bam_files;
-    typedef ConfigMap<string, string>::type::const_iterator IterType;
-    for(IterType ii_fmaps = cfg.fmaps.begin(); ii_fmaps != cfg.fmaps.end(); ii_fmaps++)
-        bam_files.push_back(ii_fmaps->first);
-
     typedef vector<shared_ptr<IBamReader> > ReaderVecType;
-    ReaderVecType sp_readers(openBams(bam_files, opts));
+    ReaderVecType sp_readers(openBams(cfg.bam_files(), opts));
     vector<IBamReader*> readers;
     for(size_t i = 0; i != sp_readers.size(); ++i)
         readers.push_back(sp_readers[i].get());
@@ -1204,7 +1201,7 @@ int main(int argc, char *argv[]) {
                 &idx_buff, &nnormal_reads, &normal_switch,
                 reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides,
-                possible_fake_data, maps
+                possible_fake_data
             );
         }
     }
@@ -1213,14 +1210,12 @@ int main(int argc, char *argv[]) {
         do_break_func(
             opts, bdancer, cfg, reg_seq, read_regions, &idx_buff,
             &nnormal_reads, reference_len, SVtype,
-            &max_readlen, merged_reader.header(), &ntotal_nucleotides,
-            maps
+            &max_readlen, merged_reader.header(), &ntotal_nucleotides
             );
     }
 
     buildConnection(opts, bdancer, cfg, read_regions,
-        reference_len, max_readlen, SVtype, merged_reader.header(),
-        maps);
+        reference_len, max_readlen, SVtype, merged_reader.header());
 
     bam_destroy1(b);
 
@@ -1242,8 +1237,7 @@ void do_break_func(
     ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
     int *max_readlen,
     bam_header_t* bam_header,
-    uint32_t *ntotal_nucleotides,
-    vector<string> maps
+    uint32_t *ntotal_nucleotides
     )
 {
     int& begins = bdancer.begins;
@@ -1272,8 +1266,7 @@ void do_break_func(
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
             buildConnection(opts, bdancer, cfg, read_regions,
-                reference_len, *max_readlen, SVtype, bam_header,
-                maps);
+                reference_len, *max_readlen, SVtype, bam_header);
 
             *idx_buff = 0;
         }

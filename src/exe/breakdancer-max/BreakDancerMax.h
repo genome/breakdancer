@@ -50,8 +50,7 @@ void do_break_func(
     ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
     int *max_readlen,
     bam_header_t* bam_header,
-    uint32_t *ntotal_nucleotides,
-    vector<string> maps
+    uint32_t *ntotal_nucleotides
     );
 
 float mean(vector<int> &stat);

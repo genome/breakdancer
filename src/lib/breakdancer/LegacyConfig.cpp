@@ -140,101 +140,105 @@ LegacyConfig::LegacyConfig(std::istream& in, Options const& opts)
 {
     string line;
     while(getline(in, line)) {
-            if(line.empty())
-                break;
+        if(line.empty())
+            break;
 
-            // analyze the line
-            string fmap = get_from_line(line,"map",1);
-            string mean_ = get_from_line(line,"mean",0);
-            string std_ = get_from_line(line,"std",0);
-            string readlen_ = get_from_line(line,"readlen",0);
-            string upper_ = get_from_line(line,"upp",0);
-            string lower_ = get_from_line(line,"low",0);
-            string mqual_ = get_from_line_two(line,"map","qual",0);
-            string lib = get_from_line(line,"lib",0);
-            float mean=0.0f,std=0.0f,readlen=0.0f,upper=0.0f,lower=0.0f;
-            int mqual;
-            if(lib.compare("NA")==0)
-                lib = get_from_line(line,"samp",0);
+        // analyze the line
+        string fmap = get_from_line(line,"map",1);
+        string mean_ = get_from_line(line,"mean",0);
+        string std_ = get_from_line(line,"std",0);
+        string readlen_ = get_from_line(line,"readlen",0);
+        string upper_ = get_from_line(line,"upp",0);
+        string lower_ = get_from_line(line,"low",0);
+        string mqual_ = get_from_line_two(line,"map","qual",0);
+        string lib = get_from_line(line,"lib",0);
+        float mean=0.0f,std=0.0f,readlen=0.0f,upper=0.0f,lower=0.0f;
+        int mqual;
+        if(lib.compare("NA")==0)
+            lib = get_from_line(line,"samp",0);
 
 
-            string readgroup = get_from_line(line,"group",1);
-            if(readgroup.compare("NA")==0)
-                readgroup = lib;
-            readgroup_library[readgroup] = lib;
+        string readgroup = get_from_line(line,"group",1);
+        if(readgroup.compare("NA")==0)
+            readgroup = lib;
+        readgroup_library[readgroup] = lib;
 
-            string platform = get_from_line(line,"platform",1);
-            if(opts.Illumina_to_SOLiD)
-                readgroup_platform[readgroup] = "solid";
-            else
-                readgroup_platform[readgroup] = "illumina";
-            readgroup_platform[readgroup] = platform;
+        string platform = get_from_line(line,"platform",1);
+        if(opts.Illumina_to_SOLiD)
+            readgroup_platform[readgroup] = "solid";
+        else
+            readgroup_platform[readgroup] = "illumina";
+        readgroup_platform[readgroup] = platform;
 
-            string exe = get_from_line(line,"exe",0);
-            if(!opts.prefix_fastq.empty()) {
-                //ofstream ReadsOut[lib.append("1")](prefix_fastq.append(lib).append(".1.fastq"), ios::out | ios::app | ios::binary);
-                ReadsOut[lib + "1"] = opts.prefix_fastq + "." + lib + ".1.fastq";
-                ofstream ReadsOutTmp;
-                ReadsOutTmp.open(ReadsOut[lib+"1"].c_str());
-                if(!ReadsOutTmp.is_open())
-                    cout << "unable to open " << opts.prefix_fastq << "." << lib << ".1.fastq, check write permission\n";
-                ReadsOutTmp.close();
-                ReadsOut[lib + "2"] = opts.prefix_fastq + "." + lib + ".2.fastq";
-                ReadsOutTmp.open(ReadsOut[lib+"2"].c_str());
-                if(!ReadsOutTmp.is_open())
-                    cout << "unable to open " << opts.prefix_fastq << "." << lib << ".2.fastq, check write permission\n";
-                ReadsOutTmp.close();
-            }
-
-            LibraryInfo lib_info;
-            lib_info.bam_file = fmap;
-
-            if(mqual_.compare("NA")){
-                mqual = atoi(mqual_.c_str());
-                lib_info.min_mapping_quality = mqual;
-            } else {
-                lib_info.min_mapping_quality = -1;
-            }
-            fmaps[fmap] = lib;
-
-            if(mean_ != "NA" && std_ != "NA") {
-                mean = atof(mean_.c_str());
-                std = atof(std_.c_str());
-                if(!upper_.compare("NA") || !lower_.compare("NA")){
-                    upper = mean + std*float(opts.cut_sd);
-                    lower = mean - std*float(opts.cut_sd);
-                    lower = lower > 0 ? lower : 0;//atof(lower_.c_str()) > 0 ? atof(lower_.c_str()):0; this is not related with lower_
-                }
-                else{
-                    upper = atof(upper_.c_str());
-                    lower = atof(lower_.c_str());
-                }
-            }
-
-            if(readlen_.compare("NA")){
-                readlen = atof(readlen_.c_str());
-            }
-            max_readlen = max_readlen < readlen ? readlen:max_readlen;
-
-            lib_info.mean_insertsize = mean;
-            lib_info.std_insertsize = std;
-            lib_info.uppercutoff = upper;
-            lib_info.lowercutoff = lower;
-            lib_info.readlens = readlen;
-
-            library_info[lib] = lib_info;
-
-            if(exes.find(fmap) == exes.end())
-                exes[fmap] = exe.compare("NA")?exe:"cat";
-            else if(exes[fmap].compare(exe) != 0){
-                throw runtime_error(
-                    "Please use identical exe commands to open the same input file.\n"
-                    );
-            }
-
-            int tmp = mean - readlen*2;    // this determines the mean of the max of the SV flanking region
-            max_read_window_size = std::min(max_read_window_size, tmp);
+        string exe = get_from_line(line,"exe",0);
+        if(!opts.prefix_fastq.empty()) {
+            //ofstream ReadsOut[lib.append("1")](prefix_fastq.append(lib).append(".1.fastq"), ios::out | ios::app | ios::binary);
+            ReadsOut[lib + "1"] = opts.prefix_fastq + "." + lib + ".1.fastq";
+            ofstream ReadsOutTmp;
+            ReadsOutTmp.open(ReadsOut[lib+"1"].c_str());
+            if(!ReadsOutTmp.is_open())
+                cout << "unable to open " << opts.prefix_fastq << "." << lib << ".1.fastq, check write permission\n";
+            ReadsOutTmp.close();
+            ReadsOut[lib + "2"] = opts.prefix_fastq + "." + lib + ".2.fastq";
+            ReadsOutTmp.open(ReadsOut[lib+"2"].c_str());
+            if(!ReadsOutTmp.is_open())
+                cout << "unable to open " << opts.prefix_fastq << "." << lib << ".2.fastq, check write permission\n";
+            ReadsOutTmp.close();
         }
+
+        LibraryInfo lib_info;
+        lib_info.bam_file = fmap;
+
+        if(mqual_.compare("NA")){
+            mqual = atoi(mqual_.c_str());
+            lib_info.min_mapping_quality = mqual;
+        } else {
+            lib_info.min_mapping_quality = -1;
+        }
+        fmaps[fmap] = lib;
+
+        if(mean_ != "NA" && std_ != "NA") {
+            mean = atof(mean_.c_str());
+            std = atof(std_.c_str());
+            if(!upper_.compare("NA") || !lower_.compare("NA")){
+                upper = mean + std*float(opts.cut_sd);
+                lower = mean - std*float(opts.cut_sd);
+                lower = lower > 0 ? lower : 0;//atof(lower_.c_str()) > 0 ? atof(lower_.c_str()):0; this is not related with lower_
+            }
+            else{
+                upper = atof(upper_.c_str());
+                lower = atof(lower_.c_str());
+            }
+        }
+
+        if(readlen_.compare("NA")){
+            readlen = atof(readlen_.c_str());
+        }
+        max_readlen = max_readlen < readlen ? readlen:max_readlen;
+
+        lib_info.mean_insertsize = mean;
+        lib_info.std_insertsize = std;
+        lib_info.uppercutoff = upper;
+        lib_info.lowercutoff = lower;
+        lib_info.readlens = readlen;
+
+        library_info[lib] = lib_info;
+
+        if(exes.find(fmap) == exes.end())
+            exes[fmap] = exe.compare("NA")?exe:"cat";
+        else if(exes[fmap].compare(exe) != 0){
+            throw runtime_error(
+                "Please use identical exe commands to open the same input file.\n"
+                );
+        }
+
+        int tmp = mean - readlen*2;    // this determines the mean of the max of the SV flanking region
+        max_read_window_size = std::min(max_read_window_size, tmp);
+    }
+
+    typedef ConfigMap<string, string>::type::const_iterator IterType;
+    for (IterType iter = fmaps.begin(); iter != fmaps.end(); ++iter)
+        _bam_files.push_back(iter->first);
 
     max_read_window_size = std::max(max_read_window_size, 50);
 }

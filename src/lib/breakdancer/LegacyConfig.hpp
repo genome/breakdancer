@@ -2,10 +2,12 @@
 
 #include "ReadFlags.hpp"
 
+#include <boost/container/flat_map.hpp>
+
 #include <istream>
 #include <map>
 #include <stdint.h> // cstdint requires c++11
-#include <boost/container/flat_map.hpp>
+#include <vector>
 
 class Options;
 
@@ -61,6 +63,10 @@ public:
     int max_read_window_size;
     int max_readlen;
 
+    std::vector<std::string> const& bam_files() const {
+        return _bam_files;
+    }
+
     std::string const& platform_for_readgroup(std::string const& readgroup) const {
         using std::string;
         static string illumina("illumina");
@@ -72,4 +78,7 @@ public:
             return illumina;
         }
     }
+
+private:
+    std::vector<std::string> _bam_files;
 };
