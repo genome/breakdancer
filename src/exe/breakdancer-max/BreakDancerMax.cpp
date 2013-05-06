@@ -965,8 +965,8 @@ int main(int argc, char *argv[]) {
         uint32_t ref_len = 0;
         ++i;
 
-        int p_pos = 0;
-        const char *p_chr = 0;
+        int last_pos = 0;
+        int last_tid = -1;
         string const& bam_name = (*ii).first;
 
         // XXX: Note: the original code would 'continue' if a particular
@@ -984,44 +984,23 @@ int main(int argc, char *argv[]) {
             breakdancer::Read aln2(b, format_, cfg);
             string const& readgroup = aln2.readgroup;
 
-            //This seems weird below, but it could allow for merging of differently sorted bams
-            //If we don't care if we support this then we would need to check that they are the same elsewhere
-            //and then this could switch to a tid comparison...
-            char const* new_seq_name = reader->header()->target_name[aln2.tid()];
-            if (p_chr) {
-                if (strcmp(p_chr, new_seq_name) == 0) {
-                    ref_len += aln2.pos() - p_pos;
-                }
-            }
-            p_pos = aln2.pos();
-            p_chr = new_seq_name;
+            if (last_tid >= 0 && last_tid == aln2.tid())
+                ref_len += aln2.pos() - last_pos;
+            last_pos = aln2.pos();
+            last_tid = aln2.tid();
 
             //FIXME It would be better if this was done as part of the Read class
             //doing it in a way in which the read class doesn't have to know about how we are
             //reading the files would be key though
-            string lib;
-            if(!(readgroup.empty()))
-                lib = cfg.readgroup_library.at(readgroup);
-            else
-                lib = cfg.fmaps.at(ii->first);
+            string const& lib = !readgroup.empty()
+                ? cfg.readgroup_library.at(readgroup)
+                : cfg.fmaps.at(ii->first);
 
             if(lib.empty())
                 continue;
 
             LibraryInfo const& lib_info = cfg.library_info.at(lib);
 
-            //Below seems like a bug to me. 18 means FR orientation plus paired end req met in MAQ
-            //this would also allow 20 (RF and paired end req met) and 24 (RR and paired end req met)
-            //the latter two are abnormal mappings and this would allow them but would skip 17 (FF and paired end req met)
-            //I don't know if these were ever real world values but this oddness seems inconsistent with the intent
-            // (^dlarson)
-            //
-            // This is the thing I was talking about that creeped me out
-            // (relational cmps on bitvectors)
-            // -tabbott
-            //
-            // Indeed. Having looked over the flags, my comment above does not apply...
-            // -dlarson
             if(aln2.bdqual() > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
                 ++nreads[lib];
                 if(opts.CN_lib == 0){
@@ -1043,6 +1022,7 @@ int main(int argc, char *argv[]) {
 
             if(aln2.bdflag() == breakdancer::NA)
                 continue;
+
             if((opts.transchr_rearrange && aln2.bdflag() != breakdancer::ARP_CTX) || aln2.bdflag() == breakdancer::MATE_UNMAPPED || aln2.bdflag() == breakdancer::UNMAPPED)
                 continue;
 
