@@ -46,7 +46,6 @@ void do_break_func(
     map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,
-    map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
     ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
     int *max_readlen,

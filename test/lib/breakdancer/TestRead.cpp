@@ -1,4 +1,5 @@
 #include "breakdancer/Read.hpp"
+#include "breakdancer/LegacyConfig.hpp"
 
 #include <map>
 #include <memory>

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ReadFlags.hpp"
+
 #include <istream>
 #include <map>
 #include <stdint.h> // cstdint requires c++11
@@ -30,6 +32,18 @@ struct LibraryInfo {
     float lowercutoff;
     float readlens;
     int min_mapping_quality;
+
+    // FIXME: ultimately we'll want to renumber the bd flag types and
+    // use a simple array for this.
+    std::map<breakdancer::pair_orientation_flag, uint32_t> read_counts_by_flag;
+
+    uint32_t get_read_counts_by_flag(breakdancer::pair_orientation_flag flag) const {
+        std::map<breakdancer::pair_orientation_flag, uint32_t>::const_iterator fiter = read_counts_by_flag.find(flag);
+        if (fiter == read_counts_by_flag.end())
+            return 0u;
+
+        return fiter->second;
+    }
 };
 
 class LegacyConfig {
@@ -46,7 +60,6 @@ public:
 
     int max_read_window_size;
     int max_readlen;
-
 
     std::string const& platform_for_readgroup(std::string const& readgroup) const {
         using std::string;

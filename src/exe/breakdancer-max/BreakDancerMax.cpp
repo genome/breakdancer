@@ -31,7 +31,6 @@ KSORT_INIT(heap, heap1_t, heap_lt)
 # Data structure menagerie
 ## Preliminary counting
 + nread -> number of reads for each library
-+ x_readcounts -> number of reads of each orientation, per library
 ## Analysis
 + reg_name -> vector; contains coordinates of the region and the number of normal reads within it.
 + reg_seq -> array of read information underlying a region
@@ -74,7 +73,15 @@ namespace {
 
 
     // compute the probability score
-    real_type ComputeProbScore(vector<int> &rnode, map<string,int> &rlibrary_readcount, uint32_t type, map<uint32_t, map<string,int> > &x_readcounts, uint32_t reference_len, int fisher, BreakDancer const& bdancer)
+    real_type ComputeProbScore(
+            vector<int> &rnode,
+            map<string,int> &rlibrary_readcount,
+            breakdancer::pair_orientation_flag type,
+            uint32_t reference_len,
+            int fisher,
+            BreakDancer const& bdancer,
+            LegacyConfig const& cfg
+            )
     {
         // rnode, rlibrary_readcount, type
         int total_region_size = PutativeRegion(rnode, bdancer);
@@ -85,10 +92,12 @@ namespace {
         for(map<string,int>::const_iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
             string const& lib = ii_rlibrary_readcount->first;
             int const& readcount = ii_rlibrary_readcount->second;
+            LibraryInfo const& lib_info = cfg.library_info.at(lib);
 
             // debug
             //int db_x_rc = x_readcounts[type][lib];
-            lambda = real_type(total_region_size)* (real_type(x_readcounts[type][lib])/real_type(reference_len));
+            uint32_t read_count_for_flag = lib_info.get_read_counts_by_flag(type);
+            lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(reference_len));
             lambda = max(real_type(1.0e-10), lambda);
             poisson_distribution<real_type> poisson(lambda);
             real_type tmp_a = log(cdf(complement(poisson, readcount))) - err;
@@ -120,7 +129,6 @@ namespace {
         BreakDancer& bdancer,
         LegacyConfig const& cfg,
         map<string, vector<int> > &read_regions,
-        map<uint32_t, map<string,int> > &x_readcounts,
         uint32_t reference_len,
         int max_readlen,
         ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
@@ -490,7 +498,7 @@ namespace {
                                 sptypes[flag] = sptype;
 
 
-                                real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], uint32_t(flag), x_readcounts, reference_len, opts.fisher, bdancer);
+                                real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], flag, reference_len, opts.fisher, bdancer, cfg);
                                 real_type PhredQ_tmp = -10*LogPvalue/log(10);
                                 int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
                                 //float AF = float(type[flag])/float(type[flag]+normal_rp);
@@ -606,7 +614,6 @@ namespace {
         int *idx_buff,
         int *nnormal_reads,
         int *normal_switch,
-        map<uint32_t, map<string, int> > &x_readcounts,
         uint32_t reference_len,
         ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
         int max_read_window_size,
@@ -762,7 +769,7 @@ namespace {
                 (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
-                    buildConnection(opts, bdancer, cfg, read_regions, x_readcounts,
+                    buildConnection(opts, bdancer, cfg, read_regions,
                         reference_len, *max_readlen, SVtype, bam_header, maps);
                     *idx_buff = 0;
                 }
@@ -946,9 +953,6 @@ int main(int argc, char *argv[]) {
         cfg.exes.at(ii->first); // throws if not found
     }
 
-    map<uint32_t, map<string,int> > x_readcounts;
-
-
     uint32_t reference_len = 1;
     map<string, int> nreads;
     map<string, int> nreads_per_bam;    // only to compute density per bam
@@ -999,7 +1003,7 @@ int main(int argc, char *argv[]) {
             if(lib.empty())
                 continue;
 
-            LibraryInfo const& lib_info = cfg.library_info.at(lib);
+            LibraryInfo& lib_info = cfg.library_info.at(lib);
 
             if(aln2.bdqual() > opts.min_map_qual && (aln2.bdflag() == breakdancer::NORMAL_FR || aln2.bdflag() == breakdancer::NORMAL_RF)) {
                 ++nreads[lib];
@@ -1055,7 +1059,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
 
-            ++x_readcounts[aln2.bdflag()][lib];
+            ++lib_info.read_counts_by_flag[aln2.bdflag()];
         }
         reader.reset(); // free bam reader
 
@@ -1109,15 +1113,10 @@ int main(int argc, char *argv[]) {
         float physical_coverage = float(nreads[lib]*lib_info.mean_insertsize)/float(reference_len)/2;
         total_phy_cov += physical_coverage;
 
-        int nread_lengthDiscrepant = -1;
+        int nread_lengthDiscrepant = lib_info.get_read_counts_by_flag(breakdancer::ARP_FR_big_insert) +
+            lib_info.get_read_counts_by_flag(breakdancer::ARP_FR_small_insert);
 
-        if(x_readcounts.find(breakdancer::ARP_FR_big_insert) != x_readcounts.end() && x_readcounts[breakdancer::ARP_FR_big_insert].find(lib) != x_readcounts[breakdancer::ARP_FR_big_insert].end())
-            nread_lengthDiscrepant = x_readcounts[breakdancer::ARP_FR_big_insert][lib];
-        if(x_readcounts.find(breakdancer::ARP_FR_small_insert) != x_readcounts.end() && x_readcounts[breakdancer::ARP_FR_small_insert].find(lib) != x_readcounts[breakdancer::ARP_FR_small_insert].end()){
-            if(nread_lengthDiscrepant == -1)
-                nread_lengthDiscrepant = 0;
-            nread_lengthDiscrepant += x_readcounts[breakdancer::ARP_FR_small_insert][lib];
-        }
+
         int tmp = (nread_lengthDiscrepant > 0)?(float)reference_len/(float)nread_lengthDiscrepant:50;
         max_read_window_size = std::min(max_read_window_size, tmp);
 
@@ -1134,20 +1133,16 @@ int main(int argc, char *argv[]) {
             << "\tphycov:" << physical_coverage
             ;
 
-        map<uint32_t,map<string,int> >::const_iterator x_readcounts_ii;
-        for(x_readcounts_ii = x_readcounts.begin(); x_readcounts_ii!=x_readcounts.end(); ++x_readcounts_ii){
-            uint32_t const& t = x_readcounts_ii->first;// get the first key out, which is a member of recflags
-
-            map<string,int>::const_iterator found = x_readcounts_ii->second.find(lib);
-            if (found != x_readcounts_ii->second.end())
-                printf("\t%d:%d",t,found->second);
+        typedef map<breakdancer::pair_orientation_flag, uint32_t>::const_iterator IterType;
+        for(IterType i = lib_info.read_counts_by_flag.begin(); i != lib_info.read_counts_by_flag.end(); ++i) {
+            cout << "\t" << i->first << ":" << i->second;
         }
-        printf("\n");
+        cout << "\n";
     }
 
-    printf("#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib");
+    cout << "#Chr1\tPos1\tOrientation1\tChr2\tPos2\tOrientation2\tType\tSize\tScore\tnum_Reads\tnum_Reads_lib";
     if(opts.print_AF == 1)
-        printf("\tAllele_frequency");
+        cout << "\tAllele_frequency";
     if(opts.CN_lib == 0){
         for(vector<string>::const_iterator it_map = maps.begin(); it_map != maps.end(); it_map++){
             string::size_type tmp = it_map->rfind("/");
@@ -1200,17 +1195,14 @@ int main(int argc, char *argv[]) {
 
         breakdancer::Read aln2(b, format_, cfg);
         string const& readgroup = aln2.readgroup;
-// string library = (!readgroup.empty())?readgroup_library.at(readgroup):((*(fmaps.begin())).second);
-        string library;
-        if (!readgroup.empty())
-            library = cfg.readgroup_library.at(readgroup);
-        else
-            library = cfg.fmaps.begin()->second;
+        string const& library = !readgroup.empty()
+            ? cfg.readgroup_library.at(readgroup)
+            : cfg.fmaps.begin()->second;
 
         if(!library.empty()){
             Analysis(opts, bdancer, cfg, library, aln2, reg_seq, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
-                x_readcounts, reference_len, SVtype, max_read_window_size, &max_readlen,
+                reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides,
                 possible_fake_data, maps
             );
@@ -1220,13 +1212,13 @@ int main(int argc, char *argv[]) {
     if (reg_seq.size() != 0) {
         do_break_func(
             opts, bdancer, cfg, reg_seq, read_regions, &idx_buff,
-            &nnormal_reads, x_readcounts, reference_len, SVtype,
+            &nnormal_reads, reference_len, SVtype,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides,
             maps
             );
     }
 
-    buildConnection(opts, bdancer, cfg, read_regions, x_readcounts,
+    buildConnection(opts, bdancer, cfg, read_regions,
         reference_len, max_readlen, SVtype, merged_reader.header(),
         maps);
 
@@ -1246,7 +1238,6 @@ void do_break_func(
     map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,
-    map<uint32_t, map<string,int> > &x_readcounts,
     uint32_t reference_len,
     ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
     int *max_readlen,
@@ -1280,7 +1271,7 @@ void do_break_func(
         (*idx_buff)++;
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
-            buildConnection(opts, bdancer, cfg, read_regions, x_readcounts,
+            buildConnection(opts, bdancer, cfg, read_regions,
                 reference_len, *max_readlen, SVtype, bam_header,
                 maps);
 

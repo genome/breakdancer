@@ -3,7 +3,6 @@ project(breakdancer)
 set(SOURCES
     BDConfig.cpp
     BDConfig.hpp
-    BDTypedefs.hpp
     BamMerger.cpp
     BamMerger.hpp
     BamReader.cpp
@@ -15,6 +14,7 @@ set(SOURCES
     LegacyConfig.hpp
     Read.cpp
     Read.hpp
+    ReadFlags.hpp
     Region.cpp
     Region.hpp
     samtools.h
