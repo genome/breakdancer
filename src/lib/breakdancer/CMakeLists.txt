@@ -8,8 +8,6 @@ set(SOURCES
     BamReader.cpp
     BamReader.hpp
     IBamReader.hpp
-    LegacyBamReader.cpp
-    LegacyBamReader.hpp
     LegacyConfig.cpp
     LegacyConfig.hpp
     Read.cpp

@@ -3,7 +3,6 @@
 #include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamMerger.hpp"
 #include "breakdancer/BamReader.hpp"
-#include "breakdancer/LegacyBamReader.hpp"
 #include "breakdancer/LegacyConfig.hpp"
 #include "breakdancer/Options.hpp"
 #include "breakdancer/Read.hpp"
@@ -24,8 +23,6 @@
 #ifndef SCORE_FLOAT_TYPE
 # define SCORE_FLOAT_TYPE double
 #endif
-
-KSORT_INIT(heap, heap1_t, heap_lt)
 
 /*
 # Data structure menagerie
