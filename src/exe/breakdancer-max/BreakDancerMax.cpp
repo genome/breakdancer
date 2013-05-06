@@ -33,7 +33,7 @@ KSORT_INIT(heap, heap1_t, heap_lt)
 + nread -> number of reads for each library
 ## Analysis
 + reg_name -> vector; contains coordinates of the region and the number of normal reads within it.
-+ reg_seq -> array of read information underlying a region
++ reads_in_current_region -> array of read information underlying a region
 + read -> hash of readnames with array of region ids. Stores which two regions are associated with a readpair
 + regs -> hash storing each region's associated reads
 ## buildConnection
@@ -614,7 +614,6 @@ namespace {
         LegacyConfig const& cfg,
         string const& lib,
         breakdancer::Read &aln,
-        vector<breakdancer::Read> &reg_seq,
         map<string, vector<int> > &read_regions,
         int *idx_buff,
         int *nnormal_reads,
@@ -636,6 +635,7 @@ namespace {
         int& lastc = bdancer.lastc;
         map<string, uint32_t>& nread_ROI = bdancer.nread_ROI;
         map<string, uint32_t>& nread_FR = bdancer.nread_FR;
+        vector<breakdancer::Read>& reads_in_current_region = bdancer.reads_in_current_region;
 
         LibraryInfo const& lib_info = cfg.library_info.at(lib);
 
@@ -763,12 +763,12 @@ namespace {
                 }
 
                 // This adds the region id to an array of region ids
-                vector<breakdancer::Read> p;
-                for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq++){
-                    p.push_back(*it_reg_seq);
-                    read_regions[it_reg_seq->query_name()].push_back(k);
+                for(vector<breakdancer::Read>::const_iterator iter = reads_in_current_region.begin(); iter != reads_in_current_region.end(); iter++) {
+                    read_regions[iter->query_name()].push_back(k);
                 }
-                bdancer.swap_reads_in_region(k, p);
+                // we're essentially destroying reads_in_current_region here by swapping it with whatever
+                //reads this region had (probably none) this is ok because it is just about to be cleared anyway.
+                bdancer.swap_reads_in_region(k, reads_in_current_region);
 
                 (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
                 if(*idx_buff > opts.buffer_size){
@@ -795,14 +795,14 @@ namespace {
                 }
 
                 // remove any reads that are linking the last region with this new, merged in region
-                for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); ++it_reg_seq) {
+                for(vector<breakdancer::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); ++it_reg_seq) {
                     read_regions.erase(it_reg_seq->query_name());
                 }
             }
             // clear out this node
             begins = aln.tid();
             beginc = aln.pos();
-            reg_seq.clear();
+            reads_in_current_region.clear();
             *normal_switch = 0;
             *nnormal_reads = 0;
             *max_readlen = 0;
@@ -815,10 +815,10 @@ namespace {
             nread_FR.clear();
         }
 
-        reg_seq.push_back(aln); // store each read in the region_sequence buffer
+        reads_in_current_region.push_back(aln); // store each read in the region_sequence buffer
         //
         //If we just added the first read, flip the flag that lets us collect all reads
-        if(reg_seq.size() == 1)
+        if(reads_in_current_region.size() == 1)
             *normal_switch = 1;
         lasts = aln.tid();
         lastc = aln.pos();
@@ -1160,7 +1160,6 @@ int main(int argc, char *argv[]) {
 
     map<string, uint32_t > possible_fake_data;
     map<string, vector<int> > read_regions;// global in analysis
-    vector<breakdancer::Read> reg_seq; // global need to see if it's the key or value of one of the above global. should be a string
 
     int idx_buff = 0;// global
     int normal_switch = 0; // global
@@ -1197,7 +1196,7 @@ int main(int argc, char *argv[]) {
             : cfg.fmaps.begin()->second;
 
         if(!library.empty()){
-            Analysis(opts, bdancer, cfg, library, aln2, reg_seq, read_regions,
+            Analysis(opts, bdancer, cfg, library, aln2, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
                 reference_len, SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides,
@@ -1206,16 +1205,16 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (reg_seq.size() != 0) {
+    if (bdancer.reads_in_current_region.size() != 0) {
         do_break_func(
-            opts, bdancer, cfg, reg_seq, read_regions, &idx_buff,
+            opts, bdancer, cfg, read_regions, &idx_buff,
             &nnormal_reads, reference_len, SVtype,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides
             );
     }
 
-    buildConnection(opts, bdancer, cfg, read_regions,
-        reference_len, max_readlen, SVtype, merged_reader.header());
+    buildConnection(opts, bdancer, cfg, read_regions, reference_len,
+        max_readlen, SVtype, merged_reader.header());
 
     bam_destroy1(b);
 
@@ -1229,7 +1228,6 @@ void do_break_func(
     Options const& opts,
     BreakDancer& bdancer,
     LegacyConfig const& cfg,
-    vector<breakdancer::Read> const& reg_seq,
     map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,
@@ -1243,6 +1241,7 @@ void do_break_func(
     int& begins = bdancer.begins;
     int& beginc = bdancer.beginc;
     int& lastc = bdancer.lastc;
+    vector<breakdancer::Read> const& reads_in_current_region = bdancer.reads_in_current_region;
 
     float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
     if (lastc - beginc > opts.min_len
@@ -1252,9 +1251,8 @@ void do_break_func(
         // register reliable region and supporting reads across gaps
         int k = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
-        vector<breakdancer::Read> p;
-        for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
-            p.push_back(*it_reg_seq);
+        vector<breakdancer::Read> p = reads_in_current_region;
+        for(vector<breakdancer::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); it_reg_seq ++){
             read_regions[it_reg_seq->query_name()].push_back(k);
         }
         bdancer.swap_reads_in_region(k, p);
@@ -1271,32 +1269,12 @@ void do_break_func(
             *idx_buff = 0;
         }
     }
-    else if(reg_seq.size() > 0) {
-        for(vector<breakdancer::Read>::const_iterator it_reg_seq = reg_seq.begin(); it_reg_seq != reg_seq.end(); it_reg_seq ++){
+    else if(reads_in_current_region.size() > 0) {
+        for(vector<breakdancer::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); it_reg_seq ++){
             ///string s = get_item_from_string(*it_reg_seq,0);
             read_regions.erase(it_reg_seq->query_name());
         }
     }
-}
-
-// compute the mean of a vector of int
-float mean(vector<int> &stat){
-    int all = 0;
-    vector<int>::const_iterator ii_stat;
-    for(ii_stat = stat.begin(); ii_stat < stat.end(); ii_stat++){
-        all += *ii_stat;
-    }
-    return (float)all/(float)(stat.size());
-}
-
-// compute the standard deviation of a vector of int knowing the mean
-float standard_deviation(vector<int> &stat, float mean){
-    int all = 0;
-    vector<int>::const_iterator ii_stat;
-    for(ii_stat = stat.begin(); ii_stat < stat.end(); ii_stat ++){
-        all += (*ii_stat)*(*ii_stat);
-    }
-    return sqrt((float)all/(float)(stat.size()) - mean*mean);
 }
 
 // augmenting function from int to string

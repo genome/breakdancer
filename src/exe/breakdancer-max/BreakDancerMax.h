@@ -42,7 +42,6 @@ void do_break_func(
     Options const& opts,
     BreakDancer& bdancer,
     LegacyConfig const& cfg,
-    vector<breakdancer::Read> const& reg_seq,
     map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,
