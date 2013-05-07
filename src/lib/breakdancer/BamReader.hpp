@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IBamReader.hpp"
+#include "Options.hpp"
 
 #include <string>
 
@@ -17,6 +18,8 @@ public:
     int next(bam1_t* entry);
 
     bam_header_t* header() const;
+
+    std::string const& path() const { return _path; }
 
 protected:
     std::string _path;
@@ -47,4 +50,13 @@ protected:
 inline
 bam_header_t* BamReader::header() const {
     return _in->header;
+}
+
+namespace {
+    IBamReader* openBam(std::string const& path, Options const& opts) {
+        if (opts.chr == "0")
+            return new BamReader(path);
+        else
+            return new RegionLimitedBamReader(path, opts.chr.c_str());
+    }
 }

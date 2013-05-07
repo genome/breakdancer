@@ -1,9 +1,9 @@
 #include "BreakDancerMax.h"
 
 #include "breakdancer/BDConfig.hpp"
+#include "breakdancer/BamConfig.hpp"
 #include "breakdancer/BamMerger.hpp"
 #include "breakdancer/BamReader.hpp"
-#include "breakdancer/BamConfig.hpp"
 #include "breakdancer/Options.hpp"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/utility.hpp"
@@ -823,13 +823,6 @@ namespace {
 }
 
 namespace {
-    IBamReader* openBam(std::string const& path, Options const& opts) {
-        if (opts.chr == "0")
-            return new BamReader(path);
-        else
-            return new RegionLimitedBamReader(path, opts.chr.c_str());
-    }
-
     vector<shared_ptr<IBamReader> > openBams(
             vector<string> const& paths,
             Options const& opts)
@@ -938,6 +931,7 @@ int main(int argc, char *argv[]) {
     config_stream.open(argv[optind]);
     string line;
     BamConfig cfg(config_stream, opts);
+
     config_stream.close();
 
     // WTH, max_readlen just gets reset to zero before ever being used??? -ta
@@ -953,115 +947,6 @@ int main(int argc, char *argv[]) {
         cfg.exes.at(ii->first); // throws if not found
     }
 
-    uint32_t reference_len = 1;
-    map<string, int> nreads;
-    map<string, int> nreads_per_bam;    // only to compute density per bam
-
-    int i = 0;
-    bam1_t *b = bam_init1();
-
-    for(ii=cfg.fmaps.begin(); ii!=cfg.fmaps.end(); ++ii)
-    {
-        uint32_t ref_len = 0;
-        ++i;
-
-        int last_pos = 0;
-        int last_tid = -1;
-        string const& bam_name = (*ii).first;
-
-        // XXX: Note: the original code would 'continue' if a particular
-        // bam could not be opened. It would also spew the bam name into
-        // the output, which probably messes it up anyway. We are going
-        // to crash. If it is determined that this is wrong, we should
-        // continue if openBam fails.
-        // -ta
-        auto_ptr<IBamReader> reader(openBam(bam_name, opts));
-
-        while (reader->next(b) > 0) {
-            if (b->core.tid < 0)
-                continue;
-
-            breakdancer::Read aln(b, cfg);
-            if(aln.library.empty())
-                continue;
-
-            LibraryInfo& lib_info = cfg.library_info.at(aln.library);
-
-            if (last_tid >= 0 && last_tid == aln.tid())
-                ref_len += aln.pos() - last_pos;
-
-            last_pos = aln.pos();
-            last_tid = aln.tid();
-
-            if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
-                ++nreads[aln.library];
-                if(opts.CN_lib == 0){
-                    ++nreads_per_bam[lib_info.bam_file];
-                }
-            }
-
-            //XXX This seems weird to me as well. Why are we checking the
-            //mapping quality in two different places and performing some
-            //calculations before this is applied?
-            //-dlarson
-
-            int min_mapq = lib_info.min_mapping_quality < 0 ?
-                    opts.min_map_qual : lib_info.min_mapping_quality;
-
-            if (aln.bdqual() <= min_mapq)
-                continue;
-
-            if(aln.bdflag() == breakdancer::NA)
-                continue;
-
-            if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
-                continue;
-
-            //It would be nice if this was pulled into the Read class as well
-            //for now, let's just set the bdflag directly here since it is public
-            if(opts.Illumina_long_insert){
-                if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
-                    aln.set_bdflag(breakdancer::ARP_RF);
-                }
-                if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_RF) {
-                    aln.set_bdflag(breakdancer::NORMAL_RF);
-                }
-                if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
-                    aln.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
-                }
-            }
-            else{
-                if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
-                    aln.set_bdflag(breakdancer::ARP_FR_big_insert);
-                }
-                if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
-                    aln.set_bdflag(breakdancer::NORMAL_FR);
-                }
-                if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
-                    aln.set_bdflag(breakdancer::ARP_FR_small_insert);
-                }
-            }
-
-            if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
-                continue;
-            }
-
-            ++lib_info.read_counts_by_flag[aln.bdflag()];
-        }
-        reader.reset(); // free bam reader
-
-        if(ref_len == 0) {
-            cout << ii->second <<
-                " does not contain legitimate paired end alignment. "
-                "Please check that you have the correct paths and the "
-                "map/bam files are properly formated and indexed.";
-        }
-
-        if(reference_len < ref_len)
-            reference_len = ref_len;
-    }
-    bam_destroy1(b);
-
     // need to read the total base
 
     float total_phy_cov = 0;
@@ -1074,41 +959,40 @@ int main(int argc, char *argv[]) {
     }
     cout << endl;
     cout << "#Library Statistics:" << endl;
-    map<string,int>::const_iterator nreads_ii;
-    for(nreads_ii=nreads.begin(); nreads_ii!=nreads.end(); ++nreads_ii)
+    ConfigMap<string, LibraryInfo>::type::const_iterator nreads_ii;
+    for(nreads_ii = cfg.library_info.begin(); nreads_ii != cfg.library_info.end(); ++nreads_ii)
     {
         string const& lib = nreads_ii->first;
-        LibraryInfo const& lib_info = cfg.library_info.at(lib);
-        float sequence_coverage = float(nreads[lib]*lib_info.readlens)/float(reference_len);
+        LibraryInfo const& lib_info = nreads_ii->second;
+
+        uint32_t lib_read_count = lib_info.read_count;
+
+        float sequence_coverage = float(lib_read_count*lib_info.readlens)/cfg.covered_reference_length();
         total_seq_cov += sequence_coverage;
 
         // compute read_density
         if(opts.CN_lib == 1){
-            if(nreads.find(lib) != nreads.end())
-                bdancer.read_density[lib] = float(nreads[lib])/float(reference_len);
+            if(lib_info.read_count != 0) {
+                bdancer.read_density[lib] = float(lib_info.read_count)/cfg.covered_reference_length();
+            }
             else{
                 bdancer.read_density[lib] = 0.000001;
                 cout << lib << " does not contain any normals" << endl;
             }
         }
         else{
-            map<string, int>::const_iterator iter = nreads_per_bam.find(lib_info.bam_file);
-            if(iter != nreads_per_bam.end())
-                bdancer.read_density[lib_info.bam_file] = float(iter->second)/float(reference_len);
-            else{
-                bdancer.read_density[lib_info.bam_file] = 0.000001;
-                cout << lib << " does not contain any normals" << endl;
-            }
+            uint32_t nreads = cfg.read_count_in_bam(lib_info.bam_file);
+            bdancer.read_density[lib_info.bam_file] = float(nreads)/cfg.covered_reference_length();
         }
 
-        float physical_coverage = float(nreads[lib]*lib_info.mean_insertsize)/float(reference_len)/2;
+        float physical_coverage = float(lib_read_count*lib_info.mean_insertsize)/cfg.covered_reference_length()/2;
         total_phy_cov += physical_coverage;
 
         int nread_lengthDiscrepant = lib_info.get_read_counts_by_flag(breakdancer::ARP_FR_big_insert) +
             lib_info.get_read_counts_by_flag(breakdancer::ARP_FR_small_insert);
 
 
-        int tmp = (nread_lengthDiscrepant > 0)?(float)reference_len/(float)nread_lengthDiscrepant:50;
+        int tmp = (nread_lengthDiscrepant > 0)?(float)cfg.covered_reference_length()/(float)nread_lengthDiscrepant:50;
         max_read_window_size = std::min(max_read_window_size, tmp);
 
         cout << "#" << lib_info.bam_file
@@ -1118,7 +1002,7 @@ int main(int argc, char *argv[]) {
             << "\tlowercutoff:" << lib_info.lowercutoff
             << "\treadlen:" << lib_info.readlens
             << "\tlibrary:" << lib
-            << "\treflen:" << reference_len
+            << "\treflen:" << cfg.covered_reference_length()
             << "\tseqcov:" << sequence_coverage
             << "\tphycov:" << physical_coverage
             ;
@@ -1173,7 +1057,7 @@ int main(int argc, char *argv[]) {
 
     BamMerger merged_reader(readers);
 
-    b = bam_init1();
+    bam1_t* b = bam_init1();
     while (merged_reader.next(b) >= 0) {
         // skip somewhat expensive construction of Read object if entry is not
         // aligned.
@@ -1185,7 +1069,7 @@ int main(int argc, char *argv[]) {
         if(!aln.library.empty()) {
             Analysis(opts, bdancer, cfg, aln, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
-                reference_len, SVtype, max_read_window_size, &max_readlen,
+                cfg.covered_reference_length(), SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides,
                 possible_fake_data
             );
@@ -1195,12 +1079,12 @@ int main(int argc, char *argv[]) {
     if (bdancer.reads_in_current_region.size() != 0) {
         do_break_func(
             opts, bdancer, cfg, read_regions, &idx_buff,
-            &nnormal_reads, reference_len, SVtype,
+            &nnormal_reads, cfg.covered_reference_length(), SVtype,
             &max_readlen, merged_reader.header(), &ntotal_nucleotides
             );
     }
 
-    buildConnection(opts, bdancer, cfg, read_regions, reference_len,
+    buildConnection(opts, bdancer, cfg, read_regions, cfg.covered_reference_length(),
         max_readlen, SVtype, merged_reader.header());
 
     bam_destroy1(b);

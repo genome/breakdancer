@@ -10,6 +10,8 @@
 #include <vector>
 
 class Options;
+class BamSummary;
+class IBamReader;
 
 template<typename K, typename V>
 struct ConfigMap {
@@ -24,6 +26,7 @@ struct LibraryInfo {
         , lowercutoff(0)
         , readlens(0)
         , min_mapping_quality(-1)
+        , read_count(0)
     {
     }
 
@@ -34,6 +37,7 @@ struct LibraryInfo {
     float lowercutoff;
     float readlens;
     int min_mapping_quality;
+    size_t read_count;
 
     // FIXME: ultimately we'll want to renumber the bd flag types and
     // use a simple array for this.
@@ -79,6 +83,22 @@ public:
         }
     }
 
+    uint32_t covered_reference_length() const {
+        return _covered_ref_len;
+    }
+
+    uint32_t read_count_in_bam(std::string const& key) const {
+        return _read_count_per_bam.at(key);
+    }
+
 private:
+    void _analyze_bam(IBamReader& reader, Options const& opts);
+
+private:
+    // FIXME: we don't need separate vectors for filenames and file summaries
+    // we can do with one if the summary can report the name.
     std::vector<std::string> _bam_files;
+    std::vector<BamSummary*> _bam_summaries;
+    ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
+    uint32_t _covered_ref_len;
 };

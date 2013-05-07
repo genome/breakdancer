@@ -1,11 +1,14 @@
 #include "BamConfig.hpp"
 #include "Options.hpp"
+#include "BamReader.hpp"
+#include "Read.hpp"
 
 #include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <cstdlib>
+#include <memory>
 
 using namespace std;
 
@@ -131,12 +134,14 @@ namespace {
 BamConfig::BamConfig()
     : max_read_window_size(1e8)
     , max_readlen(0)
+    , _covered_ref_len(0)
 {
 }
 
 BamConfig::BamConfig(std::istream& in, Options const& opts)
     : max_read_window_size(1e8)
     , max_readlen(0)
+    , _covered_ref_len(0)
 {
     string line;
     while(getline(in, line)) {
@@ -237,8 +242,103 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
     }
 
     typedef ConfigMap<string, string>::type::const_iterator IterType;
-    for (IterType iter = fmaps.begin(); iter != fmaps.end(); ++iter)
+    for (IterType iter = fmaps.begin(); iter != fmaps.end(); ++iter) {
         _bam_files.push_back(iter->first);
+        auto_ptr<IBamReader> reader(openBam(iter->first, opts));
+        _analyze_bam(*reader, opts);
+    }
 
     max_read_window_size = std::max(max_read_window_size, 50);
+}
+
+void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
+    int last_pos = 0;
+    int last_tid = -1;
+
+    size_t ref_len = 0;
+    uint32_t read_count = 0;
+
+    bam1_t* b = bam_init1();
+    while (reader.next(b) > 0) {
+        if (b->core.tid < 0)
+            continue;
+
+        breakdancer::Read aln(b, *this);
+        if (aln.library.empty())
+            continue;
+
+        LibraryInfo& lib_info = this->library_info.at(aln.library);
+
+        if (last_tid >= 0 && last_tid == aln.tid())
+            ref_len += aln.pos() - last_pos;
+
+        last_pos = aln.pos();
+        last_tid = aln.tid();
+
+        if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
+            ++lib_info.read_count; // FIXME: this is a bad side effect modifying another object
+            ++read_count;
+        }
+
+        //XXX This seems weird to me as well. Why are we checking the
+        //mapping quality in two different places and performing some
+        //calculations before this is applied?
+        //-dlarson
+
+        int min_mapq = lib_info.min_mapping_quality < 0 ?
+                opts.min_map_qual : lib_info.min_mapping_quality;
+
+        if (aln.bdqual() <= min_mapq)
+            continue;
+
+        if(aln.bdflag() == breakdancer::NA)
+            continue;
+
+        if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
+            continue;
+
+        //It would be nice if this was pulled into the Read class as well
+        //for now, let's just set the bdflag directly here since it is public
+        if(opts.Illumina_long_insert) {
+            if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
+                aln.set_bdflag(breakdancer::ARP_RF);
+            }
+            if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_RF) {
+                aln.set_bdflag(breakdancer::NORMAL_RF);
+            }
+            if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
+                aln.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
+            }
+        }
+        else{
+            if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
+                aln.set_bdflag(breakdancer::ARP_FR_big_insert);
+            }
+            if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
+                aln.set_bdflag(breakdancer::NORMAL_FR);
+            }
+            if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
+                aln.set_bdflag(breakdancer::ARP_FR_small_insert);
+            }
+        }
+
+        if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
+            continue;
+        }
+
+        ++lib_info.read_counts_by_flag[aln.bdflag()];
+    }
+    bam_destroy1(b);
+
+    if(ref_len == 0) {
+        cerr << "Input file " << reader.path() <<
+            " does not contain legitimate paired end alignment. "
+            "Please check that you have the correct paths and the "
+            "map/bam files are properly formated and indexed.";
+    }
+
+    _read_count_per_bam[reader.path()] = read_count;
+
+    if (_covered_ref_len < ref_len)
+        _covered_ref_len = ref_len;
 }

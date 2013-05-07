@@ -1,6 +1,7 @@
 #include "BamMerger.hpp"
 
 #include <cassert>
+#include <sstream>
 #include <stdexcept>
 
 using namespace std;
@@ -65,15 +66,20 @@ BamMerger::BamMerger(std::vector<IBamReader*> const& streams) {
     // TODO: validate that headers are all "compatible".
     _header = streams[0]->header();
 
+    stringstream names;
     typedef std::vector<IBamReader*>::const_iterator IterType;
     for (IterType i = streams.begin(); i != streams.end(); ++i) {
         Stream* s = new Stream(*i);
         if (s->valid()) {
             _streams.push(s);
+            if (!_streams.empty())
+                names << ", ";
+            names << (*i)->path();
         } else {
             delete s;
         }
     }
+    _path = names.str();
 }
 
 BamMerger::~BamMerger() {
