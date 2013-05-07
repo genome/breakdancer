@@ -30,6 +30,7 @@ struct LibraryInfo {
     {
     }
 
+    std::string name;
     std::string bam_file;
     float mean_insertsize;
     float std_insertsize;
@@ -49,6 +50,23 @@ struct LibraryInfo {
             return 0u;
 
         return fiter->second;
+    }
+
+    struct Wrapper {
+        Wrapper(LibraryInfo const& lib_info)
+            : lib_info(lib_info)
+        {
+        }
+
+        bool operator<(Wrapper const& rhs) const {
+            return lib_info.name < rhs.lib_info.name;
+        }
+
+        LibraryInfo const& lib_info;
+    };
+
+    Wrapper wrap() const {
+        return Wrapper(*this);
     }
 };
 

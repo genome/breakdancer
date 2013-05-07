@@ -74,7 +74,6 @@ namespace {
             vector<int> &rnode,
             map<string,int> &rlibrary_readcount,
             breakdancer::pair_orientation_flag type,
-            uint32_t reference_len,
             int fisher,
             BreakDancer const& bdancer,
             BamConfig const& cfg
@@ -94,7 +93,7 @@ namespace {
             // debug
             //int db_x_rc = x_readcounts[type][lib];
             uint32_t read_count_for_flag = lib_info.get_read_counts_by_flag(type);
-            lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(reference_len));
+            lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(cfg.covered_reference_length()));
             lambda = max(real_type(1.0e-10), lambda);
             poisson_distribution<real_type> poisson(lambda);
             real_type tmp_a = log(cdf(complement(poisson, readcount))) - err;
@@ -126,7 +125,6 @@ namespace {
         BreakDancer& bdancer,
         BamConfig const& cfg,
         map<string, vector<int> > &read_regions,
-        uint32_t reference_len,
         int max_readlen,
         ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
         bam_header_t* bam_header
@@ -381,7 +379,7 @@ namespace {
 
                                         // add up the read number
                                         for(int i_node = first_node; i_node < node; i_node++){
-                                            typedef BreakDancer::RoiReadCounts::value_type MapType;
+                                            typedef BreakDancer::PerLibReadCounts MapType;
                                             typedef MapType::const_iterator IterType;
                                             MapType const* counts = bdancer.region_read_counts_by_library(i_node);
                                             if (counts)
@@ -494,7 +492,7 @@ namespace {
                                 sptypes[flag] = sptype;
 
 
-                                real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], flag, reference_len, opts.fisher, bdancer, cfg);
+                                real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], flag, opts.fisher, bdancer, cfg);
                                 real_type PhredQ_tmp = -10*LogPvalue/log(10);
                                 int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
                                 //float AF = float(type[flag])/float(type[flag]+normal_rp);
@@ -614,7 +612,6 @@ namespace {
         int *idx_buff,
         int *nnormal_reads,
         int *normal_switch,
-        uint32_t reference_len,
         ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
         int max_read_window_size,
         int *max_readlen,
@@ -633,7 +630,7 @@ namespace {
         map<string, uint32_t>& nread_FR = bdancer.nread_FR;
         vector<breakdancer::Read>& reads_in_current_region = bdancer.reads_in_current_region;
 
-        LibraryInfo const& lib_info = cfg.library_info.at(aln.library);
+        LibraryInfo const& lib_info = aln.lib_info();
 
         //main analysis code
 
@@ -739,38 +736,35 @@ namespace {
                     && seq_coverage < opts.seq_coverage_lim) // skip short/unreliable flanking supporting regions
             {
                 // register reliable region and supporting reads across gaps
-                int k = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
+                int region_idx = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
                 // never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
                 // record nread_ROI
                 // track the number of reads from each library for the region
-                for(map<string, uint32_t>::const_iterator nread_ROI_it = nread_ROI.begin(); nread_ROI_it != nread_ROI.end(); nread_ROI_it ++){
-                    string const& lib_ = nread_ROI_it->first;
-                    bdancer.increment_region_lib_read_count(k, lib_, nread_ROI_it->second);
-                }
+                bdancer.add_per_lib_read_counts_to_region(region_idx, nread_ROI);
 
                 // compute nread_FR and record it
                 // track number of FR reads from the region.
                 // From earlier, these numbers seem like they shoudl be the same unless they are being added to in multiple places
                 for(map<string, uint32_t>::const_iterator nread_FR_it = nread_FR.begin(); nread_FR_it != nread_FR.end(); nread_FR_it ++){
                     string const& lib_ = nread_FR_it->first;
-                    uint32_t count = bdancer.region_lib_read_count(k, lib_);
-                    bdancer.set_region_lib_FR_count(k, lib_, nread_FR_it->second - count);
+                    uint32_t count = bdancer.region_lib_read_count(region_idx, lib_);
+                    bdancer.set_region_lib_FR_count(region_idx, lib_, nread_FR_it->second - count);
                 }
 
                 // This adds the region id to an array of region ids
                 for(vector<breakdancer::Read>::const_iterator iter = reads_in_current_region.begin(); iter != reads_in_current_region.end(); iter++) {
-                    read_regions[iter->query_name()].push_back(k);
+                    read_regions[iter->query_name()].push_back(region_idx);
                 }
                 // we're essentially destroying reads_in_current_region here by swapping it with whatever
                 //reads this region had (probably none) this is ok because it is just about to be cleared anyway.
-                bdancer.swap_reads_in_region(k, reads_in_current_region);
+                bdancer.swap_reads_in_region(region_idx, reads_in_current_region);
 
                 (*idx_buff)++; //increment tracking of number of regions in buffer??? Not quite sure if this is what idx_buff is
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
                     buildConnection(opts, bdancer, cfg, read_regions,
-                        reference_len, *max_readlen, SVtype, bam_header);
+                        *max_readlen, SVtype, bam_header);
                     *idx_buff = 0;
                 }
             }
@@ -780,14 +774,12 @@ namespace {
                 // possible fake is off, never gone to possible fake before, save the ROI
                 // I don't understand exactly what this is doing. It is only hitting here to store the info if flanking region is too short or the coverage is too high
                 // It appears to be used to pull in nearby neighboring regions to the last region identified if the distance between them is too short
-                if(/* *possible_fake == 1 &&*/ bdancer.num_regions() > 0) {
-                    int last_reg_idx = bdancer.num_regions() - 1;
-                    typedef map<string, uint32_t>::const_iterator IterType;
-                    for(IterType iter = possible_fake_data.begin(); iter != possible_fake_data.end(); ++iter) {
-                        string const& lib_ = iter->first;
-                        uint32_t const& count = iter->second;
-                        bdancer.increment_region_lib_read_count(last_reg_idx, lib_, count);
-                    }
+                //
+                // Why doesn't this update the FR read counts as well?
+                // -ta
+                if(bdancer.num_regions() > 0) {
+                    size_t last_reg_idx = bdancer.num_regions() - 1;
+                    bdancer.add_per_lib_read_counts_to_region(last_reg_idx, possible_fake_data);
                 }
 
                 // remove any reads that are linking the last region with this new, merged in region
@@ -949,8 +941,6 @@ int main(int argc, char *argv[]) {
 
     // need to read the total base
 
-    float total_phy_cov = 0;
-    float total_seq_cov = 0;
 
     cout << "#Software: " << __g_prog_version << endl;
     cout << "#Command: ";
@@ -968,7 +958,6 @@ int main(int argc, char *argv[]) {
         uint32_t lib_read_count = lib_info.read_count;
 
         float sequence_coverage = float(lib_read_count*lib_info.readlens)/cfg.covered_reference_length();
-        total_seq_cov += sequence_coverage;
 
         // compute read_density
         if(opts.CN_lib == 1){
@@ -986,7 +975,6 @@ int main(int argc, char *argv[]) {
         }
 
         float physical_coverage = float(lib_read_count*lib_info.mean_insertsize)/cfg.covered_reference_length()/2;
-        total_phy_cov += physical_coverage;
 
         int nread_lengthDiscrepant = lib_info.get_read_counts_by_flag(breakdancer::ARP_FR_big_insert) +
             lib_info.get_read_counts_by_flag(breakdancer::ARP_FR_small_insert);
@@ -1064,12 +1052,13 @@ int main(int argc, char *argv[]) {
         if(b->core.tid < 0)
             continue;
 
-        breakdancer::Read aln(b, cfg);
+        breakdancer::Read aln(b, cfg, true);
+        aln.set_lib_info(&cfg.library_info.at(aln.library));
 
         if(!aln.library.empty()) {
             Analysis(opts, bdancer, cfg, aln, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
-                cfg.covered_reference_length(), SVtype, max_read_window_size, &max_readlen,
+                SVtype, max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides,
                 possible_fake_data
             );
@@ -1079,12 +1068,12 @@ int main(int argc, char *argv[]) {
     if (bdancer.reads_in_current_region.size() != 0) {
         do_break_func(
             opts, bdancer, cfg, read_regions, &idx_buff,
-            &nnormal_reads, cfg.covered_reference_length(), SVtype,
-            &max_readlen, merged_reader.header(), &ntotal_nucleotides
+            &nnormal_reads, SVtype, &max_readlen,
+            merged_reader.header(), &ntotal_nucleotides
             );
     }
 
-    buildConnection(opts, bdancer, cfg, read_regions, cfg.covered_reference_length(),
+    buildConnection(opts, bdancer, cfg, read_regions,
         max_readlen, SVtype, merged_reader.header());
 
     bam_destroy1(b);
@@ -1102,7 +1091,6 @@ void do_break_func(
     map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,
-    uint32_t reference_len,
     ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
     int *max_readlen,
     bam_header_t* bam_header,
@@ -1120,13 +1108,13 @@ void do_break_func(
         // skip short/unreliable flnaking supporting regions
     {
         // register reliable region and supporting reads across gaps
-        int k = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
+        int region_idx = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
 
         vector<breakdancer::Read> p = reads_in_current_region;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); it_reg_seq ++){
-            read_regions[it_reg_seq->query_name()].push_back(k);
+            read_regions[it_reg_seq->query_name()].push_back(region_idx);
         }
-        bdancer.swap_reads_in_region(k, p);
+        bdancer.swap_reads_in_region(region_idx, p);
 
         //this should replace both regs and reg_name
         //region::Region new_region(begins, beginc, lastc, *nnormal_reads, reg_seq);
@@ -1135,7 +1123,7 @@ void do_break_func(
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
             buildConnection(opts, bdancer, cfg, read_regions,
-                reference_len, *max_readlen, SVtype, bam_header);
+                *max_readlen, SVtype, bam_header);
 
             *idx_buff = 0;
         }

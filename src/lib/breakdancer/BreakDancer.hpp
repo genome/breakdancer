@@ -1,18 +1,21 @@
 #pragma once
 
 #include "BasicRegion.hpp"
+#include "utility.hpp"
 
 #include <cstddef>
 #include <map>
 #include <stdint.h>
 #include <string>
 #include <vector>
+#include <functional>
 
 class BreakDancer {
 public:
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
-    typedef std::vector<std::map<std::string, uint32_t> > RoiReadCounts;
+    typedef std::map<std::string, uint32_t> PerLibReadCounts;
+    typedef std::vector<PerLibReadCounts> RoiReadCounts;
 
     BreakDancer()
         : begins(-1)
@@ -37,10 +40,11 @@ public:
     std::map<std::string, float> read_density;
     ReadVector reads_in_current_region;
 
-    void increment_region_lib_read_count(size_t region_idx, std::string const& lib, uint32_t nreads) {
+    void add_per_lib_read_counts_to_region(size_t region_idx, std::map<std::string, uint32_t> const& counts) {
         if (region_idx >= _read_count_ROI_map.size())
             _read_count_ROI_map.resize(2*(region_idx+1));
-        _read_count_ROI_map[region_idx][lib] += nreads;
+
+        merge_maps(_read_count_ROI_map[region_idx], counts, std::plus<uint32_t>());
     }
 
     void set_region_lib_FR_count(size_t region_idx, std::string const& lib, uint32_t nreads) {
@@ -49,13 +53,13 @@ public:
         _read_count_FR_map[region_idx][lib] = nreads;
     }
 
-    RoiReadCounts::value_type const* region_read_counts_by_library(size_t region_idx) {
+    PerLibReadCounts const* region_read_counts_by_library(size_t region_idx) {
         if (region_idx >= _read_count_ROI_map.size())
             return 0;
         return &_read_count_ROI_map[region_idx];
     }
 
-    RoiReadCounts::value_type const* region_FR_counts_by_library(size_t region_idx) {
+    PerLibReadCounts const* region_FR_counts_by_library(size_t region_idx) {
         if (region_idx >= _read_count_FR_map.size())
             return 0;
         return &_read_count_FR_map[region_idx];

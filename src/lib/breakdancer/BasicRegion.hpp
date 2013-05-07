@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Read.hpp"
+
 #include <vector>
 
 class BasicRegion {

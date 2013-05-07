@@ -103,7 +103,8 @@ pair_orientation_flag determine_bdflag(bam1_t const* record, std::string const& 
 
 Read::Read(
         bam1_t const* record,
-        BamConfig const& cfg
+        BamConfig const& cfg,
+        bool seq_data
         )
     : _bdflag(determine_bdflag(record, cfg.platform_for_readgroup(readgroup)))
     , _ori(record->core.flag & BAM_FREVERSE ? REV : FWD)
@@ -116,11 +117,14 @@ Read::Read(
     , _query_name(bam1_qname(record))
     , _seq_converted(false)
     , _quality_converted(false)
+    , _lib_info(0)
+{
     // FIXME: if *bam1_qual(record) = 0xff, there is no quality string?
     // we should test for that
-    , _bam_data(reinterpret_cast<char const*>(bam1_seq(record)),
-                reinterpret_cast<char const*>(bam1_qual(record) + record->core.l_qseq))
-{
+    if (seq_data)
+        _bam_data.assign(reinterpret_cast<char const*>(bam1_seq(record)),
+                reinterpret_cast<char const*>(bam1_qual(record) + record->core.l_qseq));
+
     if(uint8_t* tmp = bam_aux_get(record, "RG"))
         readgroup = bam_aux2Z(tmp);
 
@@ -129,6 +133,7 @@ Read::Read(
         library = lib->second;
     else
         library = cfg.fmaps.begin()->second;
+
 }
 
 END_NAMESPACE(breakdancer)

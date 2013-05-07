@@ -192,6 +192,7 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         }
 
         LibraryInfo lib_info;
+        lib_info.name = lib;
         lib_info.bam_file = fmap;
 
         if(mqual_.compare("NA")){
@@ -263,7 +264,7 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
         if (b->core.tid < 0)
             continue;
 
-        breakdancer::Read aln(b, *this);
+        breakdancer::Read aln(b, *this, false);
         if (aln.library.empty())
             continue;
 

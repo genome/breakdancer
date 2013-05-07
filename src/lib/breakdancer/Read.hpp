@@ -12,6 +12,7 @@ extern "C" {
 }
 
 class BamConfig;
+class LibraryInfo;
 
 BEGIN_NAMESPACE(breakdancer)
 
@@ -23,13 +24,15 @@ public:
     std::string library;
 
     Read(bam1_t const* record,
-        BamConfig const& cfg);
+        BamConfig const& cfg,
+        bool seq_data = true);
 
     Read()
         : _bdflag(NA)
         , _ori(FWD)
         , _abs_isize(0)
         , _bdqual(0)
+        , _lib_info(0)
     {}
 
     void set_bdflag(pair_orientation_flag const& new_flag);
@@ -45,6 +48,9 @@ public:
     strand_e const& ori() const;
     int const& isize() const;
     int const& abs_isize() const;
+
+    LibraryInfo const& lib_info() const;
+    void set_lib_info(LibraryInfo const* lib_info);
 
 private: // Data
     pair_orientation_flag _bdflag;
@@ -65,6 +71,8 @@ private: // Data
     mutable bool _quality_converted;
 
     std::string _bam_data;
+
+    LibraryInfo const* _lib_info;
 };
 
 inline
@@ -142,6 +150,17 @@ std::string const& Read::quality_string() const {
     }
 
     return _quality_string;
+}
+
+inline
+void Read::set_lib_info(LibraryInfo const* lib_info) {
+    _lib_info = lib_info;
+}
+
+
+inline
+LibraryInfo const& Read::lib_info() const {
+    return *_lib_info;
 }
 
 END_NAMESPACE(breakdancer)

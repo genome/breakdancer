@@ -1,1 +1,1 @@
-def_integration_test(breakdancer-max BreakDancer breakdancer_test.py)
+def_integration_test(breakdancer-max RunBreakDancer breakdancer_test.py)
