@@ -11,7 +11,7 @@ extern "C" {
     #include <bam.h>
 }
 
-class LegacyConfig;
+class BamConfig;
 
 BEGIN_NAMESPACE(breakdancer)
 
@@ -23,7 +23,7 @@ public:
     std::string library;
 
     Read(bam1_t const* record,
-        LegacyConfig const& cfg);
+        BamConfig const& cfg);
 
     Read()
         : _bdflag(NA)
@@ -48,7 +48,6 @@ public:
 
 private: // Data
     pair_orientation_flag _bdflag;
-
     strand_e _ori;
     int _abs_isize;
     int _bdqual;

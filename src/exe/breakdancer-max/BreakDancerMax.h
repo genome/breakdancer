@@ -1,5 +1,5 @@
 #include "breakdancer/BDConfig.hpp"
-#include "breakdancer/LegacyConfig.hpp"
+#include "breakdancer/BamConfig.hpp"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/saminternals.h"
 #include "breakdancer/BreakDancer.hpp"
@@ -41,7 +41,7 @@ T from_string(const std::string& s,
 void do_break_func(
     Options const& opts,
     BreakDancer& bdancer,
-    LegacyConfig const& cfg,
+    BamConfig const& cfg,
     map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,

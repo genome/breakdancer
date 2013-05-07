@@ -48,10 +48,10 @@ struct LibraryInfo {
     }
 };
 
-class LegacyConfig {
+class BamConfig {
 public:
-    LegacyConfig();
-    LegacyConfig(std::istream& in, Options const& opts);
+    BamConfig();
+    BamConfig(std::istream& in, Options const& opts);
 
     ConfigMap<std::string, std::string>::type exes;
     ConfigMap<std::string, std::string>::type fmaps;

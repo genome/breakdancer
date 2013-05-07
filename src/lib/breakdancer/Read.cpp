@@ -1,5 +1,5 @@
 #include "Read.hpp"
-#include "LegacyConfig.hpp"
+#include "BamConfig.hpp"
 
 #include <cstdlib>
 #include <boost/lexical_cast.hpp>
@@ -103,7 +103,7 @@ pair_orientation_flag determine_bdflag(bam1_t const* record, std::string const& 
 
 Read::Read(
         bam1_t const* record,
-        LegacyConfig const& cfg
+        BamConfig const& cfg
         )
     : _bdflag(determine_bdflag(record, cfg.platform_for_readgroup(readgroup)))
     , _ori(record->core.flag & BAM_FREVERSE ? REV : FWD)

@@ -1,6 +1,6 @@
 #include "breakdancer/Options.hpp"
 #include "breakdancer/BDConfig.hpp"
-#include "breakdancer/LegacyConfig.hpp"
+#include "breakdancer/BamConfig.hpp"
 
 #include <sstream>
 #include <string>
@@ -52,7 +52,7 @@ public:
 };
 
 TEST_F(TestConfig, legacyParse) {
-    LegacyConfig cfg(_cfg_stream, _opts);
+    BamConfig cfg(_cfg_stream, _opts);
 
     // test "fmaps", mapping input files -> first library they contain?
     ASSERT_EQ(2, cfg.fmaps.size());

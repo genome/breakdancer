@@ -1,5 +1,5 @@
 #include "breakdancer/Read.hpp"
-#include "breakdancer/LegacyConfig.hpp"
+#include "breakdancer/BamConfig.hpp"
 
 #include <map>
 #include <memory>
@@ -40,7 +40,7 @@ class TestRead : public ::testing::Test {
         bam1_core_t core;
         bam1_t bam_record;
         auto_ptr<Read> test_read;
-        LegacyConfig cfg;
+        BamConfig cfg;
 };
 
 TEST_F(TestRead, readgroup) {

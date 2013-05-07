@@ -3,7 +3,7 @@
 #include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamMerger.hpp"
 #include "breakdancer/BamReader.hpp"
-#include "breakdancer/LegacyConfig.hpp"
+#include "breakdancer/BamConfig.hpp"
 #include "breakdancer/Options.hpp"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/utility.hpp"
@@ -77,7 +77,7 @@ namespace {
             uint32_t reference_len,
             int fisher,
             BreakDancer const& bdancer,
-            LegacyConfig const& cfg
+            BamConfig const& cfg
             )
     {
         // rnode, rlibrary_readcount, type
@@ -124,7 +124,7 @@ namespace {
     void buildConnection(
         Options const& opts,
         BreakDancer& bdancer,
-        LegacyConfig const& cfg,
+        BamConfig const& cfg,
         map<string, vector<int> > &read_regions,
         uint32_t reference_len,
         int max_readlen,
@@ -608,7 +608,7 @@ namespace {
     void Analysis (
         Options const& opts,
         BreakDancer& bdancer,
-        LegacyConfig const& cfg,
+        BamConfig const& cfg,
         breakdancer::Read &aln,
         map<string, vector<int> > &read_regions,
         int *idx_buff,
@@ -937,7 +937,7 @@ int main(int argc, char *argv[]) {
 
     config_stream.open(argv[optind]);
     string line;
-    LegacyConfig cfg(config_stream, opts);
+    BamConfig cfg(config_stream, opts);
     config_stream.close();
 
     // WTH, max_readlen just gets reset to zero before ever being used??? -ta
@@ -1111,7 +1111,6 @@ int main(int argc, char *argv[]) {
         int tmp = (nread_lengthDiscrepant > 0)?(float)reference_len/(float)nread_lengthDiscrepant:50;
         max_read_window_size = std::min(max_read_window_size, tmp);
 
-        //printf("#%s\tmean:%.3f\tstd:%.3f\tuppercutoff:%.3f\tlowercutoff:%.3f\treadlen:%.3f\tlibrary:%s\treflen:%d\tseqcov:%.3fx\tphycov:%.3fx", libmaps.at(lib),mean_insertsize[lib],std_insertsize[lib],uppercutoff.at(lib),lowercutoff.at(lib),readlens[lib],lib,reference_len, sequence_coverage,physical_coverage);
         cout << "#" << lib_info.bam_file
             << "\tmean:" << lib_info.mean_insertsize
             << "\tstd:" << lib_info.std_insertsize
@@ -1183,7 +1182,7 @@ int main(int argc, char *argv[]) {
 
         breakdancer::Read aln(b, cfg);
 
-        if(!aln.library.empty()){
+        if(!aln.library.empty()) {
             Analysis(opts, bdancer, cfg, aln, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
                 reference_len, SVtype, max_read_window_size, &max_readlen,
@@ -1215,7 +1214,7 @@ int main(int argc, char *argv[]) {
 void do_break_func(
     Options const& opts,
     BreakDancer& bdancer,
-    LegacyConfig const& cfg,
+    BamConfig const& cfg,
     map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,

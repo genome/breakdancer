@@ -1,4 +1,4 @@
-#include "LegacyConfig.hpp"
+#include "BamConfig.hpp"
 #include "Options.hpp"
 
 #include <algorithm>
@@ -128,13 +128,13 @@ namespace {
 }
 
 
-LegacyConfig::LegacyConfig()
+BamConfig::BamConfig()
     : max_read_window_size(1e8)
     , max_readlen(0)
 {
 }
 
-LegacyConfig::LegacyConfig(std::istream& in, Options const& opts)
+BamConfig::BamConfig(std::istream& in, Options const& opts)
     : max_read_window_size(1e8)
     , max_readlen(0)
 {
