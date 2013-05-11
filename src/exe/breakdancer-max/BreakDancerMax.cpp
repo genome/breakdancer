@@ -1052,7 +1052,7 @@ int main(int argc, char *argv[]) {
         if(b->core.tid < 0)
             continue;
 
-        breakdancer::Read aln(b, cfg, true);
+        breakdancer::Read aln(b, cfg, opts.need_sequence_data());
         aln.set_lib_info(&cfg.library_info.at(aln.library));
 
         if(!aln.library.empty()) {

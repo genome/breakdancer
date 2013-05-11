@@ -45,6 +45,12 @@ struct Options {
     std::string prefix_fastq;
     std::string dump_BED;
     std::string platform;
+
+    bool need_sequence_data() const {
+        // we'll need to keep sequence/quality data if we are dumping
+        // fastq or bed.
+        return !prefix_fastq.empty() || !dump_BED.empty();
+    }
 };
 
 
