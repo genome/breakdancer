@@ -23,7 +23,6 @@ public:
 
 protected:
     std::string _path;
-    std::string _region;
     samfile_t* _in;
 };
 
