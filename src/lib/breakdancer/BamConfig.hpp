@@ -20,7 +20,8 @@ struct ConfigMap {
 
 struct LibraryInfo {
     LibraryInfo()
-        : mean_insertsize(0)
+        : index(0)
+        , mean_insertsize(0)
         , std_insertsize(0)
         , uppercutoff(0)
         , lowercutoff(0)
@@ -30,6 +31,7 @@ struct LibraryInfo {
     {
     }
 
+    size_t index;
     std::string name;
     std::string bam_file;
     float mean_insertsize;
@@ -77,13 +79,20 @@ public:
 
     ConfigMap<std::string, std::string>::type exes;
     ConfigMap<std::string, std::string>::type fmaps;
-    ConfigMap<std::string, LibraryInfo>::type library_info;
     ConfigMap<std::string, std::string>::type readgroup_library;
     ConfigMap<std::string, std::string>::type readgroup_platform;
     ConfigMap<std::string, std::string>::type ReadsOut;
 
     int max_read_window_size;
     int max_readlen;
+
+    size_t num_libs() const {
+        return _library_info.size();
+    }
+
+    size_t num_bams() const {
+        return _bam_files.size();
+    }
 
     std::vector<std::string> const& bam_files() const {
         return _bam_files;
@@ -99,6 +108,14 @@ public:
         else {
             return illumina;
         }
+    }
+
+    LibraryInfo const& library_info_by_index(size_t idx) const {
+        return _library_info[idx];
+    }
+
+    LibraryInfo const& library_info_by_name(std::string const& lib) const {
+        return _library_info[_lib_names_to_indices.at(lib)];
     }
 
     uint32_t covered_reference_length() const {
@@ -119,4 +136,6 @@ private:
     std::vector<BamSummary*> _bam_summaries;
     ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
     uint32_t _covered_ref_len;
+    ConfigMap<std::string, size_t>::type _lib_names_to_indices;
+    std::vector<LibraryInfo> _library_info;
 };

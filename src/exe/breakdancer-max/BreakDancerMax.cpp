@@ -88,7 +88,7 @@ namespace {
         for(map<string,int>::const_iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
             string const& lib = ii_rlibrary_readcount->first;
             int const& readcount = ii_rlibrary_readcount->second;
-            LibraryInfo const& lib_info = cfg.library_info.at(lib);
+            LibraryInfo const& lib_info = cfg.library_info_by_name(lib);
 
             // debug
             //int db_x_rc = x_readcounts[type][lib];
@@ -141,13 +141,17 @@ namespace {
         // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
         for(ii_read = read_regions.begin(); ii_read != read_regions.end(); ii_read++){
             // test
-            //string tmp_str = (*ii_read).first;
             vector<int> const& p = ii_read->second;
             assert( p.size() < 3);
             if(p.size() != 2) // skip singleton read (non read pairs)
                 continue;
-            //cout << tmp_str << "\t" << p[0] << "\t" << p[1] << endl;
+
             //track the number of links between two nodes
+            //
+            // This doesn't make a lot of sense to me. When p[0] == p[1] and p[0] is not
+            // in the map, both are set to one. If p[0] is in the map, then we increment
+            // twice. We should either double count or not. Doing a mixture of both is
+            // silly. -ta
             if(clink.find(p[0]) != clink.end() && clink[p[0]].find(p[1]) != clink[p[0]].end()){
                 ++clink[p[0]][p[1]];
                 ++clink[p[1]][p[0]];
@@ -156,79 +160,81 @@ namespace {
                 clink[p[0]][p[1]] = 1;
                 clink[p[1]][p[0]] = 1;
             }
+
             //cout << tmp_str << endl;
             //cout << p[0] << "\t" << p[1] << "\t" << link[p[0]][p[1]] << endl;
         }
         // segregate graph, find nodes that have connections
         set<int> free_nodes;
-        map<int, map<int, int> >::const_iterator ii_clink;
-        vector<int> s0_vec;
-        //  int tmp_read_size = read.size();
-        //cout << tmp_read_size << endl;
+        map<int, map<int, int> >::iterator ii_clink = clink.begin();
 
-        // Grab the first region for every link
-        for(ii_clink = clink.begin(); ii_clink != clink.end(); ii_clink++){
-            s0_vec.push_back((*ii_clink).first);
-            //cout << ",,,,," << (*ii_clink).first << endl;
-            //      map<int,int> tmp_clink = (*ii_clink).second;
-            /*int s1, value;
-             for(map<int,int>::iterator ii_tmp_clink = tmp_clink.begin(); ii_tmp_clink != tmp_clink.end(); ii_tmp_clink++){
-             s1 = (*ii_tmp_clink).first;
-             //cout << ",,,," << s1 << endl;
-             value = (*ii_tmp_clink).second;
-             }*/
-        }
-        for(vector<int>::const_iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){
-            int s0 = *ii_s0_vec;
+        //for(vector<int>::const_iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){}
+        while (ii_clink != clink.end()) {
+            int const& s0 = ii_clink->first;
             //cout << ",,,,," << s0 << endl;
             // assert( clink.find(s0) != clink.end() ); THIS ASSERT TRIPS
-            if(clink.find(s0) == clink.end())
-                continue;
+            //if(clink.find(s0) == clink.end())
+                //continue;
             // construct a subgraph
             vector<int> tails;
             tails.push_back(s0);
-            while(tails.size() > 0){
+            bool need_iter_increment = true;
+            while(tails.size() > 0) {
                 vector<int> newtails;
                 vector<int>::const_iterator it_tails;
                 for(it_tails = tails.begin(); it_tails != tails.end(); it_tails ++){
                     int const& tail = *it_tails;
                     //cout << ",,,," << tail << endl;
-                    //assert(clink.find(*it_tails) != clink.end()); THIS ASSERT TRIPS
-                    if(clink.find(*it_tails) == clink.end())
-                        continue;
                     assert(bdancer.region_exists(*it_tails));
-                    if(!bdancer.region_exists(*it_tails))
+                    // Make sure region with id "tail" hasn't already been deleted
+                    if(!bdancer.region_exists(tail))
                         continue;
-                    vector<int> s1s; //accumulate all linked nodes for a  single node
-                    for(map<int, int>::const_iterator ii_clink_ = clink[tail].begin(); ii_clink_ != clink[tail].end(); ii_clink_++){
-                        s1s.push_back((*ii_clink_).first);
-                        //cout << ",,," << (*ii_clink_).first << endl;
-                    }
-                    for(vector<int>::const_iterator ii_s1s = s1s.begin(); ii_s1s != s1s.end(); ii_s1s++){
-                        int s1 = *ii_s1s;
-                        //cout << ",," << s1 << endl;
+
+                    //assert(clink.find(*it_tails) != clink.end()); THIS ASSERT TRIPS
+                    map<int, map<int, int> >::iterator found = clink.find(tail);
+                    if (found == clink.end())
+                        continue;
+
+                    map<int, int>& clink_tail = found->second;
+
+                    map<int, int>::iterator ii_clink_tail = clink_tail.begin();
+                    //for(vector<int>::const_iterator ii_s1s = s1s.begin(); ii_s1s != s1s.end(); ii_s1s++){}
+                    while (ii_clink_tail != clink_tail.end()) {
+                        int s1 = ii_clink_tail->first;
+                        int nlinks = ii_clink_tail->second;
+
+                        // save the current iterator so we can safely delete it
+                        map<int, int>::iterator iter_to_delete = ii_clink_tail;
+                        // increment the iterator so deleting iter_to_delete won't invalidate it
+                        ++ii_clink_tail;
+
                         vector<string> free_reads;
-                        map<int,map<int,int> > nodepair;
-                        int nlinks = clink[tail][s1];
-                        if(nlinks<opts.min_read_pair) // require sufficient number of pairs
+                        map<int, map<int, int> > nodepair;
+
+                        if(nlinks < opts.min_read_pair) {// require sufficient number of pairs
                             continue;
-                        assert(nodepair.find(s1) == nodepair.end()); // a node only appear once in a pair
-                        if(nodepair.find(s1) != nodepair.end()) // a node only appear once in a pair
-                            continue;
-                        assert(bdancer.region_exists(s1));
-                        if(!bdancer.region_exists(s1)) // a node must be defined
-                            continue;
-                        nodepair[tail][s1] = clink[tail][s1];
-                        nodepair[s1][tail] = clink[s1][tail];
-                        if(clink[tail].find(s1)!=clink[tail].end()){
-                            clink[tail].erase(clink[tail].find(s1));    // use a link only once
                         }
+
+                        assert(bdancer.region_exists(s1));
+                        if(!bdancer.region_exists(s1)) { // a node must be defined
+                            continue;
+                        }
+
+                        /*
+                         *nodepair[tail][s1] = clink[tail][s1];
+                         *nodepair[s1][tail] = clink[s1][tail];
+                         */
+
+                        nodepair[s1][tail] = nlinks;
+
                         //NOTE it is entirely possible that tail and s1 are the same.
                         if(tail != s1){
-                            if(clink[s1].find(tail)!=clink[s1].end()){
-                                clink[s1].erase(clink[s1].find(tail));
-                            }
+                            nodepair[tail][s1] = nlinks;
+                            clink[s1].erase(tail);
                         }
+
+                        clink_tail.erase(iter_to_delete);
+
                         newtails.push_back(s1);
 
                         // analysis a nodepair
@@ -280,8 +286,6 @@ namespace {
                                     //cout << y.ori() << "\t" << y.query_name() << "\t" << y[2] << "\t" << orient_count[y.ori()] << endl;
                                 }
                                 else{
-                                    // see if initialized 'type' or not
-                                    // y[5] is our bastardized "flag" describing the pair orientation
                                     breakdancer::pair_orientation_flag bdflag = y.bdflag();
                                     string libname = y.library;
                                     ++type[bdflag];
@@ -440,7 +444,7 @@ namespace {
                                 if(opts.CN_lib == 1){
                                     for(map<string,int>::const_iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
                                         string const& sp = ii_type_lib_rc->first;
-                                        LibraryInfo const& lib_info = cfg.library_info.at(sp);
+                                        LibraryInfo const& lib_info = cfg.library_info_by_name(sp);
                                         // intialize to be zero, in case of no library, or DEL, or ITX.
 
                                         string copy_number_str = "NA";
@@ -469,7 +473,7 @@ namespace {
                                     map<string, int> type_bam_readcount;
                                     for(map<string, int>::const_iterator ii_type_lib_rc = type_library_readcount[flag].begin(); ii_type_lib_rc != type_library_readcount[flag].end(); ii_type_lib_rc ++){
                                         string const& sp = ii_type_lib_rc->first;
-                                        LibraryInfo const& lib_info = cfg.library_info.at(sp);
+                                        LibraryInfo const& lib_info = cfg.library_info_by_name(sp);
                                         type_bam_readcount[lib_info.bam_file] += ii_type_lib_rc->second;
                                         diffspan += float(type_library_meanspan[flag][sp]) - float(type_library_readcount[flag][sp])*lib_info.mean_insertsize;
                                     }
@@ -578,10 +582,18 @@ namespace {
                             free_nodes.insert(node2);
                         }
                     }
-                    clink.erase(tail);
+                    if (tail == ii_clink->first) {
+                        // The fact that this is postincrement is critical
+                        clink.erase(ii_clink++);
+                        need_iter_increment = false;
+                    } else {
+                        clink.erase(tail);
+                    }
                 }
-                tails = newtails;
+                tails.swap(newtails);
             }
+            if (need_iter_increment)
+                ++ii_clink;
         }
 
         // free nodes
@@ -616,8 +628,7 @@ namespace {
         int max_read_window_size,
         int *max_readlen,
         bam_header_t* bam_header,
-        uint32_t *ntotal_nucleotides,
-        map<string, uint32_t> &possible_fake_data
+        uint32_t *ntotal_nucleotides
         )
     {
         // for now, we can just set up references to the data struct so we
@@ -642,7 +653,6 @@ namespace {
         {
             string const& key = opts.CN_lib == 1 ? aln.library : lib_info.bam_file;
             ++nread_ROI[key];
-            ++possible_fake_data[key];
             ++nread_FR[key];
         }
 
@@ -656,10 +666,6 @@ namespace {
 
         if (aln.bdqual() <= min_mapq)
             return;
-
-        //FIXME this is likely to have a special tid reserved in the spec. Go back and fix it.
-        if(strcmp(bam_header->target_name[aln.tid()], "*")==0)
-            return; // ignore reads that failed to associate with a reference
 
         if(aln.bdflag() == breakdancer::NA)
             return; // return fragment reads and other bad ones
@@ -779,7 +785,7 @@ namespace {
                 // -ta
                 if(bdancer.num_regions() > 0) {
                     size_t last_reg_idx = bdancer.num_regions() - 1;
-                    bdancer.add_per_lib_read_counts_to_region(last_reg_idx, possible_fake_data);
+                    bdancer.add_per_lib_read_counts_to_region(last_reg_idx, nread_FR);
                 }
 
                 // remove any reads that are linking the last region with this new, merged in region
@@ -796,8 +802,6 @@ namespace {
             *max_readlen = 0;
             *ntotal_nucleotides = 0;
 
-            // clear possible fake data
-            possible_fake_data.clear();
             nread_ROI.clear();
             // clear FR
             nread_FR.clear();
@@ -949,11 +953,10 @@ int main(int argc, char *argv[]) {
     }
     cout << endl;
     cout << "#Library Statistics:" << endl;
-    ConfigMap<string, LibraryInfo>::type::const_iterator nreads_ii;
-    for(nreads_ii = cfg.library_info.begin(); nreads_ii != cfg.library_info.end(); ++nreads_ii)
-    {
-        string const& lib = nreads_ii->first;
-        LibraryInfo const& lib_info = nreads_ii->second;
+    size_t num_libs = cfg.num_libs();
+    for(size_t i = 0; i < num_libs; ++i) {
+        LibraryInfo const& lib_info = cfg.library_info_by_index(i);
+        string const& lib = lib_info.name;
 
         uint32_t lib_read_count = lib_info.read_count;
 
@@ -1019,7 +1022,6 @@ int main(int argc, char *argv[]) {
     cout << "\n";
 
 
-    map<string, uint32_t > possible_fake_data;
     map<string, vector<int> > read_regions;// global in analysis
 
     int idx_buff = 0;// global
@@ -1053,14 +1055,13 @@ int main(int argc, char *argv[]) {
             continue;
 
         breakdancer::Read aln(b, cfg, opts.need_sequence_data());
-        aln.set_lib_info(&cfg.library_info.at(aln.library));
+        aln.set_lib_info(&cfg.library_info_by_name(aln.library));
 
         if(!aln.library.empty()) {
             Analysis(opts, bdancer, cfg, aln, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
                 SVtype, max_read_window_size, &max_readlen,
-                merged_reader.header(), &ntotal_nucleotides,
-                possible_fake_data
+                merged_reader.header(), &ntotal_nucleotides
             );
         }
     }

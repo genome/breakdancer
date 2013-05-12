@@ -143,6 +143,7 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
     , max_readlen(0)
     , _covered_ref_len(0)
 {
+    map<string, LibraryInfo> temp_lib_info;
     string line;
     while(getline(in, line)) {
         if(line.empty())
@@ -228,7 +229,9 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         lib_info.lowercutoff = lower;
         lib_info.readlens = readlen;
 
-        library_info[lib] = lib_info;
+        // This is silly, library info can be repeated in the config file
+        // hopefully whatever we are clobbering is equivalent!
+        temp_lib_info[lib] = lib_info;
 
         if(exes.find(fmap) == exes.end())
             exes[fmap] = exe.compare("NA")?exe:"cat";
@@ -241,6 +244,14 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         int tmp = mean - readlen*2;    // this determines the mean of the max of the SV flanking region
         max_read_window_size = std::min(max_read_window_size, tmp);
     }
+
+
+    for (map<string, LibraryInfo>::iterator i = temp_lib_info.begin(); i != temp_lib_info.end(); ++i) {
+        i->second.index = _library_info.size();
+        _lib_names_to_indices[i->first] = i->second.index;
+        _library_info.push_back(i->second);
+    }
+
 
     typedef ConfigMap<string, string>::type::const_iterator IterType;
     for (IterType iter = fmaps.begin(); iter != fmaps.end(); ++iter) {
@@ -268,7 +279,8 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
         if (aln.library.empty())
             continue;
 
-        LibraryInfo& lib_info = this->library_info.at(aln.library);
+        size_t lib_idx = _lib_names_to_indices[aln.library];
+        LibraryInfo& lib_info = _library_info[lib_idx];
 
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
