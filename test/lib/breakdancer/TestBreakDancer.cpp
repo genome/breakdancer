@@ -1,7 +1,7 @@
 #include "breakdancer/BreakDancer.hpp"
-#include "breakdancer/BamConfig.hpp"
 
-#include <boost/assign/list_of.hpp>
+#include "breakdancer/BamConfig.hpp"
+#include "breakdancer/ReadCountsByLib.hpp"
 
 #include <map>
 #include <memory>
@@ -10,11 +10,10 @@
 
 using namespace std;
 using namespace breakdancer;
-using boost::assign::map_list_of;
 
 TEST(BreakDancer, region_lib_read_counts) {
     BreakDancer bd;
-    typedef BreakDancer::PerLibReadCounts MapType;
+    typedef ReadCountsByLib MapType;
     MapType counts;
     counts["x"] = 11;
     counts["y"] = 22;
@@ -28,11 +27,11 @@ TEST(BreakDancer, region_lib_read_counts) {
     bd.add_per_lib_read_counts_to_region(0, counts);
     ASSERT_EQ(3, c0->size());
 
-    MapType expected = map_list_of
-        ("x", 22)
-        ("y", 44)
-        ("z", 33)
-        ;
+    MapType expected;
+    expected["x"] = 22;
+    expected["y"] = 44;
+    expected["z"] = 33;
+
     ASSERT_TRUE(expected == *c0);
 
     ASSERT_EQ(22, bd.region_lib_read_count(0, "x"));

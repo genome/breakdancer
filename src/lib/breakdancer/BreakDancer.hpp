@@ -1,7 +1,7 @@
 #pragma once
 
+#include "ReadCountsByLib.hpp"
 #include "BasicRegion.hpp"
-#include "utility.hpp"
 
 #include <cstddef>
 #include <map>
@@ -14,8 +14,7 @@ class BreakDancer {
 public:
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
-    typedef std::map<std::string, uint32_t> PerLibReadCounts;
-    typedef std::vector<PerLibReadCounts> RoiReadCounts;
+    typedef std::vector<ReadCountsByLib> RoiReadCounts;
 
     BreakDancer()
         : begins(-1)
@@ -35,16 +34,16 @@ public:
     int beginc; // global
     int lasts; // global (chr, should be int in samtools)
     int lastc; // global
-    std::map<std::string, uint32_t> nread_ROI; // global
-    std::map<std::string, uint32_t> nread_FR;    // global
+    ReadCountsByLib nread_ROI; // global
+    ReadCountsByLib nread_FR;    // global
     std::map<std::string, float> read_density;
     ReadVector reads_in_current_region;
 
-    void add_per_lib_read_counts_to_region(size_t region_idx, std::map<std::string, uint32_t> const& counts) {
+    void add_per_lib_read_counts_to_region(size_t region_idx, ReadCountsByLib const& counts) {
         if (region_idx >= _read_count_ROI_map.size())
             _read_count_ROI_map.resize(2*(region_idx+1));
 
-        merge_maps(_read_count_ROI_map[region_idx], counts, std::plus<uint32_t>());
+        _read_count_ROI_map[region_idx] +=  counts;
     }
 
     void set_region_lib_FR_count(size_t region_idx, std::string const& lib, uint32_t nreads) {
@@ -53,13 +52,13 @@ public:
         _read_count_FR_map[region_idx][lib] = nreads;
     }
 
-    PerLibReadCounts const* region_read_counts_by_library(size_t region_idx) {
+    ReadCountsByLib const* region_read_counts_by_library(size_t region_idx) {
         if (region_idx >= _read_count_ROI_map.size())
             return 0;
         return &_read_count_ROI_map[region_idx];
     }
 
-    PerLibReadCounts const* region_FR_counts_by_library(size_t region_idx) {
+    ReadCountsByLib const* region_FR_counts_by_library(size_t region_idx) {
         if (region_idx >= _read_count_FR_map.size())
             return 0;
         return &_read_count_FR_map[region_idx];
@@ -129,5 +128,3 @@ private:
     RoiReadCounts _read_count_FR_map;
     RegionData _regions;
 };
-
-

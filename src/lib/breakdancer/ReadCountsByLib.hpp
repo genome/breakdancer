@@ -13,9 +13,35 @@ public:
     typedef std::string LibId;
     typedef uint32_t IntType;
     typedef std::map<LibId, IntType> MapType;
+    typedef MapType::iterator iterator;
+    typedef MapType::const_iterator const_iterator;
 
-    void increment(LibId const& lib, IntType n) {
-        _counts[lib] += n;
+    void clear() {
+        _counts.clear();
+    }
+
+    const_iterator find(LibId const& lib) const {
+        return _counts.find(lib);
+    }
+
+    iterator find(LibId const& lib) {
+        return _counts.find(lib);
+    }
+
+    const_iterator begin() const {
+        return _counts.begin();
+    }
+
+    iterator begin() {
+        return _counts.begin();
+    }
+
+    const_iterator end() const {
+        return _counts.end();
+    }
+
+    iterator end() {
+        return _counts.end();
     }
 
     IntType& operator[](LibId const& lib) {
@@ -30,17 +56,22 @@ public:
         return _counts.at(lib);
     }
 
-    ReadCountsByLib& operator+=(ReadCountsByLib const& rhs) {
-        merge_maps(_counts, rhs._counts, std::plus<IntType>());
-        return *this;
-    }
-
     size_t size() const {
         return _counts.size();
     }
 
     bool empty() const {
         return _counts.empty();
+    }
+
+    // Operators
+    ReadCountsByLib& operator+=(ReadCountsByLib const& rhs) {
+        merge_maps(_counts, rhs._counts, std::plus<IntType>());
+        return *this;
+    }
+
+    bool operator==(ReadCountsByLib const& rhs) {
+        return _counts == rhs._counts;
     }
 
 private:

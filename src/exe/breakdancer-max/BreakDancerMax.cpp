@@ -6,7 +6,7 @@
 #include "breakdancer/BamReader.hpp"
 #include "breakdancer/Options.hpp"
 #include "breakdancer/Read.hpp"
-#include "breakdancer/utility.hpp"
+#include "breakdancer/ReadCountsByLib.hpp"
 
 #include "version.h"
 #include <stdio.h>
@@ -338,7 +338,7 @@ namespace {
                                 int normal_rp;
 
                                 int first_node = 0;
-                                map<string, uint32_t> read_count;
+                                ReadCountsByLib read_count;
                                 // find inner most positions
                                 for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes ++){
                                     int node = *ii_snodes;
@@ -383,11 +383,11 @@ namespace {
 
                                         // add up the read number
                                         for(int i_node = first_node; i_node < node; i_node++){
-                                            typedef BreakDancer::PerLibReadCounts MapType;
+                                            typedef ReadCountsByLib MapType;
                                             typedef MapType::const_iterator IterType;
                                             MapType const* counts = bdancer.region_read_counts_by_library(i_node);
                                             if (counts)
-                                                merge_maps(read_count, *counts, std::plus<uint32_t>());
+                                                read_count += *counts;
 
                                             // flanking region doesn't contain the first node
                                             if(i_node == first_node)
@@ -395,7 +395,7 @@ namespace {
 
                                             counts = bdancer.region_FR_counts_by_library(i_node);
                                             if (counts)
-                                                merge_maps(read_count, *counts, std::plus<uint32_t>());
+                                                read_count += *counts;
                                         }
                                     }
                                     else {
@@ -637,8 +637,8 @@ namespace {
         int& beginc = bdancer.beginc;
         int& lasts = bdancer.lasts;
         int& lastc = bdancer.lastc;
-        map<string, uint32_t>& nread_ROI = bdancer.nread_ROI;
-        map<string, uint32_t>& nread_FR = bdancer.nread_FR;
+        ReadCountsByLib& nread_ROI = bdancer.nread_ROI;
+        ReadCountsByLib& nread_FR = bdancer.nread_FR;
         vector<breakdancer::Read>& reads_in_current_region = bdancer.reads_in_current_region;
 
         LibraryInfo const& lib_info = aln.lib_info();
