@@ -3,19 +3,24 @@ project(breakdancer)
 set(SOURCES
     BDConfig.cpp
     BDConfig.hpp
+    BamConfig.cpp
+    BamConfig.hpp
     BamMerger.cpp
     BamMerger.hpp
     BamReader.cpp
     BamReader.hpp
+    BasicRegion.hpp
+    BreakDancer.hpp
     IBamReader.hpp
-    BamConfig.cpp
-    BamConfig.hpp
+    Options.hpp
     Read.cpp
     Read.hpp
+    ReadCountsByLib.hpp
     ReadFlags.hpp
     Region.cpp
     Region.hpp
-    samtools.h
+    namespace.hpp
+    utility.hpp
 )
 
 add_library(breakdancer ${SOURCES})
