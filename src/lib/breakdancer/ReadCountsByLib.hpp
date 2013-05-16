@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 
+#include <iostream>
 #include <functional>
 #include <map>
 #include <string>
@@ -70,8 +71,32 @@ public:
         return *this;
     }
 
-    bool operator==(ReadCountsByLib const& rhs) {
+    bool operator==(ReadCountsByLib const& rhs) const {
         return _counts == rhs._counts;
+    }
+
+    ReadCountsByLib& operator-=(ReadCountsByLib const& rhs) {
+        using namespace std;
+        for (const_iterator i = rhs.begin(); i != rhs.end(); ++i) {
+            pair<iterator, bool> inserted = _counts.insert(make_pair(i->first, -i->second));
+            if (!inserted.second) {
+                inserted.first->second -= i->second;
+                if (inserted.first->second == 0)
+                    _counts.erase(inserted.first);
+            }
+        }
+        return *this;
+    }
+
+    std::ostream& toStream(std::ostream& s) const {
+        s << "(";
+        for (const_iterator i = begin(); i != end(); ++i) {
+            if (i != begin())
+                s << ", ";
+            s << i->first << ": " << i->second;
+        }
+        s << ")";
+        return s;
     }
 
 private:
@@ -83,3 +108,16 @@ ReadCountsByLib operator+(ReadCountsByLib lhs, ReadCountsByLib const& rhs) {
     lhs += rhs;
     return lhs;
 }
+
+
+inline
+ReadCountsByLib operator-(ReadCountsByLib lhs, ReadCountsByLib const& rhs) {
+    lhs -= rhs;
+    return lhs;
+}
+
+inline
+std::ostream& operator<<(std::ostream& s, ReadCountsByLib const& counts) {
+    return counts.toStream(s);
+}
+

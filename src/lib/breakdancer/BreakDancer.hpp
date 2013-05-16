@@ -3,12 +3,16 @@
 #include "ReadCountsByLib.hpp"
 #include "BasicRegion.hpp"
 
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
+#include <functional>
+#include <iterator>
 #include <map>
+#include <numeric>
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include <functional>
 
 class BreakDancer {
 public:
@@ -39,42 +43,45 @@ public:
     std::map<std::string, float> read_density;
     ReadVector reads_in_current_region;
 
-    void add_per_lib_read_counts_to_region(size_t region_idx, ReadCountsByLib const& counts) {
+    void add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts) {
+        assert(num_regions() > 0);
+
+        size_t region_idx = num_regions()-1;
         if (region_idx >= _read_count_ROI_map.size())
             _read_count_ROI_map.resize(2*(region_idx+1));
 
         _read_count_ROI_map[region_idx] +=  counts;
     }
 
-    void set_region_lib_FR_count(size_t region_idx, std::string const& lib, uint32_t nreads) {
+    void add_current_read_counts_to_last_region() {
+        assert(num_regions() > 0);
+
+        size_t region_idx = num_regions() - 1;
+        if (region_idx >= _read_count_ROI_map.size())
+            _read_count_ROI_map.resize(2*(region_idx+1));
+
+        _read_count_ROI_map[region_idx] = nread_ROI;
+
         if (region_idx >= _read_count_FR_map.size())
             _read_count_FR_map.resize(2*(region_idx+1));
-        _read_count_FR_map[region_idx][lib] = nreads;
+
+        _read_count_FR_map[region_idx] = nread_FR - nread_ROI;
     }
 
-    ReadCountsByLib const* region_read_counts_by_library(size_t region_idx) {
-        if (region_idx >= _read_count_ROI_map.size())
-            return 0;
-        return &_read_count_ROI_map[region_idx];
-    }
+    void accumulate_reads_in_region(ReadCountsByLib& acc, size_t begin, size_t end) {
+        for(size_t i = begin; i < std::min(end, _read_count_ROI_map.size()); i++){
+            acc += _read_count_ROI_map[i];
 
-    ReadCountsByLib const* region_FR_counts_by_library(size_t region_idx) {
-        if (region_idx >= _read_count_FR_map.size())
-            return 0;
-        return &_read_count_FR_map[region_idx];
+            // flanking region doesn't contain the first node
+            if(i > begin && i < _read_count_FR_map.size())
+                acc += _read_count_FR_map[i];
+        }
     }
 
     uint32_t region_lib_read_count(size_t region_idx, std::string const& lib) const {
         return _region_lib_counts(region_idx, lib, _read_count_ROI_map);
     }
 
-    uint32_t region_lib_FR_count(size_t region_idx, std::string const& lib) const {
-        return _region_lib_counts(region_idx, lib, _read_count_FR_map);
-    }
-
-
-    // Ultimately, we'll want to be pushing onto this vector and
-    // returning new region indices as appropriate.
     void swap_reads_in_region(size_t region_idx, ReadVector& reads) {
         _regions[region_idx]->swap_reads(reads);
     }
@@ -103,14 +110,6 @@ public:
 
     BasicRegion const& get_region_data(size_t region_idx) const {
         return *_regions[region_idx];
-    }
-
-    RoiReadCounts const& read_count_ROI_map() const {
-        return _read_count_ROI_map;
-    }
-
-    RoiReadCounts const& read_count_FR_map() const {
-        return _read_count_FR_map;
     }
 
 private:

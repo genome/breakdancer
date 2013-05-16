@@ -8,7 +8,20 @@
 
 using namespace std;
 
-TEST(TestReadCountsByLib, accessors) {
+class TestReadCountsByLib : public ::testing::Test {
+public:
+    void SetUp() {
+        a["x"] = 5;
+        a["y"] = 6;
+        b["y"] = 7;
+        b["z"] = 8;
+    }
+
+    ReadCountsByLib a;
+    ReadCountsByLib b;
+};
+
+TEST_F(TestReadCountsByLib, accessors) {
     ReadCountsByLib counts;
 
     counts["x"] += 3;
@@ -26,21 +39,7 @@ TEST(TestReadCountsByLib, accessors) {
     ASSERT_EQ(7, counts.at("y"));
 }
 
-TEST(TestReadCountsByLib, addition) {
-    ReadCountsByLib a;
-    ReadCountsByLib b;
-
-    a["x"] = 5;
-    a["y"] = 6;
-    b["y"] = 7;
-    b["z"] = 8;
-
-    ASSERT_EQ(5, a.at("x"));
-    ASSERT_EQ(6, a.at("y"));
-    ASSERT_EQ(7, b.at("y"));
-    ASSERT_EQ(8, b.at("z"));
-
-
+TEST_F(TestReadCountsByLib, addition) {
     // Test normal addition
     ReadCountsByLib c = a + b;
     ASSERT_EQ(3, c.size());
@@ -62,4 +61,11 @@ TEST(TestReadCountsByLib, addition) {
 
     ASSERT_EQ(7, b.at("y"));
     ASSERT_EQ(8, b.at("z"));
+}
+
+TEST_F(TestReadCountsByLib, subtraction) {
+    // Test normal subtraction
+    ReadCountsByLib c = a + b;
+    ReadCountsByLib d = c - b;
+    ASSERT_EQ(a, d);
 }

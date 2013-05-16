@@ -9,16 +9,20 @@
 #include "breakdancer/ReadCountsByLib.hpp"
 
 #include "version.h"
-#include <stdio.h>
-#include <stdlib.h>
+
 #include <boost/shared_ptr.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/chi_squared.hpp>
+
+#include <algorithm>
+#include <assert.h>
 #include <functional>
+#include <iterator>
 #include <memory>
 #include <set>
 #include <stdexcept>
-#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #ifndef SCORE_FLOAT_TYPE
 # define SCORE_FLOAT_TYPE double
@@ -220,11 +224,6 @@ namespace {
                             continue;
                         }
 
-                        /*
-                         *nodepair[tail][s1] = clink[tail][s1];
-                         *nodepair[s1][tail] = clink[s1][tail];
-                         */
-
                         nodepair[s1][tail] = nlinks;
 
                         //NOTE it is entirely possible that tail and s1 are the same.
@@ -243,6 +242,7 @@ namespace {
                             snodes.push_back((*ii_nodepair).first);
                             //cout << "," << (*ii_nodepair).first << endl;
                         }
+
                         assert(snodes.size() < 3);
                         // track node1 and node2 as nodes that could potentially be freed
                         int node1 = snodes[0];
@@ -381,22 +381,7 @@ namespace {
                                             sv_ori2_tmp2 = itos(ori_readcount[REV]);
                                         sv_ori2 = sv_ori2_tmp1.append("+").append(sv_ori2_tmp2).append("-");
 
-                                        // add up the read number
-                                        for(int i_node = first_node; i_node < node; i_node++){
-                                            typedef ReadCountsByLib MapType;
-                                            typedef MapType::const_iterator IterType;
-                                            MapType const* counts = bdancer.region_read_counts_by_library(i_node);
-                                            if (counts)
-                                                read_count += *counts;
-
-                                            // flanking region doesn't contain the first node
-                                            if(i_node == first_node)
-                                                continue;
-
-                                            counts = bdancer.region_FR_counts_by_library(i_node);
-                                            if (counts)
-                                                read_count += *counts;
-                                        }
+                                        bdancer.accumulate_reads_in_region(read_count, first_node, node);
                                     }
                                     else {
                                         first_node = node;
@@ -743,20 +728,7 @@ namespace {
             {
                 // register reliable region and supporting reads across gaps
                 int region_idx = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
-
-                // never been to possible_fake in this turn, record ROI; or else the possible fake is not the fake, but the true one, doesn't need to record it in ROI, previous regions were recorded already
-                // record nread_ROI
-                // track the number of reads from each library for the region
-                bdancer.add_per_lib_read_counts_to_region(region_idx, nread_ROI);
-
-                // compute nread_FR and record it
-                // track number of FR reads from the region.
-                // From earlier, these numbers seem like they shoudl be the same unless they are being added to in multiple places
-                for(map<string, uint32_t>::const_iterator nread_FR_it = nread_FR.begin(); nread_FR_it != nread_FR.end(); nread_FR_it ++){
-                    string const& lib_ = nread_FR_it->first;
-                    uint32_t count = bdancer.region_lib_read_count(region_idx, lib_);
-                    bdancer.set_region_lib_FR_count(region_idx, lib_, nread_FR_it->second - count);
-                }
+                bdancer.add_current_read_counts_to_last_region();
 
                 // This adds the region id to an array of region ids
                 for(vector<breakdancer::Read>::const_iterator iter = reads_in_current_region.begin(); iter != reads_in_current_region.end(); iter++) {
@@ -774,7 +746,7 @@ namespace {
                     *idx_buff = 0;
                 }
             }
-            else{
+            else {
               // possible fake
                 // restore ROI for copy number since lastc will be cleared, but the new node has not been registered
                 // possible fake is off, never gone to possible fake before, save the ROI
@@ -784,8 +756,7 @@ namespace {
                 // Why doesn't this update the FR read counts as well?
                 // -ta
                 if(bdancer.num_regions() > 0) {
-                    size_t last_reg_idx = bdancer.num_regions() - 1;
-                    bdancer.add_per_lib_read_counts_to_region(last_reg_idx, nread_FR);
+                    bdancer.add_per_lib_read_counts_to_last_region(nread_FR);
                 }
 
                 // remove any reads that are linking the last region with this new, merged in region
