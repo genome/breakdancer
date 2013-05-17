@@ -1,8 +1,14 @@
 #pragma once
 
+#include "ReadFlags.hpp"
+#include "utility.hpp"
+
 #include <string>
 
 struct Options {
+
+    Options(int argc, char**argv);
+
     Options()
         : chr("0")
         , min_len(7)
@@ -45,6 +51,7 @@ struct Options {
     std::string prefix_fastq;
     std::string dump_BED;
     std::string platform;
+    ConfigMap<breakdancer::pair_orientation_flag, std::string>::type SVtype;
 
     bool need_sequence_data() const {
         // we'll need to keep sequence/quality data if we are dumping

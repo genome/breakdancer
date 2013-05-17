@@ -94,8 +94,6 @@ namespace {
             int const& readcount = ii_rlibrary_readcount->second;
             LibraryInfo const& lib_info = cfg.library_info_by_name(lib);
 
-            // debug
-            //int db_x_rc = x_readcounts[type][lib];
             uint32_t read_count_for_flag = lib_info.get_read_counts_by_flag(type);
             lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(cfg.covered_reference_length()));
             lambda = max(real_type(1.0e-10), lambda);
@@ -130,7 +128,6 @@ namespace {
         BamConfig const& cfg,
         map<string, vector<int> > &read_regions,
         int max_readlen,
-        ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
         bam_header_t* bam_header
         )
     {
@@ -488,7 +485,7 @@ namespace {
                                 float AF = 1 - copy_number_sum;
 
 
-                                string SVT = SVtype.find(flag)==SVtype.end()?"UN":SVtype.at(flag); // UN stands for unknown
+                                string SVT = opts.SVtype.find(flag)==opts.SVtype.end()?"UN":opts.SVtype.at(flag); // UN stands for unknown
                                 // make the coordinates with base 1
                                 sv_pos1 = sv_pos1 + 1;
                                 sv_pos2 = sv_pos2 + 1;
@@ -609,7 +606,6 @@ namespace {
         int *idx_buff,
         int *nnormal_reads,
         int *normal_switch,
-        ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
         int max_read_window_size,
         int *max_readlen,
         bam_header_t* bam_header,
@@ -742,7 +738,7 @@ namespace {
                 if(*idx_buff > opts.buffer_size){
                     //flush buffer by building connection
                     buildConnection(opts, bdancer, cfg, read_regions,
-                        *max_readlen, SVtype, bam_header);
+                        *max_readlen, bam_header);
                     *idx_buff = 0;
                 }
             }
@@ -800,95 +796,12 @@ namespace {
         }
         return rv;
     }
-
-    Options parseArguments(int argc, char** argv) {
-        int c;
-        Options opts;
-        while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:ep:tfd:g:lCahy:")) >= 0) {
-            switch(c) {
-                case 'o': opts.chr = optarg; break;
-                case 's': opts.min_len = atoi(optarg); break;
-                case 'c': opts.cut_sd = atoi(optarg); break;
-                case 'm': opts.max_sd = atoi(optarg); break;
-                case 'q': opts.min_map_qual = atoi(optarg); break;
-                case 'r': opts.min_read_pair = atoi(optarg); break;
-                case 'x': opts.seq_coverage_lim = atoi(optarg); break;
-                case 'b': opts.buffer_size = atoi(optarg); break;
-                case 'e': opts.learn_par = true; break;
-                case 'p': opts.prior_prob = atof(optarg); break;
-                case 't': opts.transchr_rearrange = true; break;
-                case 'f': opts.fisher = true; break;
-                case 'd': opts.prefix_fastq = optarg; break;
-                case 'g': opts.dump_BED = optarg; break;
-                case 'l': opts.Illumina_long_insert = true; break;
-                //case 'C': opts.Illumina_to_SOLiD = true; break;
-                case 'a': opts.CN_lib = true; break;
-                case 'h': opts.print_AF = true; break;
-                case 'y': opts.score_threshold = atoi(optarg); break;
-                default: fprintf(stderr, "Unrecognized option '-%c'.\n", c);
-                    exit(1);
-            }
-        }
-
-        // FIXME: instead of printing out defaults, this will print any partial options
-        // specified. Let's try to get clearance to use boost::program_options or something
-        // more reasonable.
-        if(optind == argc) {
-            fprintf(stderr, "\nbreakdancer-max version %s (commit %s)\n\n", __g_prog_version, __g_commit_hash);
-            fprintf(stderr, "Usage: breakdancer-max <analysis.config>\n\n");
-            fprintf(stderr, "Options: \n");
-            fprintf(stderr, "       -o STRING       operate on a single chromosome [all chromosome]\n");
-            fprintf(stderr, "       -s INT          minimum length of a region [%d]\n", opts.min_len);
-            fprintf(stderr, "       -c INT          cutoff in unit of standard deviation [%d]\n", opts.cut_sd);
-            fprintf(stderr, "       -m INT          maximum SV size [%d]\n", opts.max_sd);
-            fprintf(stderr, "       -q INT          minimum alternative mapping quality [%d]\n", opts.min_map_qual);
-            fprintf(stderr, "       -r INT          minimum number of read pairs required to establish a connection [%d]\n", opts.min_read_pair);
-            fprintf(stderr, "       -x INT          maximum threshold of haploid sequence coverage for regions to be ignored [%d]\n", opts.seq_coverage_lim);
-            fprintf(stderr, "       -b INT          buffer size for building connection [%d]\n", opts.buffer_size);
-            //fprintf(stderr, "    -e INT    learn parameters from data before applying to SV detection [%d]\n", opts.learn_par);
-            //fprintf(stderr, "    -p FLOAT    prior probability of SV [%f]\n", prior_prob);
-            fprintf(stderr, "       -t              only detect transchromosomal rearrangement, by default off\n");
-            //fprintf(stderr, "    -f INT    use Fisher's method to combine P values from multiple library [%d]\n", opts.fisher);
-            fprintf(stderr, "       -d STRING       prefix of fastq files that SV supporting reads will be saved by library\n");
-            fprintf(stderr, "       -g STRING       dump SVs and supporting reads in BED format for GBrowse\n");
-            fprintf(stderr, "       -l              analyze Illumina long insert (mate-pair) library\n");
-            fprintf(stderr, "       -a              print out copy number and support reads per library rather than per bam, by default off\n");
-            fprintf(stderr, "       -h              print out Allele Frequency column, by default off\n");
-            fprintf(stderr, "       -y INT          output score filter [%d]\n", opts.score_threshold);
-            //fprintf(stderr, "    -C INT    change system default from Illumina to SOLiD [%d]\n", opts.Illumina_to_SOLiD);
-            //fprintf(stderr, "Version: %s\n", version);
-            fprintf(stderr, "\n");
-            exit(1);
-        }
-
-        opts.platform = opts.Illumina_to_SOLiD ? "solid" : "illumina";
-
-        return opts;
-    }
 }
 
 // main function
 int main(int argc, char *argv[]) {
-    Options opts = parseArguments(argc, argv);
+    Options opts(argc, argv);
     BreakDancer bdancer;
-
-    // define the map SVtype
-    ConfigMap<breakdancer::pair_orientation_flag, string>::type SVtype;
-    if(opts.Illumina_long_insert) {
-        SVtype[breakdancer::ARP_FF] = "INV";
-        SVtype[breakdancer::ARP_FR_small_insert] = "INS";
-        SVtype[breakdancer::ARP_RF] = "DEL";
-        SVtype[breakdancer::ARP_RR] = "INV";
-        SVtype[breakdancer::ARP_CTX] = "CTX";
-    }
-    else{
-        SVtype[breakdancer::ARP_FF] = "INV";
-        SVtype[breakdancer::ARP_FR_big_insert] = "DEL";
-        SVtype[breakdancer::ARP_FR_small_insert] = "INS";
-        SVtype[breakdancer::ARP_RF] = "ITX";
-        SVtype[breakdancer::ARP_RR] = "INV";
-        SVtype[breakdancer::ARP_CTX] = "CTX";
-    }
 
     // configure file
     ifstream config_stream(argv[optind]);
@@ -917,7 +830,8 @@ int main(int argc, char *argv[]) {
     // need to read the total base
 
 
-    cout << "#Software: " << __g_prog_version << endl;
+    cout << "#Software: " << __g_prog_version << " (commit "
+        << __g_commit_hash << ")" << endl;
     cout << "#Command: ";
     for(int i=0;i<argc;i++) {
         cout << argv[i] << " ";
@@ -1031,7 +945,7 @@ int main(int argc, char *argv[]) {
         if(!aln.library.empty()) {
             Analysis(opts, bdancer, cfg, aln, read_regions,
                 &idx_buff, &nnormal_reads, &normal_switch,
-                SVtype, max_read_window_size, &max_readlen,
+                max_read_window_size, &max_readlen,
                 merged_reader.header(), &ntotal_nucleotides
             );
         }
@@ -1040,13 +954,13 @@ int main(int argc, char *argv[]) {
     if (bdancer.reads_in_current_region.size() != 0) {
         do_break_func(
             opts, bdancer, cfg, read_regions, &idx_buff,
-            &nnormal_reads, SVtype, &max_readlen,
+            &nnormal_reads, &max_readlen,
             merged_reader.header(), &ntotal_nucleotides
             );
     }
 
     buildConnection(opts, bdancer, cfg, read_regions,
-        max_readlen, SVtype, merged_reader.header());
+        max_readlen, merged_reader.header());
 
     bam_destroy1(b);
 
@@ -1063,7 +977,6 @@ void do_break_func(
     map<string, vector<int> >& read_regions,
     int *idx_buff,
     int *nnormal_reads,
-    ConfigMap<breakdancer::pair_orientation_flag, string>::type const& SVtype,
     int *max_readlen,
     bam_header_t* bam_header,
     uint32_t *ntotal_nucleotides
@@ -1072,7 +985,7 @@ void do_break_func(
     int& begins = bdancer.begins;
     int& beginc = bdancer.beginc;
     int& lastc = bdancer.lastc;
-    vector<breakdancer::Read> const& reads_in_current_region = bdancer.reads_in_current_region;
+    vector<breakdancer::Read>& reads_in_current_region = bdancer.reads_in_current_region;
 
     float seq_coverage = *ntotal_nucleotides/float(lastc - beginc + 1 + *max_readlen);
     if (lastc - beginc > opts.min_len
@@ -1081,12 +994,12 @@ void do_break_func(
     {
         // register reliable region and supporting reads across gaps
         int region_idx = bdancer.add_region(new BasicRegion(begins, beginc, lastc, *nnormal_reads));
+        bdancer.add_current_read_counts_to_last_region();
 
-        vector<breakdancer::Read> p = reads_in_current_region;
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); it_reg_seq ++){
             read_regions[it_reg_seq->query_name()].push_back(region_idx);
         }
-        bdancer.swap_reads_in_region(region_idx, p);
+        bdancer.swap_reads_in_region(region_idx, reads_in_current_region);
 
         //this should replace both regs and reg_name
         //region::Region new_region(begins, beginc, lastc, *nnormal_reads, reg_seq);
@@ -1095,14 +1008,17 @@ void do_break_func(
         if(*idx_buff > opts.buffer_size){
             //cout << "build connection:" << endl;
             buildConnection(opts, bdancer, cfg, read_regions,
-                *max_readlen, SVtype, bam_header);
+                *max_readlen, bam_header);
 
             *idx_buff = 0;
         }
     }
-    else if(reads_in_current_region.size() > 0) {
+    else {
+        if(bdancer.num_regions() > 0) {
+            bdancer.add_per_lib_read_counts_to_last_region(bdancer.nread_FR);
+        }
+
         for(vector<breakdancer::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); it_reg_seq ++){
-            ///string s = get_item_from_string(*it_reg_seq,0);
             read_regions.erase(it_reg_seq->query_name());
         }
     }

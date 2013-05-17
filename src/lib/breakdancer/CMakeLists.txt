@@ -13,6 +13,7 @@ set(SOURCES
     BreakDancer.hpp
     IBamReader.hpp
     Options.hpp
+    Options.cpp
     Read.cpp
     Read.hpp
     ReadCountsByLib.hpp

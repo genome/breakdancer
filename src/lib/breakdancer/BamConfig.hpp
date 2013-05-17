@@ -1,8 +1,7 @@
 #pragma once
 
 #include "ReadFlags.hpp"
-
-#include <boost/container/flat_map.hpp>
+#include "utility.hpp"
 
 #include <istream>
 #include <map>
@@ -12,11 +11,6 @@
 class Options;
 class BamSummary;
 class IBamReader;
-
-template<typename K, typename V>
-struct ConfigMap {
-    typedef boost::container::flat_map<K, V> type;
-};
 
 struct LibraryInfo {
     LibraryInfo()
