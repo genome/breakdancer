@@ -10,6 +10,7 @@ set(SOURCES
     BamReader.cpp
     BamReader.hpp
     BasicRegion.hpp
+    BreakDancer.cpp
     BreakDancer.hpp
     IBamReader.hpp
     Options.hpp

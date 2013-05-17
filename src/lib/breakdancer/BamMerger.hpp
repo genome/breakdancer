@@ -16,7 +16,7 @@ struct deref_greater {
     }
 };
 
-class BamMerger : IBamReader {
+class BamMerger : public IBamReader {
 public:
     struct Stream {
         // Functions
