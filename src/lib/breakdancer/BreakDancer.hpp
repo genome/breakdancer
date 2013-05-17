@@ -36,6 +36,7 @@ public:
 
     void push_read(ReadType& aln, bam_header_t const* bam_header);
     void build_connection(bam_header_t const* bam_header);
+    int sum_of_region_sizes(std::vector<int> const& region_ids) const;
 
     void add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts) {
         assert(num_regions() > 0);

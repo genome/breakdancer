@@ -29,17 +29,6 @@ using boost::math::chi_squared;
 namespace {
     typedef SCORE_FLOAT_TYPE real_type;
 
-    int PutativeRegion(vector<int> const& rnode, BreakDancer const& bdancer) {
-        int total_region_size = 0;
-        for(vector<int>::const_iterator ii_node = rnode.begin(); ii_node < rnode.end(); ii_node++){
-            BasicRegion const& region = bdancer.get_region_data(*ii_node);
-            int clust_start = region.start;
-            int clust_end = region.end;
-            total_region_size += clust_end - clust_start + 1;
-        }
-        return total_region_size;
-    }
-
     // compute the probability score
     real_type ComputeProbScore(
             vector<int> &rnode,
@@ -51,7 +40,7 @@ namespace {
             )
     {
         // rnode, rlibrary_readcount, type
-        int total_region_size = PutativeRegion(rnode, bdancer);
+        int total_region_size = bdancer.sum_of_region_sizes(rnode);
 
         real_type lambda;
         real_type logpvalue = 0.0;
@@ -107,8 +96,6 @@ namespace {
             fh.close();
         }
     }
-
-
 }
 
 BreakDancer::BreakDancer(
@@ -160,6 +147,16 @@ void BreakDancer::run() {
     process_final_region(_merged_reader.header());
     bam_destroy1(b);
 }
+
+int BreakDancer::sum_of_region_sizes(std::vector<int> const& region_ids) const {
+    typedef vector<int>::const_iterator IterType;
+    int size(0);
+    for (IterType i = region_ids.begin(); i != region_ids.end(); ++i)
+        size += _regions[*i]->size();
+    return size;
+}
+
+
 
 void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_header) {
     LibraryInfo const& lib_info = aln.lib_info();

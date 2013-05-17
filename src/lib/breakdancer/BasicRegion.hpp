@@ -26,6 +26,10 @@ public:
         _reads.swap(reads);
     }
 
+    int size() const {
+        return end - start + 1;
+    }
+
     ReadVector const& reads() const {
         return _reads;
     }
