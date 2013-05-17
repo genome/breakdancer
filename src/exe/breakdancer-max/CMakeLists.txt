@@ -2,7 +2,6 @@ project(breakdancer-max)
 
 set(SOURCES
     BreakDancerMax.cpp
-    BreakDancerMax.h
 )
 
 set(EXECUTABLE_NAME breakdancer-max)

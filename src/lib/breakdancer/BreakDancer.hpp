@@ -37,11 +37,6 @@ public:
     void push_read(ReadType& aln, bam_header_t const* bam_header);
     void build_connection(bam_header_t const* bam_header);
 
-    ReadCountsByLib nread_ROI; // global
-    ReadCountsByLib nread_FR;    // global
-    std::map<std::string, float> read_density;
-    ReadVector reads_in_current_region;
-
     void add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts) {
         assert(num_regions() > 0);
 
@@ -140,19 +135,24 @@ private:
     RoiReadCounts _read_count_FR_map;
     RegionData _regions;
 
+    ReadCountsByLib nread_ROI;
+    ReadCountsByLib nread_FR;
+    ReadVector reads_in_current_region;
+
     bool _normal_switch;
     int _nnormal_reads;
     int _ntotal_nucleotides;
     int _max_readlen;
     int _buffer_size;
 
+    int _region_start_tid;
+    int _region_start_pos;
+    int _region_end_tid; // global (chr, should be int in samtools)
+    int _region_end_pos; // global
+
 public:
     std::map<std::string, std::vector<int> > _read_regions;
-    int begins; // global (chr)
-    int beginc; // global
-    int lasts; // global (chr, should be int in samtools)
-    int lastc; // global
-
+    std::map<std::string, float> read_density;
 };
 
 // choose the predominant type of read in a region

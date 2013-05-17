@@ -8,6 +8,7 @@
 #include <boost/math/distributions/chi_squared.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <fstream>
@@ -127,10 +128,10 @@ BreakDancer::BreakDancer(
     , _max_readlen(0)
     , _buffer_size(0)
 
-    , begins(-1)
-    , beginc(-1)
-    , lasts(-1)
-    , lastc(-1)
+    , _region_start_tid(-1)
+    , _region_start_pos(-1)
+    , _region_end_tid(-1)
+    , _region_end_pos(-1)
 
 {
 }
@@ -249,18 +250,18 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
 
     if(_normal_switch){
         _ntotal_nucleotides += aln.query_length();
-        _max_readlen = (_max_readlen < aln.query_length()) ? aln.query_length() : _max_readlen;
+        _max_readlen = std::max(_max_readlen, aln.query_length());
     }
 
     //This appears to test that you've exited a window after your first abnormal read by either reading off the chromosome or exiting the the window
     // d appears to be 1e8 at max (seems big), 50 at minimum or the smallest mean - readlen*2 for a given library
-    bool do_break = aln.tid() != lasts || aln.pos() - lastc > _max_read_window_size;
+    bool do_break = aln.tid() != _region_end_tid || aln.pos() - _region_end_pos > _max_read_window_size;
 
     if(do_break) { // breakpoint in the assembly
         process_breakpoint(bam_header);
         // clear out this node
-        begins = aln.tid();
-        beginc = aln.pos();
+        _region_start_tid = aln.tid();
+        _region_start_pos = aln.pos();
         reads_in_current_region.clear();
         _normal_switch = false;
         _nnormal_reads = 0;
@@ -277,19 +278,19 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     //If we just added the first read, flip the flag that lets us collect all reads
     if(reads_in_current_region.size() == 1)
         _normal_switch = true;
-    lasts = aln.tid();
-    lastc = aln.pos();
+    _region_end_tid = aln.tid();
+    _region_end_pos = aln.pos();
     nread_ROI.clear(); //Not sure why this is cleared here...
     return;
 }
 
 void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
-    float seq_coverage = _ntotal_nucleotides/float(lastc - beginc + 1 + _max_readlen);
-    if(lastc - beginc > _opts.min_len
+    float seq_coverage = _ntotal_nucleotides/float(_region_end_pos - _region_start_pos + 1 + _max_readlen);
+    if(_region_end_pos - _region_start_pos > _opts.min_len
             && seq_coverage < _opts.seq_coverage_lim) // skip short/unreliable flanking supporting regions
     {
         // register reliable region and supporting reads across gaps
-        int region_idx = add_region(new BasicRegion(begins, beginc, lastc, _nnormal_reads));
+        int region_idx = add_region(new BasicRegion(_region_start_tid, _region_start_pos, _region_end_pos, _nnormal_reads));
         add_current_read_counts_to_last_region();
 
         // This adds the region id to an array of region ids
@@ -309,7 +310,7 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
     }
     else {
       // possible fake
-        // restore ROI for copy number since lastc will be cleared, but the new node has not been registered
+        // restore ROI for copy number since _region_end_pos will be cleared, but the new node has not been registered
         // possible fake is off, never gone to possible fake before, save the ROI
         // I don't understand exactly what this is doing. It is only hitting here to store the info if flanking region is too short or the coverage is too high
         // It appears to be used to pull in nearby neighboring regions to the last region identified if the distance between them is too short
