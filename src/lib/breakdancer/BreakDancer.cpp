@@ -105,7 +105,7 @@ BreakDancer::BreakDancer(
     , _merged_reader(merged_reader)
     , _max_read_window_size(max_read_window_size)
 
-    , _normal_switch(false)
+    , _collecting_normal_reads(false)
     , _nnormal_reads(0)
     , _ntotal_nucleotides(0)
     , _max_readlen(0)
@@ -235,13 +235,13 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
     //I suspect this is to include those reads in the fastq dump for assembly!
     if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
-        if(_normal_switch && aln.isize() > 0){
+        if(_collecting_normal_reads && aln.isize() > 0){
             ++_nnormal_reads;
         }
         return;
     }
 
-    if(_normal_switch){
+    if(_collecting_normal_reads){
         _ntotal_nucleotides += aln.query_length();
         _max_readlen = std::max(_max_readlen, aln.query_length());
     }
@@ -256,7 +256,7 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
         _region_start_tid = aln.tid();
         _region_start_pos = aln.pos();
         reads_in_current_region.clear();
-        _normal_switch = false;
+        _collecting_normal_reads = false;
         _nnormal_reads = 0;
         _max_readlen = 0;
         _ntotal_nucleotides = 0;
@@ -270,7 +270,7 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     //
     //If we just added the first read, flip the flag that lets us collect all reads
     if(reads_in_current_region.size() == 1)
-        _normal_switch = true;
+        _collecting_normal_reads = true;
     _region_end_tid = aln.tid();
     _region_end_pos = aln.pos();
     nread_ROI.clear(); //Not sure why this is cleared here...

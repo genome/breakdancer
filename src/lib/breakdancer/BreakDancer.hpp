@@ -140,7 +140,7 @@ private:
     ReadCountsByLib nread_FR;
     ReadVector reads_in_current_region;
 
-    bool _normal_switch;
+    bool _collecting_normal_reads;
     int _nnormal_reads;
     int _ntotal_nucleotides;
     int _max_readlen;
