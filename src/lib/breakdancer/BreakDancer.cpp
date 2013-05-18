@@ -31,17 +31,13 @@ namespace {
 
     // compute the probability score
     real_type ComputeProbScore(
-            vector<int> &rnode,
+            int total_region_size,
             map<string,int> &rlibrary_readcount,
             breakdancer::pair_orientation_flag type,
             int fisher,
-            BreakDancer const& bdancer,
             BamConfig const& cfg
             )
     {
-        // rnode, rlibrary_readcount, type
-        int total_region_size = bdancer.sum_of_region_sizes(rnode);
-
         real_type lambda;
         real_type logpvalue = 0.0;
         real_type err = 0.0;
@@ -666,8 +662,8 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                             sptypes[flag] = sptype;
 
 
-                            //real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], flag, _opts.fisher, *this, cfg);
-                            real_type LogPvalue = ComputeProbScore(snodes, type_library_readcount[flag], flag, _opts.fisher, *this, _cfg);
+                            int total_region_size = sum_of_region_sizes(snodes);
+                            real_type LogPvalue = ComputeProbScore(total_region_size, type_library_readcount[flag], flag, _opts.fisher, _cfg);
                             real_type PhredQ_tmp = -10*LogPvalue/log(10);
                             int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
                             //float AF = float(type[flag])/float(type[flag]+normal_rp);
@@ -681,7 +677,7 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                             if(PhredQ > _opts.score_threshold){
                                 cout << bam_header->target_name[sv_chr1]
                                     << "\t" << sv_pos1
-                                    << "\t"  << sv_ori1
+                                    << "\t" << sv_ori1
                                     << "\t" << bam_header->target_name[sv_chr2]
                                     << "\t" << sv_pos2
                                     << "\t" << sv_ori2
@@ -689,7 +685,8 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                                     << "\t" << diffspans[flag]
                                     << "\t" << PhredQ
                                     << "\t" << type[flag]
-                                    << "\t" << sptypes[flag];
+                                    << "\t" << sptypes[flag]
+                                    ;
 
                                 if(_opts.print_AF == 1)
                                     cout <<  "\t" << AF;
