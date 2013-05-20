@@ -25,7 +25,7 @@ set(SAMTOOLS_ADDITIONAL_HEADERS sam.h)
 find_package(Samtools 0.1.6 REQUIRED)
 include_directories(${Samtools_INCLUDE_DIRS})
 
-find_package(Boost 1.35 REQUIRED filesystem program_options system)
+find_package(Boost 1.51 REQUIRED filesystem program_options system)
 include_directories(${Boost_INCLUDE_DIRS})
 
 if (CMAKE_COMPILER_IS_GNUCC)

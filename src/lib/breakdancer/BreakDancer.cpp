@@ -158,17 +158,8 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     LibraryInfo const& lib_info = aln.lib_info();
 
     //main analysis code
-
-    // region between last and next begin
-    // Store readdepth in nread_ROI by bam name (no per library calc) or by library
-    // I believe this only counts normally mapped reads
-    if(aln.bdqual() > _opts.min_map_qual
-        && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF))
-    {
-        string const& key = _opts.CN_lib == 1 ? aln.library : lib_info.bam_file;
-        ++nread_ROI[key];
-        ++nread_FR[key];
-    }
+    if(aln.bdflag() == breakdancer::NA)
+        return; // return fragment reads and other bad ones
 
     // min_mapping_quality is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
 
@@ -181,13 +172,30 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     if (aln.bdqual() <= min_mapq)
         return;
 
-    if(aln.bdflag() == breakdancer::NA)
-        return; // return fragment reads and other bad ones
+    // region between last and next begin
+    // Store readdepth in nread_ROI by bam name (no per library calc) or by library
+    // I believe this only counts normally mapped reads
+    // FIXME Weird to me that this one uses opts.min_map_qual directly
+    // seems like it should use min_mapq from above. Could fix now that I've moved it
+    if(aln.bdqual() > _opts.min_map_qual
+        && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF))
+    {
+        string const& key = _opts.CN_lib == 1 ? aln.library : lib_info.bam_file;
+        ++nread_ROI[key];
+        ++nread_FR[key];
+    }
+
 
     if ((_opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX)
             || aln.bdflag() == breakdancer::MATE_UNMAPPED
             || aln.bdflag() == breakdancer::UNMAPPED) // only care flag 32 for CTX
     {
+        return;
+    }
+
+    //this isn't an exact match to what was here previously
+    //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
+    if(aln.bdflag() != breakdancer::ARP_CTX && aln.abs_isize() > _opts.max_sd) {// skip read pairs mapped too distantly on the same chromosome
         return;
     }
 
@@ -223,12 +231,6 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     // This makes FF and RR the same thing
     if(aln.bdflag() == breakdancer::ARP_RR) {
         aln.set_bdflag(breakdancer::ARP_FF);
-    }
-
-    //this isn't an exact match to what was here previously
-    //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
-    if(aln.bdflag() != breakdancer::ARP_CTX && aln.abs_isize() > _opts.max_sd) {// skip read pairs mapped too distantly on the same chromosome
-        return;
     }
 
     //count reads mapped by SW, FR and RF reads, but only if normal_switch is true
