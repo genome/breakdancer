@@ -1,6 +1,7 @@
 #include "BreakDancer.hpp"
 
 #include "BamConfig.hpp"
+#include "Graph.hpp"
 #include "IBamReader.hpp"
 #include "Options.hpp"
 
@@ -372,7 +373,6 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
         // construct a subgraph
         vector<int> tails;
         tails.push_back(s0);
-        bool need_iter_increment = true;
         while(tails.size() > 0) {
             vector<int> newtails;
             vector<int>::const_iterator it_tails;
@@ -419,10 +419,10 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                     //NOTE it is entirely possible that tail and s1 are the same.
                     if(tail != s1){
                         nodepair[tail][s1] = nlinks;
-                        clink[s1].erase(tail);
+                        //clink[s1].erase(tail);
                     }
 
-                    clink_tail.erase(iter_to_delete);
+                    //clink_tail.erase(iter_to_delete);
 
                     newtails.push_back(s1);
 
@@ -755,15 +755,13 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                 if (tail == ii_clink->first) {
                     // The fact that this is postincrement is critical
                     clink.erase(ii_clink++);
-                    need_iter_increment = false;
                 } else {
                     clink.erase(tail);
+                    ++ii_clink;
                 }
             }
             tails.swap(newtails);
         }
-        if (need_iter_increment)
-            ++ii_clink;
     }
 
     // free nodes
