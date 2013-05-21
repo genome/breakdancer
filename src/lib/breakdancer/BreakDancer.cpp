@@ -1,7 +1,6 @@
 #include "BreakDancer.hpp"
 
 #include "BamConfig.hpp"
-#include "Graph.hpp"
 #include "IBamReader.hpp"
 #include "Options.hpp"
 
