@@ -233,7 +233,6 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
         aln.set_bdflag(breakdancer::ARP_FF);
     }
 
-
     //count reads mapped by SW, FR and RF reads, but only if normal_switch is true
     //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
     //I suspect this is to include those reads in the fastq dump for assembly!
@@ -420,10 +419,10 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                     //NOTE it is entirely possible that tail and s1 are the same.
                     if(tail != s1){
                         nodepair[tail][s1] = nlinks;
-                        clink[s1].erase(tail);
+                        //clink[s1].erase(tail);
                     }
 
-                    clink_tail.erase(iter_to_delete);
+                    //clink_tail.erase(iter_to_delete);
 
                     newtails.push_back(s1);
 
