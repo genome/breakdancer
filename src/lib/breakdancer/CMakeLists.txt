@@ -19,8 +19,6 @@ set(SOURCES
     Read.hpp
     ReadCountsByLib.hpp
     ReadFlags.hpp
-    Region.cpp
-    Region.hpp
     namespace.hpp
     utility.hpp
 )
