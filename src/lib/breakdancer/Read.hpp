@@ -5,6 +5,7 @@
 
 #include <string>
 #include <vector>
+#include <ostream>
 
 extern "C" {
     #include <sam.h>
@@ -51,6 +52,8 @@ public:
 
     LibraryInfo const& lib_info() const;
     void set_lib_info(LibraryInfo const* lib_info);
+
+    void to_fastq(std::ostream& stream) const;
 
 private: // Data
     pair_orientation_flag _bdflag;
@@ -162,5 +165,14 @@ inline
 LibraryInfo const& Read::lib_info() const {
     return *_lib_info;
 }
+
+inline
+void Read::to_fastq(std::ostream& stream) const {
+    stream << "@" << query_name() << "\n"
+        << query_sequence()
+        << "\n+\n"
+        << quality_string() << "\n";
+}
+
 
 END_NAMESPACE(breakdancer)

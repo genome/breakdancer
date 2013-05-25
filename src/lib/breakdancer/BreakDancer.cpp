@@ -84,11 +84,12 @@ namespace {
             string suffix = pairing.count(y.query_name()) ? "1" : "2";
             string fh_tmp_str = ReadsOut.at(y.library + suffix);
             ofstream fh;
+            // This is causing horrible amounts of network IO and needs to be managed by something
+            // external. That's in the works.
             fh.open(fh_tmp_str.c_str(), ofstream::app);
             pairing[y.query_name()] = 1;
             //Note that no transformation on read bases based on read orientation is done here
-            string str_tmp = "@" + y.query_name() + "\n" + y.query_sequence() + "\n" + "+\n" + y.quality_string() + "\n";
-            fh << str_tmp;
+            y.to_fastq(fh);
             fh.close();
         }
     }
