@@ -65,7 +65,7 @@ TEST_F(TestRead, ori) {
 }
 
 TEST_F(TestRead, tid) {
-    ASSERT_EQ(test_read->tid(), 25);
+    ASSERT_EQ(test_read->tid(), 22);
 }
 
 TEST_F(TestRead, pos) {
