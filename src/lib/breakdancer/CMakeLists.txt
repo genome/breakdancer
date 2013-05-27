@@ -13,6 +13,7 @@ set(SOURCES
     BreakDancer.cpp
     BreakDancer.hpp
     IBamReader.hpp
+    LibraryInfo.hpp
     Options.hpp
     Options.cpp
     Read.cpp
