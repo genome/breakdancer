@@ -1,5 +1,4 @@
 #include "Read.hpp"
-#include "BamConfig.hpp"
 
 #include <cstdlib>
 #include <boost/lexical_cast.hpp>
@@ -69,11 +68,7 @@ pair_orientation_flag determine_bdflag(bam1_t const* record) {
     return flag;
 }
 
-Read::Read(
-        bam1_t const* record,
-        BamConfig const& cfg,
-        bool seq_data
-        )
+Read::Read(bam1_t const* record, bool seq_data)
     : _bdflag(determine_bdflag(record))
     , _ori(record->core.flag & BAM_FREVERSE ? REV : FWD)
     , _abs_isize(abs(record->core.isize))
@@ -95,12 +90,6 @@ Read::Read(
 
     if(uint8_t* tmp = bam_aux_get(record, "RG"))
         readgroup = bam_aux2Z(tmp);
-
-    ConfigMap<string, string>::type::const_iterator lib = cfg.readgroup_library.find(readgroup);
-    if(lib != cfg.readgroup_library.end())
-        library = lib->second;
-    else
-        library = cfg.fmaps.begin()->second;
 }
 
 END_NAMESPACE(breakdancer)

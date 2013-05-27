@@ -12,7 +12,6 @@ extern "C" {
     #include <bam.h>
 }
 
-class BamConfig;
 class LibraryInfo;
 
 BEGIN_NAMESPACE(breakdancer)
@@ -22,11 +21,8 @@ pair_orientation_flag determine_bdflag(bam1_t const* record, std::string const& 
 class Read {
 public:
     std::string readgroup;
-    std::string library;
 
-    Read(bam1_t const* record,
-        BamConfig const& cfg,
-        bool seq_data = true);
+    Read(bam1_t const* record, bool seq_data = true);
 
     Read()
         : _bdflag(NA)
@@ -163,6 +159,7 @@ void Read::set_lib_info(LibraryInfo const* lib_info) {
 
 inline
 LibraryInfo const& Read::lib_info() const {
+    assert(_lib_info != 0);
     return *_lib_info;
 }
 

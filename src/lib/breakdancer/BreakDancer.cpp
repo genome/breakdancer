@@ -82,7 +82,7 @@ namespace {
 
             //Paradoxically, the first read seen is put in file 2 and the second in file 1
             string suffix = pairing.count(y.query_name()) ? "1" : "2";
-            string fh_tmp_str = ReadsOut.at(y.library + suffix);
+            string fh_tmp_str = ReadsOut.at(y.lib_info().name + suffix);
             ofstream fh;
             // This is causing horrible amounts of network IO and needs to be managed by something
             // external. That's in the works.
@@ -129,10 +129,11 @@ BreakDancer::~BreakDancer() {
 void BreakDancer::run() {
     bam1_t* b = bam_init1();
     while (_merged_reader.next(b) >= 0) {
-        breakdancer::Read aln(b, _cfg, _opts.need_sequence_data());
+        breakdancer::Read aln(b, _opts.need_sequence_data());
 
-        if(!aln.library.empty()) {
-            aln.set_lib_info(&_cfg.library_info_by_name(aln.library));
+        string const& lib = _cfg.readgroup_library(aln.readgroup);
+        if(!lib.empty()) {
+            aln.set_lib_info(&_cfg.library_info_by_name(lib));
             push_read(aln, _merged_reader.header());
         }
     }
@@ -176,7 +177,7 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     if(aln.bdqual() > _opts.min_map_qual
         && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF))
     {
-        string const& key = _opts.CN_lib == 1 ? aln.library : lib_info.bam_file;
+        string const& key = _opts.CN_lib == 1 ? aln.lib_info().name : lib_info.bam_file;
         ++nread_ROI[key];
         ++nread_FR[key];
     }
@@ -473,7 +474,7 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                             }
                             else{
                                 breakdancer::pair_orientation_flag bdflag = y.bdflag();
-                                string libname = y.library;
+                                string libname = y.lib_info().name;
                                 ++type[bdflag];
                                 ++type_library_readcount[bdflag][libname];
                                 type_library_meanspan[bdflag][libname] += y.abs_isize();
@@ -726,7 +727,7 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                                         fh_BED << "chr" << bam_header->target_name[y.tid()]
                                             << "\t" << y.pos()
                                             << "\t" << aln_end
-                                            << "\t" << y.query_name() << "|" << y.library
+                                            << "\t" << y.query_name() << "|" << y.lib_info().name
                                             << "\t" << y.bdqual() * 10
                                             << "\t" << y.ori()
                                             << "\t" << y.pos()
