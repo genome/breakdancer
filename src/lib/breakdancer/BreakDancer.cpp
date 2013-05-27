@@ -46,7 +46,7 @@ namespace {
             int const& readcount = ii_rlibrary_readcount->second;
             LibraryInfo const& lib_info = cfg.library_info_by_name(lib);
 
-            uint32_t read_count_for_flag = lib_info.get_read_counts_by_flag(type);
+            uint32_t read_count_for_flag = lib_info.read_counts_by_flag[type];
             lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(cfg.covered_reference_length()));
             lambda = max(real_type(1.0e-10), lambda);
             poisson_distribution<real_type> poisson(lambda);
@@ -131,7 +131,7 @@ void BreakDancer::run() {
     while (_merged_reader.next(b) >= 0) {
         breakdancer::Read aln(b, _opts.need_sequence_data());
 
-        string const& lib = _cfg.readgroup_library(aln.readgroup);
+        string const& lib = _cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
             aln.set_lib_info(&_cfg.library_info_by_name(lib));
             push_read(aln, _merged_reader.header());

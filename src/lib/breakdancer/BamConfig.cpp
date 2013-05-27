@@ -270,7 +270,7 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
     while (reader.next(b) > 0) {
         breakdancer::Read aln(b, false);
 
-        string const& lib = readgroup_library(aln.readgroup);
+        string const& lib = readgroup_library(aln.readgroup());
         if (lib.empty())
             continue;
 

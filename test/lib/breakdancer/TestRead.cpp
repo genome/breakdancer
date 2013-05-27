@@ -40,7 +40,7 @@ class TestRead : public ::testing::Test {
 };
 
 TEST_F(TestRead, readgroup) {
-    ASSERT_EQ(test_read->readgroup, "rg3");
+    ASSERT_EQ(test_read->readgroup(), "rg3");
 }
 
 TEST_F(TestRead, query_name) {
@@ -91,7 +91,7 @@ TEST_F(TestRead, copy_constructor) {
     ASSERT_EQ(test_copy.quality_string(), "HB");
     ASSERT_EQ(test_copy.query_sequence(), "CT");
     ASSERT_EQ(test_copy.query_name(), "junk");
-    ASSERT_EQ(test_copy.readgroup, "rg3");
+    ASSERT_EQ(test_copy.readgroup(), "rg3");
 }
 
 TEST_F(TestRead, assignment) {
@@ -100,5 +100,5 @@ TEST_F(TestRead, assignment) {
     ASSERT_EQ(test_copy.quality_string(), "HB");
     ASSERT_EQ(test_copy.query_sequence(), "CT");
     ASSERT_EQ(test_copy.query_name(), "junk");
-    ASSERT_EQ(test_copy.readgroup, "rg3");
+    ASSERT_EQ(test_copy.readgroup(), "rg3");
 }

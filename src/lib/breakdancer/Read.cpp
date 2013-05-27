@@ -89,7 +89,7 @@ Read::Read(bam1_t const* record, bool seq_data)
                 reinterpret_cast<char const*>(bam1_qual(record) + record->core.l_qseq));
 
     if(uint8_t* tmp = bam_aux_get(record, "RG"))
-        readgroup = bam_aux2Z(tmp);
+        _readgroup = bam_aux2Z(tmp);
 }
 
 END_NAMESPACE(breakdancer)

@@ -1,8 +1,9 @@
 #pragma once
 
 #include <stdint.h>
-#include <string>
 #include <map>
+#include <string>
+#include <vector>
 
 struct LibraryInfo {
     LibraryInfo()
@@ -14,6 +15,7 @@ struct LibraryInfo {
         , readlens(0)
         , min_mapping_quality(-1)
         , read_count(0)
+        , read_counts_by_flag(breakdancer::NUM_ORIENTATION_FLAGS, 0u)
     {
     }
 
@@ -30,15 +32,7 @@ struct LibraryInfo {
 
     // FIXME: ultimately we'll want to renumber the bd flag types and
     // use a simple array for this.
-    std::map<breakdancer::pair_orientation_flag, uint32_t> read_counts_by_flag;
-
-    uint32_t get_read_counts_by_flag(breakdancer::pair_orientation_flag flag) const {
-        std::map<breakdancer::pair_orientation_flag, uint32_t>::const_iterator fiter = read_counts_by_flag.find(flag);
-        if (fiter == read_counts_by_flag.end())
-            return 0u;
-
-        return fiter->second;
-    }
+    std::vector<uint32_t> read_counts_by_flag;
 
     struct Wrapper {
         Wrapper(LibraryInfo const& lib_info)
