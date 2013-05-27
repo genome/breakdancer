@@ -3,9 +3,10 @@
 #include "ReadFlags.hpp"
 #include "namespace.hpp"
 
+#include <cassert>
+#include <ostream>
 #include <string>
 #include <vector>
-#include <ostream>
 
 extern "C" {
     #include <sam.h>
