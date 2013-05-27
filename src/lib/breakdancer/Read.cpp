@@ -132,7 +132,6 @@ Read::Read(
         library = lib->second;
     else
         library = cfg.fmaps.begin()->second;
-
 }
 
 END_NAMESPACE(breakdancer)

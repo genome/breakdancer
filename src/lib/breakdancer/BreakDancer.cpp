@@ -129,15 +129,10 @@ BreakDancer::~BreakDancer() {
 void BreakDancer::run() {
     bam1_t* b = bam_init1();
     while (_merged_reader.next(b) >= 0) {
-        // skip somewhat expensive construction of Read object if entry is not
-        // aligned or is a secondary alignment.
-        if(b->core.tid < 0 || b->core.flag & BAM_FSECONDARY)
-            continue;
-
         breakdancer::Read aln(b, _cfg, _opts.need_sequence_data());
-        aln.set_lib_info(&_cfg.library_info_by_name(aln.library));
 
         if(!aln.library.empty()) {
+            aln.set_lib_info(&_cfg.library_info_by_name(aln.library));
             push_read(aln, _merged_reader.header());
         }
     }

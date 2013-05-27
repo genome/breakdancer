@@ -1,6 +1,7 @@
 #include "BamConfig.hpp"
+
+#include "BamIO.hpp"
 #include "Options.hpp"
-#include "BamReader.hpp"
 #include "Read.hpp"
 
 #include <algorithm>
@@ -272,9 +273,6 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
 
     bam1_t* b = bam_init1();
     while (reader.next(b) > 0) {
-        if (b->core.tid < 0)
-            continue;
-
         breakdancer::Read aln(b, *this, false);
         if (aln.library.empty())
             continue;

@@ -1,7 +1,7 @@
 #include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamConfig.hpp"
+#include "breakdancer/BamIO.hpp"
 #include "breakdancer/BamMerger.hpp"
-#include "breakdancer/BamReader.hpp"
 #include "breakdancer/BreakDancer.hpp"
 #include "breakdancer/Options.hpp"
 #include "breakdancer/Read.hpp"
@@ -53,19 +53,6 @@ using namespace std;
 
 typedef SCORE_FLOAT_TYPE real_type;
 real_type _max_kahan_err = 0.0;
-
-namespace {
-    vector<shared_ptr<IBamReader> > openBams(
-            vector<string> const& paths,
-            Options const& opts)
-    {
-        vector<shared_ptr<IBamReader> > rv;
-        for (size_t i = 0; i < paths.size(); ++i) {
-            rv.push_back(shared_ptr<IBamReader>(openBam(paths[i], opts)));
-        }
-        return rv;
-    }
-}
 
 // main function
 int main(int argc, char *argv[]) {

@@ -1,4 +1,5 @@
 #include "breakdancer/BamReader.hpp"
+#include "breakdancer/AlignmentFilter.hpp"
 
 #include <boost/filesystem.hpp>
 #include <unistd.h>
@@ -8,6 +9,7 @@
 
 using namespace std;
 namespace bfs = boost::filesystem;
+namespace bdaf = breakdancer::alnfilter;
 
 class TestRegionLimitedBamReader : public ::testing::Test {
     protected:
@@ -32,7 +34,7 @@ TEST_F(TestRegionLimitedBamReader, readChromosome) {
     }
 
     //RegionLimitedBamReader reader(_bam_path, "21");
-    BamReader reader(_bam_path);
+    BamReader<bdaf::True> reader(_bam_path);
 
     bfs::path output(_temp_dir);
     output /= "result.sam";
