@@ -30,24 +30,5 @@ struct LibraryInfo {
     int min_mapping_quality;
     size_t read_count;
 
-    // FIXME: ultimately we'll want to renumber the bd flag types and
-    // use a simple array for this.
     std::vector<uint32_t> read_counts_by_flag;
-
-    struct Wrapper {
-        Wrapper(LibraryInfo const& lib_info)
-            : lib_info(lib_info)
-        {
-        }
-
-        bool operator<(Wrapper const& rhs) const {
-            return lib_info.name < rhs.lib_info.name;
-        }
-
-        LibraryInfo const& lib_info;
-    };
-
-    Wrapper wrap() const {
-        return Wrapper(*this);
-    }
 };
