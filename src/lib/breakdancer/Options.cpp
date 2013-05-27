@@ -20,14 +20,13 @@ Options::Options(int argc, char** argv)
         , transchr_rearrange(false)
         , fisher(false)
         , Illumina_long_insert(false)
-        , Illumina_to_SOLiD(false)
         , CN_lib(false)
         , print_AF(false)
         , score_threshold(30)
 
 {
     int c;
-    while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:ep:tfd:g:lCahy:")) >= 0) {
+    while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:ep:tfd:g:lahy:")) >= 0) {
         switch(c) {
             case 'o': chr = optarg; break;
             case 's': min_len = atoi(optarg); break;
@@ -44,7 +43,6 @@ Options::Options(int argc, char** argv)
             case 'd': prefix_fastq = optarg; break;
             case 'g': dump_BED = optarg; break;
             case 'l': Illumina_long_insert = true; break;
-            //case 'C': Illumina_to_SOLiD = true; break;
             case 'a': CN_lib = true; break;
             case 'h': print_AF = true; break;
             case 'y': score_threshold = atoi(optarg); break;
@@ -78,13 +76,10 @@ Options::Options(int argc, char** argv)
         fprintf(stderr, "       -a              print out copy number and support reads per library rather than per bam, by default off\n");
         fprintf(stderr, "       -h              print out Allele Frequency column, by default off\n");
         fprintf(stderr, "       -y INT          output score filter [%d]\n", score_threshold);
-        //fprintf(stderr, "    -C INT    change system default from Illumina to SOLiD [%d]\n", Illumina_to_SOLiD);
         //fprintf(stderr, "Version: %s\n", version);
         fprintf(stderr, "\n");
         exit(1);
     }
-
-    platform = Illumina_to_SOLiD ? "solid" : "illumina";
 
     // define the map SVtype
     if (Illumina_long_insert) {

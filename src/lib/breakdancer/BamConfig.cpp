@@ -170,12 +170,7 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
             readgroup = lib;
         readgroup_library[readgroup] = lib;
 
-        string platform = get_from_line(line,"platform",1);
-        if(opts.Illumina_to_SOLiD)
-            readgroup_platform[readgroup] = "solid";
-        else
-            readgroup_platform[readgroup] = "illumina";
-        readgroup_platform[readgroup] = platform;
+        readgroup_platform[readgroup] = get_from_line(line,"platform",1);
 
         string exe = get_from_line(line,"exe",0);
         if(!opts.prefix_fastq.empty()) {

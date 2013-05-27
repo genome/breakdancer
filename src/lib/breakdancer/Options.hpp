@@ -23,7 +23,6 @@ struct Options {
         , transchr_rearrange(false)
         , fisher(false)
         , Illumina_long_insert(false)
-        , Illumina_to_SOLiD(false)
         , CN_lib(false)
         , print_AF(false)
         , score_threshold(30)
@@ -43,14 +42,12 @@ struct Options {
     bool transchr_rearrange;
     bool fisher;
     bool Illumina_long_insert;
-    bool Illumina_to_SOLiD;
     bool CN_lib;
     bool print_AF;
     int score_threshold;
     std::string bam_file;
     std::string prefix_fastq;
     std::string dump_BED;
-    std::string platform;
     ConfigMap<breakdancer::pair_orientation_flag, std::string>::type SVtype;
 
     bool need_sequence_data() const {
