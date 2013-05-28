@@ -27,6 +27,7 @@ public:
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
     typedef std::map<std::string, std::vector<int> > ReadsToRegionsMap;
+    typedef std::map<std::string, int> ReadOccurrencesMap;
 
     BreakDancer(
         Options const& opts,
@@ -40,6 +41,21 @@ public:
     void push_read(ReadType& aln, bam_header_t const* bam_header);
     void build_connection(bam_header_t const* bam_header);
     int sum_of_region_sizes(std::vector<int> const& region_ids) const;
+
+    ReadOccurrencesMap read_occurrences_in_regions(std::vector<int> const& regions) const {
+        assert(regions.size() == 1 || (regions.size() == 2 && regions[0] != regions[1]));
+
+        ReadOccurrencesMap rv;
+        for (std::vector<int>::const_iterator region = regions.begin(); region != regions.end(); ++region) {
+            ReadVector const& reads = reads_in_region(*region);
+            for (ReadVector::const_iterator i = reads.begin(); i != reads.end(); ++i) {
+                std::string const& read_name = i->query_name();
+                if (_read_regions.count(read_name) > 0)
+                    ++rv[read_name];
+            }
+        }
+        return rv;
+    }
 
     void add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts) {
         assert(num_regions() > 0);
@@ -66,7 +82,7 @@ public:
         _read_count_FR_map[region_idx] = nread_FR - nread_ROI;
     }
 
-    void accumulate_reads_in_region(ReadCountsByLib& acc, size_t begin, size_t end) {
+    void accumulate_reads_between_regions(ReadCountsByLib& acc, size_t begin, size_t end) {
         for(size_t i = begin; i < std::min(end, _read_count_ROI_map.size()); i++){
             acc += _read_count_ROI_map[i];
 
@@ -157,6 +173,8 @@ private:
 public:
     ReadsToRegionsMap _read_regions;
     std::map<std::string, float> read_density;
+
+    void process_sv(std::vector<int> const& snodes, std::set<int>& free_nodes, bam_header_t const* bam_header);
 };
 
 // choose the predominant type of read in a region
