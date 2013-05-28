@@ -2,6 +2,7 @@
 
 #include "namespace.hpp"
 
+#include <boost/array.hpp>
 #include <cassert>
 
 enum strand_e {
@@ -26,6 +27,11 @@ enum pair_orientation_flag {
     NUM_ORIENTATION_FLAGS
 };
 
+template<typename T>
+struct PerFlagArray {
+    typedef boost::array<T, NUM_ORIENTATION_FLAGS> type;
+};
+
 struct FlagValues {
     FlagValues() {
         _values[NA] = 0; //NA means not applicable.
@@ -42,12 +48,11 @@ struct FlagValues {
     }
 
     int operator[](pair_orientation_flag const& idx) const {
-        assert(idx < NUM_ORIENTATION_FLAGS);
         return _values[int(idx)];
     }
 
 private:
-    int _values[NUM_ORIENTATION_FLAGS];
+    PerFlagArray<int>::type _values;
 };
 
 extern const FlagValues FLAG_VALUES;

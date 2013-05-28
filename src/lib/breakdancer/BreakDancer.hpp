@@ -27,7 +27,6 @@ public:
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
     typedef std::map<std::string, std::vector<int> > ReadsToRegionsMap;
-    typedef std::map<std::string, int> ReadOccurrencesMap;
 
     BreakDancer(
         Options const& opts,
@@ -41,21 +40,6 @@ public:
     void push_read(ReadType& aln, bam_header_t const* bam_header);
     void build_connection(bam_header_t const* bam_header);
     int sum_of_region_sizes(std::vector<int> const& region_ids) const;
-
-    ReadOccurrencesMap read_occurrences_in_regions(std::vector<int> const& regions) const {
-        assert(regions.size() == 1 || (regions.size() == 2 && regions[0] != regions[1]));
-
-        ReadOccurrencesMap rv;
-        for (std::vector<int>::const_iterator region = regions.begin(); region != regions.end(); ++region) {
-            ReadVector const& reads = reads_in_region(*region);
-            for (ReadVector::const_iterator i = reads.begin(); i != reads.end(); ++i) {
-                std::string const& read_name = i->query_name();
-                if (_read_regions.count(read_name) > 0)
-                    ++rv[read_name];
-            }
-        }
-        return rv;
-    }
 
     void add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts) {
         assert(num_regions() > 0);
@@ -176,22 +160,3 @@ public:
 
     void process_sv(std::vector<int> const& snodes, std::set<int>& free_nodes, bam_header_t const* bam_header);
 };
-
-// choose the predominant type of read in a region
-inline
-breakdancer::pair_orientation_flag choose_sv_flag(const int num_readpairs, const std::map<breakdancer::pair_orientation_flag, int> reads_per_type) {
-    using namespace std;
-    breakdancer::pair_orientation_flag flag = breakdancer::NA;
-    float max_type_pct = 0.0;
-    for(map<breakdancer::pair_orientation_flag, int>::const_iterator type_iter = reads_per_type.begin(); type_iter != reads_per_type.end(); ++type_iter){
-        breakdancer::pair_orientation_flag current_flag = (*type_iter).first;
-        float type_pct = static_cast<float>((*type_iter).second) / static_cast<float>(num_readpairs);
-        if(max_type_pct < type_pct) {
-            max_type_pct = type_pct;
-            flag = current_flag;
-        }
-    }
-    return flag;
-}
-
-

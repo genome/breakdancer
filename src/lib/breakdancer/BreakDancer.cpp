@@ -20,6 +20,7 @@
 #define ZERO exp(LZERO)
 
 using namespace std;
+namespace bd = breakdancer;
 using boost::format;
 using boost::lexical_cast;
 using boost::math::cdf;
@@ -31,11 +32,21 @@ using boost::math::chi_squared;
 namespace {
     typedef SCORE_FLOAT_TYPE real_type;
 
+    // choose the predominant type of read in a region
+    bd::pair_orientation_flag choose_sv_flag(bd::PerFlagArray<int>::type const& reads_per_type) {
+        bd::pair_orientation_flag flag = bd::NA;
+        int const* max_ptr = max_element(reads_per_type.begin(), reads_per_type.end());
+        if (max_ptr != reads_per_type.end() && *max_ptr > 0) {
+            flag = bd::pair_orientation_flag(max_ptr - reads_per_type.begin());
+        }
+        return flag;
+    }
+
     // compute the probability score
     real_type ComputeProbScore(
             int total_region_size,
             map<string,int> &rlibrary_readcount,
-            breakdancer::pair_orientation_flag type,
+            bd::pair_orientation_flag type,
             int fisher,
             BamConfig const& cfg
             )
@@ -74,10 +85,10 @@ namespace {
         return logpvalue;
     }
 
-    void write_fastq_for_flag(breakdancer::pair_orientation_flag const& flag, const vector<breakdancer::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
+    void write_fastq_for_flag(bd::pair_orientation_flag const& flag, const vector<bd::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
         map<string,int> pairing;
-        for( vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
-            breakdancer::Read const& y = *ii_support_reads;
+        for( vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
+            bd::Read const& y = *ii_support_reads;
 
             if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
                 continue;
@@ -131,7 +142,7 @@ BreakDancer::~BreakDancer() {
 void BreakDancer::run() {
     bam1_t* b = bam_init1();
     while (_merged_reader.next(b) >= 0) {
-        breakdancer::Read aln(b, _opts.need_sequence_data());
+        bd::Read aln(b, _opts.need_sequence_data());
 
         string const& lib = _cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
@@ -153,11 +164,11 @@ int BreakDancer::sum_of_region_sizes(std::vector<int> const& region_ids) const {
 
 
 
-void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_header) {
+void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     LibraryInfo const& lib_info = aln.lib_info();
 
     //main analysis code
-    if(aln.bdflag() == breakdancer::NA)
+    if(aln.bdflag() == bd::NA)
         return; // return fragment reads and other bad ones
 
     // min_mapping_quality is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
@@ -177,7 +188,7 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     // FIXME Weird to me that this one uses opts.min_map_qual directly
     // seems like it should use min_mapq from above. Could fix now that I've moved it
     if(aln.bdqual() > _opts.min_map_qual
-        && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF))
+        && (aln.bdflag() == bd::NORMAL_FR || aln.bdflag() == bd::NORMAL_RF))
     {
         string const& key = _opts.CN_lib == 1 ? aln.lib_info().name : lib_info.bam_file;
         ++nread_ROI[key];
@@ -185,16 +196,16 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     }
 
 
-    if ((_opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX)
-            || aln.bdflag() == breakdancer::MATE_UNMAPPED
-            || aln.bdflag() == breakdancer::UNMAPPED) // only care flag 32 for CTX
+    if ((_opts.transchr_rearrange && aln.bdflag() != bd::ARP_CTX)
+            || aln.bdflag() == bd::MATE_UNMAPPED
+            || aln.bdflag() == bd::UNMAPPED) // only care flag 32 for CTX
     {
         return;
     }
 
     //this isn't an exact match to what was here previously
     //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
-    if(aln.bdflag() != breakdancer::ARP_CTX && aln.abs_isize() > _opts.max_sd) {// skip read pairs mapped too distantly on the same chromosome
+    if(aln.bdflag() != bd::ARP_CTX && aln.abs_isize() > _opts.max_sd) {// skip read pairs mapped too distantly on the same chromosome
         return;
     }
 
@@ -203,39 +214,39 @@ void BreakDancer::push_read(breakdancer::Read &aln, bam_header_t const* bam_head
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
     if(_opts.Illumina_long_insert){
-        if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
-            aln.set_bdflag(breakdancer::ARP_RF);
+        if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == bd::NORMAL_RF) {
+            aln.set_bdflag(bd::ARP_RF);
         }
-        if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_RF) {
-            aln.set_bdflag(breakdancer::NORMAL_RF);
+        if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == bd::ARP_RF) {
+            aln.set_bdflag(bd::NORMAL_RF);
         }
-        if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
-            aln.set_bdflag(breakdancer::ARP_FR_small_insert);
+        if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == bd::NORMAL_RF) {
+            aln.set_bdflag(bd::ARP_FR_small_insert);
         }
     }
     else{
-        if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
-            aln.set_bdflag(breakdancer::ARP_FR_big_insert);
+        if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == bd::NORMAL_FR) {
+            aln.set_bdflag(bd::ARP_FR_big_insert);
         }
-        if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
-            aln.set_bdflag(breakdancer::NORMAL_FR);
+        if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == bd::ARP_FR_big_insert) {
+            aln.set_bdflag(bd::NORMAL_FR);
         }
-        if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
-            aln.set_bdflag(breakdancer::ARP_FR_small_insert);
+        if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == bd::NORMAL_FR) {
+            aln.set_bdflag(bd::ARP_FR_small_insert);
         }
-        if(aln.bdflag() == breakdancer::NORMAL_RF) {
-            aln.set_bdflag(breakdancer::ARP_RF);
+        if(aln.bdflag() == bd::NORMAL_RF) {
+            aln.set_bdflag(bd::ARP_RF);
         }
     }
     // This makes FF and RR the same thing
-    if(aln.bdflag() == breakdancer::ARP_RR) {
-        aln.set_bdflag(breakdancer::ARP_FF);
+    if(aln.bdflag() == bd::ARP_RR) {
+        aln.set_bdflag(bd::ARP_FF);
     }
 
     //count reads mapped by SW, FR and RF reads, but only if normal_switch is true
     //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
     //I suspect this is to include those reads in the fastq dump for assembly!
-    if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
+    if(aln.bdflag() == bd::NORMAL_FR || aln.bdflag() == bd::NORMAL_RF) {
         if(_collecting_normal_reads && aln.isize() > 0){
             ++_nnormal_reads;
         }
@@ -288,7 +299,7 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
         add_current_read_counts_to_last_region();
 
         // This adds the region id to an array of region ids
-        for(vector<breakdancer::Read>::const_iterator iter = reads_in_current_region.begin(); iter != reads_in_current_region.end(); iter++) {
+        for(vector<bd::Read>::const_iterator iter = reads_in_current_region.begin(); iter != reads_in_current_region.end(); iter++) {
             _read_regions[iter->query_name()].push_back(region_idx);
         }
         // we're essentially destroying reads_in_current_region here by swapping it with whatever
@@ -316,7 +327,7 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
         }
 
         // remove any reads that are linking the last region with this new, merged in region
-        for(vector<breakdancer::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); ++it_reg_seq) {
+        for(vector<bd::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); ++it_reg_seq) {
             _read_regions.erase(it_reg_seq->query_name());
         }
     }
@@ -464,8 +475,8 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
         int const& node = *ii_free_nodes;
         BasicRegion::ReadVector const& reads = reads_in_region(node);
         if(reads.size() < unsigned(_opts.min_read_pair)){
-            for(vector<breakdancer::Read>::const_iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
-                breakdancer::Read const& y = *ii_reads;
+            for(vector<bd::Read>::const_iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
+                bd::Read const& y = *ii_reads;
                 string const& readname = y.query_name();
                 _read_regions.erase(readname);
             }
@@ -478,22 +489,24 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
 void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free_nodes, bam_header_t const* bam_header) {
     vector<string> free_reads;
     int nread_pairs = 0;
-    map<string, breakdancer::Read> read_pair; //unpaired reads
-    map<breakdancer::pair_orientation_flag,int> type; // number of readpairs per each type/flag
-    map<breakdancer::pair_orientation_flag, map<string,int> > type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
+    map<string, bd::Read> read_pair; //unpaired reads
+    bd::PerFlagArray<int>::type type = {{0}}; // number of readpairs per each type/flag
+
+    bd::PerFlagArray<map<string, int> >::type type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
+
     vector<boost::array<int, 2> > type_orient_counts; //vector of readcounts for each type/flag
-    map<breakdancer::pair_orientation_flag,map<string,int> > type_library_meanspan; //average ISIZE from BAM records
-    vector<breakdancer::Read> support_reads; //reads supporting the SV
+
+    bd::PerFlagArray<map<string, int> >::type type_library_meanspan; //average ISIZE from BAM records
+
+    vector<bd::Read> support_reads; //reads supporting the SV
     for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
         int node = *ii_snodes;
         //cout << node << endl;
-        boost::array<int, 2> orient_count; // number of reads per each orientation (FWD or REV)
-        orient_count[FWD] = orient_count[REV] = 0;
+        boost::array<int, 2> orient_count = {{0,0}}; // number of reads per each orientation (FWD or REV)
 
-        vector<breakdancer::Read> nonsupportives; // reads not supporting this SV
         BasicRegion::ReadVector const& region_reads = reads_in_region(node);
         for(BasicRegion::ReadVector::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
-            breakdancer::Read const& y = *ii_regs;
+            bd::Read const& y = *ii_regs;
             //WHY ARE THESE CHECKS EVERYWHERE
             if(_read_regions.count(y.query_name()) == 0)
                 continue;
@@ -503,12 +516,13 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             ++orient_count[y.ori()];
 
             //START HERE
-            if(read_pair.find(y.query_name()) == read_pair.end()){
+            typedef map<string, bd::Read>::iterator IterType;
+            pair<IterType, bool> inserted = read_pair.insert(make_pair(y.query_name(), y));
+            if(inserted.second) {
                 read_pair[y.query_name()] = y;
-                nonsupportives.push_back(y);
             }
             else{
-                breakdancer::pair_orientation_flag bdflag = y.bdflag();
+                bd::pair_orientation_flag bdflag = y.bdflag();
                 string libname = y.lib_info().name;
                 ++type[bdflag];
                 ++type_library_readcount[bdflag][libname];
@@ -517,28 +531,20 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 ++nread_pairs;
                 free_reads.push_back(y.query_name());
                 support_reads.push_back(y);
-                support_reads.push_back(read_pair[y.query_name()]);
-                if(read_pair.find(y.query_name())!=read_pair.end()){
-                    read_pair.erase(read_pair.find(y.query_name()));
-                }
+                support_reads.push_back(inserted.first->second);
+                read_pair.erase(inserted.first);
             }
         }
-        swap_reads_in_region(node, nonsupportives);
         type_orient_counts.push_back(orient_count);
     }
 
-    //clean out supportive reads since the first read of every pair is stored in nonsupportives
-    //seems like it would be smarter to only populate nonsupportives after we determine the supportives...
-    //I think this must not be done because you don't know if the read pairs will occur on the other node or not
-    //so you build your list for each node and then go back and clean it up after the fact
-    //if you tracked which node each read came from then you could just reassign after the fact
     for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
         int node = *ii_snodes;
         BasicRegion::ReadVector nonsupportives;
         BasicRegion::ReadVector const& region_reads = reads_in_region(node);
-        for(vector<breakdancer::Read>::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
-            breakdancer::Read const& y = *ii_regs;
-            if(read_pair.find(y.query_name()) == read_pair.end())
+        for(vector<bd::Read>::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
+            bd::Read const& y = *ii_regs;
+            if(read_pair.count(y.query_name()) == 0)
                 continue;
             nonsupportives.push_back(y);
         }
@@ -549,9 +555,9 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     //int bestIndelSize;//don't know if int; no usage actually
     // START HERE
     if(nread_pairs >= _opts.min_read_pair){
-        map<breakdancer::pair_orientation_flag, int> diffspans;
-        map<breakdancer::pair_orientation_flag, string> sptypes;
-        breakdancer::pair_orientation_flag flag = choose_sv_flag(nread_pairs, type);
+        map<bd::pair_orientation_flag, int> diffspans;
+        map<bd::pair_orientation_flag, string> sptypes;
+        bd::pair_orientation_flag flag = choose_sv_flag(type);
         if(type[flag] >= _opts.min_read_pair) {
             // print out result
             int sv_chr1 = -1, sv_pos1 = 0, sv_chr2 = -1, sv_pos2 = 0;
@@ -572,13 +578,13 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 int idx = distance(snodes.begin(), ii_snodes);
                 boost::array<int, 2>& ori_readcount = type_orient_counts[idx];
                 if(sv_chr1 != -1 && sv_chr2 != -1){
-                    if(flag == breakdancer::ARP_RF)
+                    if(flag == bd::ARP_RF)
                         sv_pos2 = end + _max_readlen - 5;
-                    else if(flag == breakdancer::ARP_FF){
+                    else if(flag == bd::ARP_FF){
                         sv_pos1 = sv_pos2;
                         sv_pos2 = end + _max_readlen - 5;
                     }
-                    else if(flag == breakdancer::ARP_RR)
+                    else if(flag == bd::ARP_RR)
                         sv_pos2 = start;
                     else{
                         sv_pos1 = sv_pos2;
@@ -620,7 +626,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             }
             copy_number_sum /= (2.0*(float)read_count.size());
 
-            if(flag != breakdancer::ARP_RF && flag != breakdancer::ARP_RR && sv_pos1 + _max_readlen - 5 < sv_pos2)
+            if(flag != bd::ARP_RF && flag != bd::ARP_RR && sv_pos1 + _max_readlen - 5 < sv_pos2)
                 sv_pos1 += _max_readlen - 5; // apply extra padding to the start coordinates
 
             // deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
@@ -635,7 +641,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                     // intialize to be zero, in case of no library, or DEL, or ITX.
 
                     string copy_number_str = "NA";
-                    if(flag != breakdancer::ARP_CTX){
+                    if(flag != bd::ARP_CTX){
                         float copy_number_ = 0;
 
                         if(copy_number.find(sp) != copy_number.end()){
@@ -712,7 +718,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 if(_opts.print_AF == 1)
                     cout <<  "\t" << AF;
 
-                if(_opts.CN_lib == 0 && flag != breakdancer::ARP_CTX){
+                if(_opts.CN_lib == 0 && flag != bd::ARP_CTX){
                     vector<string> const& bams = _cfg.bam_files();
                     for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
                         map<string, float>::const_iterator cniter = copy_number.find(*iter);
@@ -739,8 +745,8 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                     string trackname(bam_header->target_name[sv_chr1]);
                     trackname = trackname.append("_").append(lexical_cast<string>(sv_pos1)).append("_").append(SVT).append("_").append(lexical_cast<string>(diffspans[flag]));
                     fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv_chr1] << " " << sv_pos1 << " " << SVT << " " << diffspans[flag] << "\"\tuseScore=0\n";
-                    for(vector<breakdancer::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
-                        breakdancer::Read const& y = *ii_support_reads;
+                    for(vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
+                        bd::Read const& y = *ii_support_reads;
                         if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
                             continue;
                         int aln_end = y.pos() - y.query_length() - 1;
@@ -777,4 +783,3 @@ void BreakDancer::process_final_region(bam_header_t const* bam_header) {
     }
     build_connection(bam_header);
 }
-
