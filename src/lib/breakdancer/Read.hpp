@@ -7,6 +7,7 @@
 #include <ostream>
 #include <string>
 #include <vector>
+#include "FlagCodec.hpp"
 
 extern "C" {
     #include <sam.h>
