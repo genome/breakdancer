@@ -501,7 +501,6 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     vector<bd::Read> support_reads; //reads supporting the SV
     for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
         int node = *ii_snodes;
-        //cout << node << endl;
         boost::array<int, 2> orient_count = {{0,0}}; // number of reads per each orientation (FWD or REV)
 
         BasicRegion::ReadVector const& region_reads = reads_in_region(node);
@@ -511,11 +510,8 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             if(_read_regions.count(y.query_name()) == 0)
                 continue;
 
-            // initialize orient_count
-            // y.ori() is the orientation.
             ++orient_count[y.ori()];
 
-            //START HERE
             typedef map<string, bd::Read>::iterator IterType;
             pair<IterType, bool> inserted = read_pair.insert(make_pair(y.query_name(), y));
             if(inserted.second) {
