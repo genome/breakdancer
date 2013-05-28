@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/unordered_map.hpp>
+
 class Options;
 class BamConfig;
 class IBamReader;
@@ -24,6 +26,7 @@ public:
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
+    typedef std::map<std::string, std::vector<int> > ReadsToRegionsMap;
 
     BreakDancer(
         Options const& opts,
@@ -152,7 +155,7 @@ private:
     int _region_end_pos; // global
 
 public:
-    std::map<std::string, std::vector<int> > _read_regions;
+    ReadsToRegionsMap _read_regions;
     std::map<std::string, float> read_density;
 };
 

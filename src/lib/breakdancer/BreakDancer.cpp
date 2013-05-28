@@ -19,6 +19,7 @@
 #define ZERO exp(LZERO)
 
 using namespace std;
+using boost::format;
 using boost::lexical_cast;
 using boost::math::cdf;
 using boost::math::complement;
@@ -327,7 +328,7 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     // find paired regions that are supported by paired reads
     //warn("-- link regions\n");
     map<int, map<int, int> > clink;
-    map<string,vector<int> >::const_iterator ii_read;
+    ReadsToRegionsMap::const_iterator ii_read;
     //read is a map of readnames, each is associated with a vector of region ids
     // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
     for(ii_read = _read_regions.begin(); ii_read != _read_regions.end(); ii_read++){
@@ -337,23 +338,23 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
         if(p.size() != 2) // skip singleton read (non read pairs)
             continue;
 
+        int const& r1 = p[0];
+        int const& r2 = p[1];
+
         //track the number of links between two nodes
         //
-        // This doesn't make a lot of sense to me. When p[0] == p[1] and p[0] is not
-        // in the map, both are set to one. If p[0] is in the map, then we increment
+        // This doesn't make a lot of sense to me. When r1 == r2 and r1 is not
+        // in the map, both are set to one. If r1 is in the map, then we increment
         // twice. We should either double count or not. Doing a mixture of both is
         // silly. -ta
-        if(clink.find(p[0]) != clink.end() && clink[p[0]].find(p[1]) != clink[p[0]].end()){
-            ++clink[p[0]][p[1]];
-            ++clink[p[1]][p[0]];
+        if(clink.find(r1) != clink.end() && clink[r1].find(r2) != clink[r1].end()){
+            ++clink[r1][r2];
+            ++clink[r2][r1];
         }
         else{
-            clink[p[0]][p[1]] = 1;
-            clink[p[1]][p[0]] = 1;
+            clink[r1][r2] = 1;
+            clink[r2][r1] = 1;
         }
-
-        //cout << tmp_str << endl;
-        //cout << p[0] << "\t" << p[1] << "\t" << link[p[0]][p[1]] << endl;
     }
     // segregate graph, find nodes that have connections
     set<int> free_nodes;
