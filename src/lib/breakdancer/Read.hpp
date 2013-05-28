@@ -3,16 +3,16 @@
 #include "ReadFlags.hpp"
 #include "namespace.hpp"
 
+#include <cassert>
+#include <ostream>
 #include <string>
 #include <vector>
-#include <ostream>
 
 extern "C" {
     #include <sam.h>
     #include <bam.h>
 }
 
-class BamConfig;
 class LibraryInfo;
 
 BEGIN_NAMESPACE(breakdancer)
@@ -21,12 +21,7 @@ pair_orientation_flag determine_bdflag(bam1_t const* record, std::string const& 
 
 class Read {
 public:
-    std::string readgroup;
-    std::string library;
-
-    Read(bam1_t const* record,
-        BamConfig const& cfg,
-        bool seq_data = true);
+    Read(bam1_t const* record, bool seq_data = true);
 
     Read()
         : _bdflag(NA)
@@ -41,6 +36,7 @@ public:
     std::string const& query_name() const;
     std::string const& query_sequence() const;
     std::string const& quality_string() const;
+    std::string const& readgroup() const;
     pair_orientation_flag const& bdflag() const;
     int const& bdqual() const;
     int const& tid() const;
@@ -55,6 +51,7 @@ public:
 
     void to_fastq(std::ostream& stream) const;
 
+
 private: // Data
     pair_orientation_flag _bdflag;
     strand_e _ori;
@@ -65,6 +62,8 @@ private: // Data
     int _query_length;
     int _tid;
     std::string _query_name;
+    std::string _readgroup;
+
 
 
     mutable std::string _query_sequence;
@@ -163,6 +162,7 @@ void Read::set_lib_info(LibraryInfo const* lib_info) {
 
 inline
 LibraryInfo const& Read::lib_info() const {
+    assert(_lib_info != 0);
     return *_lib_info;
 }
 
@@ -172,6 +172,11 @@ void Read::to_fastq(std::ostream& stream) const {
         << query_sequence()
         << "\n+\n"
         << quality_string() << "\n";
+}
+
+inline
+std::string const& Read::readgroup() const {
+    return _readgroup;
 }
 
 

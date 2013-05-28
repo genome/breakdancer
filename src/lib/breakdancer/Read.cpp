@@ -1,5 +1,4 @@
 #include "Read.hpp"
-#include "BamConfig.hpp"
 
 #include <cstdlib>
 #include <boost/lexical_cast.hpp>
@@ -27,7 +26,7 @@ BEGIN_NAMESPACE(breakdancer)
 //In addition, there is some caching that could happen to make this whole thing shorter
 //and less computationally expensive
 //ideally the majority of this code could be pulled into another class.
-pair_orientation_flag determine_bdflag(bam1_t const* record, std::string const& platform) {
+pair_orientation_flag determine_bdflag(bam1_t const* record) {
 
     // this should probably include QCfail as well
     if((record->core.flag & BAM_FDUP) || !(record->core.flag & BAM_FPAIRED))
@@ -47,65 +46,30 @@ pair_orientation_flag determine_bdflag(bam1_t const* record, std::string const& 
         flag = ARP_CTX;
     }
     else if(record->core.flag & BAM_FPROPER_PAIR) {
-        if(platform == "solid") { //assuming config parser has normalized this for me
-            flag = NORMAL_FR; //normal insert size
+        if(record->core.pos < record->core.mpos) {
+            flag = (read_reversed) ? NORMAL_RF : NORMAL_FR;
         }
         else {
-            if(record->core.pos < record->core.mpos) {
-                flag = (read_reversed) ? NORMAL_RF : NORMAL_FR;
-            }
-            else {
-                flag = (read_reversed) ? NORMAL_FR : NORMAL_RF;
-            }
+            flag = (read_reversed) ? NORMAL_FR : NORMAL_RF;
         }
     }
-    else {
-        if(platform == "solid") {
-            if( ((read_reversed) && !(mate_reversed)) ||
-                (!(read_reversed) && (mate_reversed))) { //do the mates have different orientation?
-                flag = (read_reversed) ? ARP_RR : ARP_FF;
-            }
-            else if( !(read_reversed)) {
-                if(record->core.flag & BAM_FREAD1) {
-                    flag = (record->core.pos < record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
-                }
-                else {
-                    flag = (record->core.pos > record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
-                }
-            }
-            else {
-                if(record->core.flag & BAM_FREAD1) {
-                    flag = (record->core.pos > record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
-                }
-                else {
-                    flag = (record->core.pos < record->core.mpos) ? ARP_FR_big_insert : ARP_RF;
-                }
-            }
-        }
-        else {
-            if( ((read_reversed) && (mate_reversed)) ||
-                (!(read_reversed) && !(mate_reversed))) { //do the mates have the same orientation?
+    else if( ((read_reversed) && (mate_reversed)) ||
+            (!(read_reversed) && !(mate_reversed))) { //do the mates have the same orientation?
 
-                flag = (mate_reversed) ? ARP_RR : ARP_FF;
-            }
-            else if((record->core.mpos > record->core.pos && (read_reversed)) || (record->core.pos > record->core.mpos && !(read_reversed))) {
-                flag = ARP_RF;
-            }
-            else {
-                flag = ARP_FR_big_insert;
-            }
-        }
+            flag = (mate_reversed) ? ARP_RR : ARP_FF;
+    }
+    else if((record->core.mpos > record->core.pos && (read_reversed)) || (record->core.pos > record->core.mpos && !(read_reversed))) {
+        flag = ARP_RF;
+    }
+    else {
+        flag = ARP_FR_big_insert;
     }
 
     return flag;
 }
 
-Read::Read(
-        bam1_t const* record,
-        BamConfig const& cfg,
-        bool seq_data
-        )
-    : _bdflag(determine_bdflag(record, cfg.platform_for_readgroup(readgroup)))
+Read::Read(bam1_t const* record, bool seq_data)
+    : _bdflag(determine_bdflag(record))
     , _ori(record->core.flag & BAM_FREVERSE ? REV : FWD)
     , _abs_isize(abs(record->core.isize))
     , _bdqual(determine_bdqual(record))
@@ -125,14 +89,7 @@ Read::Read(
                 reinterpret_cast<char const*>(bam1_qual(record) + record->core.l_qseq));
 
     if(uint8_t* tmp = bam_aux_get(record, "RG"))
-        readgroup = bam_aux2Z(tmp);
-
-    ConfigMap<string, string>::type::const_iterator lib = cfg.readgroup_library.find(readgroup);
-    if(lib != cfg.readgroup_library.end())
-        library = lib->second;
-    else
-        library = cfg.fmaps.begin()->second;
-
+        _readgroup = bam_aux2Z(tmp);
 }
 
 END_NAMESPACE(breakdancer)

@@ -1,6 +1,7 @@
 #include "BamConfig.hpp"
+
+#include "BamIO.hpp"
 #include "Options.hpp"
-#include "BamReader.hpp"
 #include "Read.hpp"
 
 #include <algorithm>
@@ -167,14 +168,9 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         string readgroup = get_from_line(line,"group",1);
         if(readgroup.compare("NA")==0)
             readgroup = lib;
-        readgroup_library[readgroup] = lib;
+        _readgroup_library[readgroup] = lib;
 
-        string platform = get_from_line(line,"platform",1);
-        if(opts.Illumina_to_SOLiD)
-            readgroup_platform[readgroup] = "solid";
-        else
-            readgroup_platform[readgroup] = "illumina";
-        readgroup_platform[readgroup] = platform;
+        readgroup_platform[readgroup] = get_from_line(line,"platform",1);
 
         string exe = get_from_line(line,"exe",0);
         if(!opts.prefix_fastq.empty()) {
@@ -272,14 +268,13 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
 
     bam1_t* b = bam_init1();
     while (reader.next(b) > 0) {
-        if (b->core.tid < 0)
+        breakdancer::Read aln(b, false);
+
+        string const& lib = readgroup_library(aln.readgroup());
+        if (lib.empty())
             continue;
 
-        breakdancer::Read aln(b, *this, false);
-        if (aln.library.empty())
-            continue;
-
-        size_t lib_idx = _lib_names_to_indices[aln.library];
+        size_t lib_idx = _lib_names_to_indices[lib];
         LibraryInfo& lib_info = _library_info[lib_idx];
 
         if (last_tid >= 0 && last_tid == aln.tid())

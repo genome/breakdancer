@@ -1,7 +1,7 @@
 #include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamConfig.hpp"
+#include "breakdancer/BamIO.hpp"
 #include "breakdancer/BamMerger.hpp"
-#include "breakdancer/BamReader.hpp"
 #include "breakdancer/BreakDancer.hpp"
 #include "breakdancer/Options.hpp"
 #include "breakdancer/Read.hpp"
@@ -50,22 +50,10 @@
 using boost::shared_ptr;
 
 using namespace std;
+namespace bd = breakdancer;
 
 typedef SCORE_FLOAT_TYPE real_type;
 real_type _max_kahan_err = 0.0;
-
-namespace {
-    vector<shared_ptr<IBamReader> > openBams(
-            vector<string> const& paths,
-            Options const& opts)
-    {
-        vector<shared_ptr<IBamReader> > rv;
-        for (size_t i = 0; i < paths.size(); ++i) {
-            rv.push_back(shared_ptr<IBamReader>(openBam(paths[i], opts)));
-        }
-        return rv;
-    }
-}
 
 // main function
 int main(int argc, char *argv[]) {
@@ -141,8 +129,8 @@ int main(int argc, char *argv[]) {
 
             float physical_coverage = float(lib_read_count*lib_info.mean_insertsize)/cfg.covered_reference_length()/2;
 
-            int nread_lengthDiscrepant = lib_info.get_read_counts_by_flag(breakdancer::ARP_FR_big_insert) +
-                lib_info.get_read_counts_by_flag(breakdancer::ARP_FR_small_insert);
+            int nread_lengthDiscrepant = lib_info.read_counts_by_flag[bd::ARP_FR_big_insert] +
+                lib_info.read_counts_by_flag[bd::ARP_FR_small_insert];
 
 
             int tmp = (nread_lengthDiscrepant > 0)?(float)cfg.covered_reference_length()/(float)nread_lengthDiscrepant:50;
@@ -161,9 +149,11 @@ int main(int argc, char *argv[]) {
                 << "\tphycov:" << physical_coverage
                 ;
 
-            typedef map<breakdancer::pair_orientation_flag, uint32_t>::const_iterator IterType;
-            for(IterType i = lib_info.read_counts_by_flag.begin(); i != lib_info.read_counts_by_flag.end(); ++i) {
-                cout << "\t" << i->first << ":" << i->second;
+            for (size_t i = 0; i < lib_info.read_counts_by_flag.size(); ++i) {
+                bd::pair_orientation_flag flag = bd::pair_orientation_flag(i);
+                uint32_t count = lib_info.read_counts_by_flag[flag];
+                if (count)
+                    cout << "\t" << bd::FLAG_VALUES[flag] << ":" << count;
             }
             cout << "\n";
         }

@@ -1,5 +1,4 @@
 #include "breakdancer/Read.hpp"
-#include "breakdancer/BamConfig.hpp"
 
 #include <map>
 #include <memory>
@@ -32,20 +31,16 @@ class TestRead : public ::testing::Test {
             bam_record.data_len = 23;
             bam_record.m_data = 32;
             bam_record.data = &data[0];
-            cfg.readgroup_platform["rg3"] = "helicos";
-            cfg.readgroup_library["rg3"] = "some_lib";
-            //cfg.library_info["some_lib"] = LibraryInfo();
-            test_read.reset(new Read(&bam_record, cfg));
+            test_read.reset(new Read(&bam_record));
         }
 
         bam1_core_t core;
         bam1_t bam_record;
         auto_ptr<Read> test_read;
-        BamConfig cfg;
 };
 
 TEST_F(TestRead, readgroup) {
-    ASSERT_EQ(test_read->readgroup, "rg3");
+    ASSERT_EQ(test_read->readgroup(), "rg3");
 }
 
 TEST_F(TestRead, query_name) {
@@ -96,7 +91,7 @@ TEST_F(TestRead, copy_constructor) {
     ASSERT_EQ(test_copy.quality_string(), "HB");
     ASSERT_EQ(test_copy.query_sequence(), "CT");
     ASSERT_EQ(test_copy.query_name(), "junk");
-    ASSERT_EQ(test_copy.readgroup, "rg3");
+    ASSERT_EQ(test_copy.readgroup(), "rg3");
 }
 
 TEST_F(TestRead, assignment) {
@@ -105,5 +100,5 @@ TEST_F(TestRead, assignment) {
     ASSERT_EQ(test_copy.quality_string(), "HB");
     ASSERT_EQ(test_copy.query_sequence(), "CT");
     ASSERT_EQ(test_copy.query_name(), "junk");
-    ASSERT_EQ(test_copy.readgroup, "rg3");
+    ASSERT_EQ(test_copy.readgroup(), "rg3");
 }

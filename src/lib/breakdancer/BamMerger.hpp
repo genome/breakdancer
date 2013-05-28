@@ -5,8 +5,6 @@
 #include <vector>
 #include <queue>
 
-class BamReader;
-
 // FIXME: figure out if something like this already exists.
 // if not, move it someplace more general
 template<typename T>

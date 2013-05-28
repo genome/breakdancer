@@ -1,61 +1,55 @@
 #pragma once
 
 #include "IBamReader.hpp"
+
 #include "Options.hpp"
 
+#include <boost/format.hpp>
+#include <functional>
+#include <stdexcept>
 #include <string>
 
-extern "C" {
-    #include <sam.h>
-    #include <bam.h>
-}
-
+template<typename Filter>
 class BamReader : public IBamReader {
 public:
     BamReader(std::string const& path);
-    ~BamReader();
+    ~BamReader() {
+        samclose(_in);
+        _in = 0;
+    }
 
-    int next(bam1_t* entry);
+    int next(bam1_t* entry) {
+        while (int rv = samread(_in, entry)) {
+            if (Filter()(entry))
+                return rv;
+        }
+        return 0;
+    }
 
-    bam_header_t* header() const;
+    bam_header_t* header() const {
+        return _in->header;
+    }
 
     std::string const& path() const { return _path; }
+
 
 protected:
     std::string _path;
     samfile_t* _in;
 };
 
-class RegionLimitedBamReader : public BamReader {
-public:
-    RegionLimitedBamReader(std::string const& path, char const* region);
-    ~RegionLimitedBamReader();
-
-    int next(bam1_t* entry);
-
-    int tid() const { return _tid; }
-    int beg() const { return _beg; }
-    int end() const { return _end; }
-
-protected:
-    std::string _region;
-    bam_index_t* _index;
-    bam_iter_t _iter;
-    int _tid;
-    int _beg;
-    int _end;
-};
-
+template<typename Filter>
 inline
-bam_header_t* BamReader::header() const {
-    return _in->header;
-}
+BamReader<Filter>::BamReader(std::string const& path)
+    : _path(path)
+    , _in(samopen(path.c_str(), "rb", 0))
+{
+    using boost::format;
+    if (!_in || !_in->header) {
+        throw std::runtime_error(str(format("Failed to open samfile %1%") % path));
+    }
 
-namespace {
-    IBamReader* openBam(std::string const& path, Options const& opts) {
-        if (opts.chr == "0")
-            return new BamReader(path);
-        else
-            return new RegionLimitedBamReader(path, opts.chr.c_str());
+    if (!_in->x.bam) {
+        throw std::runtime_error(str(format("%1% is not a valid bam file") % path));
     }
 }

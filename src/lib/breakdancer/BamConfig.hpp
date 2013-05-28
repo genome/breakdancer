@@ -20,7 +20,6 @@ public:
 
     ConfigMap<std::string, std::string>::type exes;
     ConfigMap<std::string, std::string>::type fmaps;
-    ConfigMap<std::string, std::string>::type readgroup_library;
     ConfigMap<std::string, std::string>::type readgroup_platform;
     ConfigMap<std::string, std::string>::type ReadsOut;
 
@@ -67,6 +66,14 @@ public:
         return _read_count_per_bam.at(key);
     }
 
+    std::string const& readgroup_library(std::string const& rg) const {
+        ConfigMap<std::string, std::string>::type::const_iterator lib = _readgroup_library.find(rg);
+        if(lib != _readgroup_library.end())
+            return lib->second;
+        else
+            return fmaps.begin()->second;
+    }
+
 private:
     void _analyze_bam(IBamReader& reader, Options const& opts);
 
@@ -79,4 +86,5 @@ private:
     uint32_t _covered_ref_len;
     ConfigMap<std::string, size_t>::type _lib_names_to_indices;
     std::vector<LibraryInfo> _library_info;
+    ConfigMap<std::string, std::string>::type _readgroup_library;
 };
