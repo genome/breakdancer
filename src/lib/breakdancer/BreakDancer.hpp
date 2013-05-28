@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+#include <boost/unordered_map.hpp>
+
 class Options;
 class BamConfig;
 class IBamReader;
@@ -24,6 +26,7 @@ public:
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
+    typedef std::map<std::string, std::vector<int> > ReadsToRegionsMap;
 
     BreakDancer(
         Options const& opts,
@@ -63,7 +66,7 @@ public:
         _read_count_FR_map[region_idx] = nread_FR - nread_ROI;
     }
 
-    void accumulate_reads_in_region(ReadCountsByLib& acc, size_t begin, size_t end) {
+    void accumulate_reads_between_regions(ReadCountsByLib& acc, size_t begin, size_t end) {
         for(size_t i = begin; i < std::min(end, _read_count_ROI_map.size()); i++){
             acc += _read_count_ROI_map[i];
 
@@ -152,25 +155,8 @@ private:
     int _region_end_pos; // global
 
 public:
-    std::map<std::string, std::vector<int> > _read_regions;
+    ReadsToRegionsMap _read_regions;
     std::map<std::string, float> read_density;
+
+    void process_sv(std::vector<int> const& snodes, std::set<int>& free_nodes, bam_header_t const* bam_header);
 };
-
-// choose the predominant type of read in a region
-inline
-breakdancer::pair_orientation_flag choose_sv_flag(const int num_readpairs, const std::map<breakdancer::pair_orientation_flag, int> reads_per_type) {
-    using namespace std;
-    breakdancer::pair_orientation_flag flag = breakdancer::NA;
-    float max_type_pct = 0.0;
-    for(map<breakdancer::pair_orientation_flag, int>::const_iterator type_iter = reads_per_type.begin(); type_iter != reads_per_type.end(); ++type_iter){
-        breakdancer::pair_orientation_flag current_flag = (*type_iter).first;
-        float type_pct = static_cast<float>((*type_iter).second) / static_cast<float>(num_readpairs);
-        if(max_type_pct < type_pct) {
-            max_type_pct = type_pct;
-            flag = current_flag;
-        }
-    }
-    return flag;
-}
-
-
