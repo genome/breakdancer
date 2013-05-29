@@ -190,7 +190,7 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     if(aln.bdqual() > _opts.min_map_qual
         && (aln.bdflag() == bd::NORMAL_FR || aln.bdflag() == bd::NORMAL_RF))
     {
-        string const& key = _opts.CN_lib == 1 ? aln.lib_info().name : lib_info.bam_file;
+        string const& key = _opts.CN_lib == 1 ? lib_info.name : lib_info.bam_file;
         ++nread_ROI[key];
         ++nread_FR[key];
     }
