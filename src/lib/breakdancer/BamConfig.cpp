@@ -268,6 +268,12 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
 
     bam1_t* b = bam_init1();
     while (reader.next(b) > 0) {
+        // FLAGMESS:
+        // Constructing the read here sets an initial bdflag that is going to be
+        // updated later. Let's see if we can trace what values of the flag are
+        // meaningful up until that point.
+        // Also, let's refer to this initial flag value as the "guess" and the
+        // updated version as the "final" flag value.
         breakdancer::Read aln(b, false);
 
         string const& lib = readgroup_library(aln.readgroup());
@@ -283,6 +289,13 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
         last_pos = aln.pos();
         last_tid = aln.tid();
 
+        // FLAGMESS:
+        // Here, we look at the guess, and care only whether or not it was
+        // normal (FR or RF, who cares?!). This could be a separate bool
+        // on the read class (something like proper_pair). It seems to me
+        // like there is no reason for making the FR/RF distinction in the
+        // guess. This check really just wants to know if tid == mtid and if
+        // flag & BAM_FPROPERPAIR != 0.
         if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
             ++lib_info.read_count; // FIXME: this is a bad side effect modifying another object
             ++read_count;
@@ -299,11 +312,41 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
         if (aln.bdqual() <= min_mapq)
             continue;
 
+        // FLAGMESS:
+        // Go look at the code in the Read class. I think the only way that
+        // the guess can be NA is if the read is marked as a duplicate
+        // (BAM_FDUP) or not paired (!BAM_FPAIRED). For reads that suffer
+        // neither of these conditions, it looks like another value will
+        // ALWAYS be set.
+        //
+        // Our bam readers have the ability to filter based on flag, so we
+        // could just filter all dup/unpaired alignments so that they never
+        // even make it this far.
         if(aln.bdflag() == breakdancer::NA)
             continue;
 
+        // FLAGMESS:
+        // mtid != tid is a property that is not modified when we transform
+        // the guess into the final flag value (if the guess is ARP_CTX,
+        // the final flag will also be ARP_CTX).
+        //
+        // The current code still wants to see unmapped reads and reads with
+        // unmapped mates for the purpose of computing the min/max read
+        // position (counting positions from reads that claim to be unmapped
+        // seems silly...), so we can't immediately filter them in the bam
+        // readers. However, being unmapped or having an unmapped mate could
+        // be a separate method call that doesn't involve "bdflag".
         if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
             continue;
+
+        // FLAGMESS:
+        // Below, we replace the guess with the final flag value, which
+        // requires access to the library from whence the read sprang. I wonder
+        // if we should just update the Read class to be able to answer all the
+        // questions it has been asked up until now and make calculation of the
+        // final flag something external. I could imagine a new class that holds
+        // Read, the library info, and the final flag. This class would be the
+        // currency of all downstream analysis.
 
         //It would be nice if this was pulled into the Read class as well
         //for now, let's just set the bdflag directly here since it is public
