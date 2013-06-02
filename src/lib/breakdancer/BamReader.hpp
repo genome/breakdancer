@@ -19,7 +19,7 @@ public:
     }
 
     int next(bam1_t* entry) {
-        while (int rv = samread(_in, entry)) {
+        while (int rv = samread(_in, entry) > 0) {
             if (Filter()(entry))
                 return rv;
         }

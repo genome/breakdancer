@@ -57,7 +57,7 @@ RegionLimitedBamReader<Filter>::~RegionLimitedBamReader() {
 template<typename Filter>
 inline
 int RegionLimitedBamReader<Filter>::next(bam1_t* entry) {
-    while (int rv = bam_iter_read(BamReader<Filter>::_in->x.bam, _iter, entry)) {
+    while (int rv = bam_iter_read(BamReader<Filter>::_in->x.bam, _iter, entry) > 0) {
         if (Filter()(entry))
             return rv;
     }
