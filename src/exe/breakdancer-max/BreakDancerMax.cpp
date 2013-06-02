@@ -71,18 +71,9 @@ int main(int argc, char *argv[]) {
         int max_readlen = cfg.max_readlen;
         int max_read_window_size = cfg.max_read_window_size; // this gets updated, so we copy it
 
-        // go through the iteration of fmaps
-        //
-        // is this just trying to validate that every "fmap" has a "exe" component?
-        // that should definitely be in the config object
-        ConfigMap<string,string>::type::const_iterator ii;
-        for(ii=cfg.fmaps.begin(); ii!=cfg.fmaps.end(); ++ii) {
-            cfg.exes.at(ii->first); // throws if not found
-        }
-
         // need to read the total base
 
-        if(cfg.fmaps.empty()) {
+        if(cfg.num_bams() == 0) {
             cout << "Error: no bams files in config file!\n";
             return 1;
         }

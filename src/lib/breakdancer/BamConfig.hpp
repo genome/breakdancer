@@ -19,7 +19,6 @@ public:
     BamConfig(std::istream& in, Options const& opts);
 
     ConfigMap<std::string, std::string>::type exes;
-    ConfigMap<std::string, std::string>::type fmaps;
     ConfigMap<std::string, std::string>::type readgroup_platform;
     ConfigMap<std::string, std::string>::type ReadsOut;
 
@@ -71,13 +70,15 @@ public:
         if(lib != _readgroup_library.end())
             return lib->second;
         else
-            return fmaps.begin()->second;
+            return _bam_library.begin()->second;
     }
 
 private:
     void _analyze_bam(IBamReader& reader, Options const& opts);
 
 private:
+    ConfigMap<std::string, std::string>::type _bam_library;
+
     // FIXME: we don't need separate vectors for filenames and file summaries
     // we can do with one if the summary can report the name.
     std::vector<std::string> _bam_files;

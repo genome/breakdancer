@@ -198,7 +198,7 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         } else {
             lib_info.min_mapping_quality = -1;
         }
-        fmaps[fmap] = lib;
+        _bam_library[fmap] = lib;
 
         if(mean_ != "NA" && std_ != "NA") {
             mean = atof(mean_.c_str());
@@ -250,7 +250,7 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
 
 
     typedef ConfigMap<string, string>::type::const_iterator IterType;
-    for (IterType iter = fmaps.begin(); iter != fmaps.end(); ++iter) {
+    for (IterType iter = _bam_library.begin(); iter != _bam_library.end(); ++iter) {
         _bam_files.push_back(iter->first);
         auto_ptr<IBamReader> reader(openBam(iter->first, opts));
         _analyze_bam(*reader, opts);
