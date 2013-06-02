@@ -551,63 +551,23 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     //float score;//don't know if float; no usage actually
     //int bestIndelSize;//don't know if int; no usage actually
     // START HERE
-    if(nread_pairs >= _opts.min_read_pair){
+    if(nread_pairs >= _opts.min_read_pair) {
         map<bd::pair_orientation_flag, int> diffspans;
         map<bd::pair_orientation_flag, string> sptypes;
         assert(snodes.size() == 1 || snodes.size() == 2);
-        SvEntry sv(snodes.size(), choose_sv_flag(type));
-        if(type[sv.flag] >= _opts.min_read_pair) {
+        assert(snodes.size() == type_orient_counts.size());
+        bd::pair_orientation_flag flag = choose_sv_flag(type);
+        if(type[flag] >= _opts.min_read_pair) {
             // print out result
-            string sv_ori1, sv_ori2;
-
-            int first_node = 0;
             ReadCountsByLib read_count_accumulator;
-            // find inner most positions
-            for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ++ii_snodes) {
-                int node = *ii_snodes;
-                BasicRegion const& region = get_region_data(node);
-                int chr = region.chr;
-                int start = region.start;
-                int end = region.end;
+            BasicRegion const* regions[2] = { &get_region_data(snodes[0]), 0 };
 
-                int idx = distance(snodes.begin(), ii_snodes);
-                boost::array<int, 2>& ori_readcount = type_orient_counts[idx];
-                if (idx > 0) {
-                    if(sv.flag == bd::ARP_RF) {
-                        sv.pos[1] = end + _max_readlen - 5;
-                    }
-                    else if(sv.flag == bd::ARP_FF) {
-                        sv.pos[0] = sv.pos[1];
-                        sv.pos[1] = end + _max_readlen - 5;
-                    }
-                    else if(sv.flag == bd::ARP_RR) {
-                        sv.pos[1] = start;
-                    }
-                    else {
-                        sv.pos[0] = sv.pos[1];
-                        sv.pos[1] = start;
-                    }
-                    sv.chr[1] = chr;
-                    stringstream tmpss;
-                    tmpss << ori_readcount[FWD] << "+" << ori_readcount[REV] << "-";
-                    sv_ori2 = tmpss.str();
-
-                    accumulate_reads_between_regions(read_count_accumulator, first_node, node);
-                }
-                else {
-                    first_node = node;
-                    sv.chr[0] = chr;
-                    sv.chr[1] = chr;
-                    sv.pos[0] = start;
-                    sv.pos[1] = end;
-
-                    stringstream tmpss;
-                    tmpss << ori_readcount[FWD] << "+" << ori_readcount[REV] << "-";
-                    sv_ori1 = sv_ori2 = tmpss.str();
-                }
+            if (snodes.size() == 2) {
+                accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
+                regions[1] = &get_region_data(snodes[1]);
             }
-            // cout << "\n";
-            //cout << sv.pos[0] + 1 << endl;
+
+            SvEntry sv(flag, _max_readlen, regions, type_orient_counts);
 
             // get the copy_number from read_count_accumulator
             map<string, float> copy_number;
@@ -626,8 +586,6 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             // deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
             string sptype;
             float diffspan = 0;
-            //debug
-            //int tmp_size_tlr = type_library_readcount[fl].size();
             if(_opts.CN_lib == 1){
                 for(map<string,int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
                     string const& sp = ii_type_lib_rc->first;
@@ -675,10 +633,6 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 }
             } // do bam for support reads; copy number will be done later
 
-            //debug
-            //int tmp_tlm = type_library_meanspan[fl][sp];
-            //int tmp_tlr = type_library_readcount[fl][sp];
-            //int tmp_mi = _cfg.mean_insertsize[sp];
             diffspans[sv.flag] = int(diffspan/float(type[sv.flag]) + 0.5);
             sptypes[sv.flag] = sptype;
 
@@ -697,10 +651,10 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             if(PhredQ > _opts.score_threshold){
                 cout << bam_header->target_name[sv.chr[0]]
                     << "\t" << sv.pos[0]
-                    << "\t" << sv_ori1
+                    << "\t" << sv.fwd_read_count[0] << "+" << sv.rev_read_count[0] << "-"
                     << "\t" << bam_header->target_name[sv.chr[1]]
                     << "\t" << sv.pos[1]
-                    << "\t" << sv_ori2
+                    << "\t" << sv.fwd_read_count[1] << "+" << sv.rev_read_count[1] << "-"
                     << "\t" << SVT
                     << "\t" << diffspans[sv.flag]
                     << "\t" << PhredQ
