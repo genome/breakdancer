@@ -490,7 +490,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     vector<string> free_reads;
     int nread_pairs = 0;
     map<string, bd::Read> read_pair; //unpaired reads
-    bd::PerFlagArray<int>::type type = {{0}}; // number of readpairs per each type/flag
+    bd::PerFlagArray<int>::type type = {{0}}; // number of readpairs per each type/flag, initialized to 0
 
     bd::PerFlagArray<map<string, int> >::type type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
 
@@ -561,7 +561,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             int normal_rp;
 
             int first_node = 0;
-            ReadCountsByLib read_count;
+            ReadCountsByLib read_count_accumulator;
             // find inner most positions
             for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes ++){
                 int node = *ii_snodes;
@@ -592,7 +592,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                     tmpss << ori_readcount[FWD] << "+" << ori_readcount[REV] << "-";
                     sv_ori2 = tmpss.str();
 
-                    accumulate_reads_between_regions(read_count, first_node, node);
+                    accumulate_reads_between_regions(read_count_accumulator, first_node, node);
                 }
                 else {
                     first_node = node;
@@ -610,17 +610,16 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             // cout << "\n";
             //cout << sv_pos1 + 1 << endl;
 
-            // get the copy_number from read_count
+            // get the copy_number from read_count_accumulator
             map<string, float> copy_number;
             float copy_number_sum = 0;
-            for(map<string, uint32_t>::const_iterator read_count_it = read_count.begin(); read_count_it != read_count.end(); read_count_it ++){
-                string const& lib = read_count_it->first;
-                copy_number[lib] = (float)((*read_count_it).second)/((float)read_density.at(lib) * float(sv_pos2 - sv_pos1))*2;
+            typedef map<string, uint32_t>::const_iterator IterType;
+            for(IterType iter = read_count_accumulator.begin(); iter != read_count_accumulator.end(); ++iter) {
+                string const& lib = iter->first;
+                copy_number[lib] = iter->second/(read_density.at(lib) * float(sv_pos2 - sv_pos1))*2.0f;
                 copy_number_sum += copy_number[lib];
-                //cout << lib << "\t" << (*read_count_it).second << "\t" << read_density[lib] << "\t" << sv_pos2-sv_pos1 << "\t" << copy_number[lib] << endl;
-
             }
-            copy_number_sum /= (2.0*(float)read_count.size());
+            copy_number_sum /= 2.0f * read_count_accumulator.size();
 
             if(flag != bd::ARP_RF && flag != bd::ARP_RR && sv_pos1 + _max_readlen - 5 < sv_pos2)
                 sv_pos1 += _max_readlen - 5; // apply extra padding to the start coordinates
