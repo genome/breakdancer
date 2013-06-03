@@ -14,7 +14,10 @@ set(SOURCES
     BasicRegion.hpp
     BreakDancer.cpp
     BreakDancer.hpp
+    FlagCodec.hpp
     IBamReader.hpp
+    IlluminaLIFlagCodec.hpp
+    IlluminaStandardFlagCodec.hpp
     LibraryInfo.hpp
     Options.cpp
     Options.hpp
