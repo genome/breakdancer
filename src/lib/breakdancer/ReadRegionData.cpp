@@ -1,5 +1,7 @@
 #include "ReadRegionData.hpp"
 
+#include <boost/bind.hpp>
+
 ReadRegionData::~ReadRegionData() {
     for (size_t i = 0; i < _regions.size(); ++i) {
         delete _regions[i];
@@ -63,6 +65,18 @@ void ReadRegionData::collapse_accumulated_data_into_last_region(ReadVector const
     for(ReadVector::const_iterator it_reg_seq = reads.begin(); it_reg_seq != reads.end(); ++it_reg_seq) {
         _read_regions.erase(it_reg_seq->query_name());
     }
+}
+
+ReadRegionData::const_read_iterator ReadRegionData::region_read_begin(size_t region_idx) const {
+    ReadVector const& reads = reads_in_region(region_idx);
+    return const_read_iterator(boost::bind(&ReadRegionData::read_exists, this, _1),
+        reads.begin(), reads.end());
+}
+
+ReadRegionData::const_read_iterator ReadRegionData::region_read_end(size_t region_idx) const {
+    ReadVector const& reads = reads_in_region(region_idx);
+    return const_read_iterator(boost::bind(&ReadRegionData::read_exists, this, _1),
+        reads.end(), reads.end());
 }
 
 void ReadRegionData::_add_current_read_counts_to_region(size_t region_idx) {

@@ -445,13 +445,12 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
 
     // free regions
     for(set<int>::const_iterator i = free_nodes.begin(); i != free_nodes.end(); ++i) {
-        BasicRegion::ReadVector const& reads = _rdata.reads_in_region(*i);
         // Hey, is it just me or does the following comparison double count
         // reads with mates in the same region and then go on to compare that
         // quantity to something measured in pairs?
         //
         // -ta
-        if(reads.size() < unsigned(_opts.min_read_pair))
+        if(_rdata.num_reads_in_region(*i) < unsigned(_opts.min_read_pair))
             _rdata.clear_region(*i);
     }
 }
@@ -471,15 +470,13 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     vector<boost::array<int, 2> > type_orient_counts;
 
     vector<bd::Read> support_reads; //reads supporting the SV
-    for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
+    for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++) {
         int node = *ii_snodes;
         boost::array<int, 2> orient_count = {{0,0}}; // number of reads per each orientation (FWD or REV)
 
-        BasicRegion::ReadVector const& region_reads = _rdata.reads_in_region(node);
-        for(BasicRegion::ReadVector::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
+        typedef ReadRegionData::const_read_iterator IterType;
+        for (IterType ii_regs = _rdata.region_read_begin(node); ii_regs != _rdata.region_read_end(node); ++ii_regs) {
             bd::Read const& y = *ii_regs;
-            if(!_rdata.read_exists(y.query_name()))
-                continue;
 
             ++orient_count[y.ori()];
 

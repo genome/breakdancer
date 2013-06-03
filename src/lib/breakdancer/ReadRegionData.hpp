@@ -4,6 +4,9 @@
 #include "Read.hpp"
 #include "ReadCountsByLib.hpp"
 
+#include <boost/function.hpp>
+#include <boost/iterator/filter_iterator.hpp>
+
 #include <map>
 #include <vector>
 #include <string>
@@ -15,6 +18,10 @@ public:
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
     typedef std::map<std::string, std::vector<int> > ReadsToRegionsMap;
+    typedef boost::filter_iterator<
+            boost::function<bool(ReadType const&)>,
+            ReadVector::const_iterator
+            > const_read_iterator;
 
     ~ReadRegionData();
 
@@ -22,6 +29,7 @@ public:
     uint32_t region_lib_read_count(size_t region_idx, std::string const& lib) const;
     void swap_reads_in_region(size_t region_idx, ReadVector& reads);
 
+    size_t num_reads_in_region(size_t region_idx) const;
     ReadVector const& reads_in_region(size_t region_idx) const;
     bool region_exists(size_t region_idx) const;
 
@@ -31,14 +39,16 @@ public:
     size_t num_regions() const;
     BasicRegion const& region(size_t region_idx) const;
 
-
     void incr_normal_read_count(ReadCountsByLib::LibId const& key);
     void clear_region_accumulator();
     void clear_flanking_region_accumulator();
     void collapse_accumulated_data_into_last_region(ReadVector const& reads);
     ReadsToRegionsMap const& read_regions() const;
     void erase_read(std::string const& read_name);
-    bool read_exists(std::string const& read_name);
+    bool read_exists(ReadType const& read) const;
+
+    const_read_iterator region_read_begin(size_t region_idx) const;
+    const_read_iterator region_read_end(size_t region_idx) const;
 
 private:
     void _add_current_read_counts_to_region(size_t region_idx);
@@ -59,6 +69,12 @@ private:
 inline
 void ReadRegionData::swap_reads_in_region(size_t region_idx, ReadVector& reads) {
     _regions[region_idx]->swap_reads(reads);
+}
+
+
+inline
+size_t ReadRegionData::num_reads_in_region(size_t region_idx) const {
+    return reads_in_region(region_idx).size();
 }
 
 inline
@@ -109,8 +125,6 @@ void ReadRegionData::erase_read(std::string const& read_name) {
 }
 
 inline
-bool ReadRegionData::read_exists(std::string const& read_name) {
-    return _read_regions.count(read_name) > 0;
+bool ReadRegionData::read_exists(ReadType const& read) const {
+    return _read_regions.count(read.query_name()) > 0;
 }
-
-
