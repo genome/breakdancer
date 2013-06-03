@@ -313,13 +313,18 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     // find paired regions that are supported by paired reads
     //warn("-- link regions\n");
     map<int, map<int, int> > clink;
-    ReadsToRegionsMap::const_iterator ii_read;
     //read is a map of readnames, each is associated with a vector of region ids
     // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
+    // -dl
+    //
+    // Alternate alignments can do it, but they break things in a bad way and are now
+    // filtered out at the BamReader level.
+    // -ta
+    ReadsToRegionsMap::const_iterator ii_read;
     for(ii_read = _rdata.read_regions().begin(); ii_read != _rdata.read_regions().end(); ii_read++){
         // test
         vector<int> const& p = ii_read->second;
-        assert( p.size() < 3);
+        assert(p.size() < 3);
         if(p.size() != 2) // skip singleton read (non read pairs)
             continue;
 
@@ -345,14 +350,8 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     set<int> free_nodes;
     map<int, map<int, int> >::iterator ii_clink = clink.begin();
 
-    //for(vector<int>::const_iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){}
     while (ii_clink != clink.end()) {
         int const& s0 = ii_clink->first;
-        //cout << ",,,,," << s0 << endl;
-        // assert( clink.find(s0) != clink.end() ); THIS ASSERT TRIPS
-        //if(clink.find(s0) == clink.end())
-            //continue;
-        // construct a subgraph
         vector<int> tails;
         tails.push_back(s0);
         bool need_iter_increment = true;
@@ -361,13 +360,13 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
             vector<int>::const_iterator it_tails;
             for(it_tails = tails.begin(); it_tails != tails.end(); it_tails ++){
                 int const& tail = *it_tails;
-                //cout << ",,,," << tail << endl;
-                assert(_rdata.region_exists(*it_tails));
+
                 // Make sure region with id "tail" hasn't already been deleted
+                assert(_rdata.region_exists(tail));
                 if(!_rdata.region_exists(tail))
                     continue;
 
-                //assert(clink.find(*it_tails) != clink.end()); THIS ASSERT TRIPS
+                //assert(clink.find(tail) != clink.end()); THIS ASSERT TRIPS
                 map<int, map<int, int> >::iterator found = clink.find(tail);
                 if (found == clink.end())
                     continue;
@@ -387,12 +386,14 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
 
                     map<int, map<int, int> > nodepair;
 
-                    if(nlinks < _opts.min_read_pair) {// require sufficient number of pairs
+                    // require sufficient number of pairs
+                    if(nlinks < _opts.min_read_pair) {
                         continue;
                     }
 
+                    // a node must be defined
                     assert(_rdata.region_exists(s1));
-                    if(!_rdata.region_exists(s1)) { // a node must be defined
+                    if(!_rdata.region_exists(s1)) {
                         continue;
                     }
 
@@ -442,20 +443,16 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
             ++ii_clink;
     }
 
-    // free nodes
-    for(set<int>::const_iterator ii_free_nodes = free_nodes.begin(); ii_free_nodes != free_nodes.end(); ii_free_nodes++){
-        // remove reads in the regions
-        int const& node = *ii_free_nodes;
-        BasicRegion::ReadVector const& reads = _rdata.reads_in_region(node);
-        if(reads.size() < unsigned(_opts.min_read_pair)){
-            for(vector<bd::Read>::const_iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
-                bd::Read const& y = *ii_reads;
-                string const& readname = y.query_name();
-                _rdata.erase_read(readname);
-            }
-            // remove regions
-            _rdata.clear_region(node);
-        }
+    // free regions
+    for(set<int>::const_iterator i = free_nodes.begin(); i != free_nodes.end(); ++i) {
+        BasicRegion::ReadVector const& reads = _rdata.reads_in_region(*i);
+        // Hey, is it just me or does the following comparison double count
+        // reads with mates in the same region and then go on to compare that
+        // quantity to something measured in pairs?
+        //
+        // -ta
+        if(reads.size() < unsigned(_opts.min_read_pair))
+            _rdata.clear_region(*i);
     }
 }
 
@@ -463,13 +460,15 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     vector<string> free_reads;
     int nread_pairs = 0;
     map<string, bd::Read> read_pair; //unpaired reads
-    bd::PerFlagArray<int>::type type = {{0}}; // number of readpairs per each type/flag, initialized to 0
+    // number of readpairs per each type/flag, initialized to 0
+    bd::PerFlagArray<int>::type type = {{0}}; 
+    // number of readpairs per each type/flag (first key) then library (second key)
+    bd::PerFlagArray<map<string, int> >::type type_library_readcount;
+    // average ISIZE from BAM records
+    bd::PerFlagArray<map<string, int> >::type type_library_meanspan;
 
-    bd::PerFlagArray<map<string, int> >::type type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
-
-    vector<boost::array<int, 2> > type_orient_counts; //vector of readcounts for each type/flag
-
-    bd::PerFlagArray<map<string, int> >::type type_library_meanspan; //average ISIZE from BAM records
+    // vector of readcounts for each type/flag
+    vector<boost::array<int, 2> > type_orient_counts;
 
     vector<bd::Read> support_reads; //reads supporting the SV
     for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
@@ -479,7 +478,6 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         BasicRegion::ReadVector const& region_reads = _rdata.reads_in_region(node);
         for(BasicRegion::ReadVector::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
             bd::Read const& y = *ii_regs;
-            //WHY ARE THESE CHECKS EVERYWHERE
             if(!_rdata.read_exists(y.query_name()))
                 continue;
 

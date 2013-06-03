@@ -45,6 +45,11 @@ public:
     }
 
     void clear_region(size_t region_idx) {
+        BasicRegion::ReadVector const& reads = reads_in_region(region_idx);
+
+        for(ReadVector::const_iterator i = reads.begin(); i != reads.end(); ++i)
+            erase_read(i->query_name());
+
         delete _regions[region_idx];
         _regions[region_idx] = 0;
     }
