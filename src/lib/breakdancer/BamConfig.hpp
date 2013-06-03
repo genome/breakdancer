@@ -2,6 +2,7 @@
 
 #include "ReadFlags.hpp"
 #include "LibraryInfo.hpp"
+#include "LibraryConfig.hpp"
 #include "utility.hpp"
 
 #include <istream>
@@ -26,7 +27,7 @@ public:
     int max_readlen;
 
     size_t num_libs() const {
-        return _library_info.size();
+        return _library_config.size();
     }
 
     size_t num_bams() const {
@@ -49,12 +50,12 @@ public:
         }
     }
 
-    LibraryInfo const& library_info_by_index(size_t idx) const {
-        return _library_info[idx];
+    LibraryConfig const& library_config_by_index(size_t idx) const {
+        return _library_config[idx];
     }
 
-    LibraryInfo const& library_info_by_name(std::string const& lib) const {
-        return _library_info[_lib_names_to_indices.at(lib)];
+    LibraryConfig const& library_config_by_name(std::string const& lib) const {
+        return _library_config[_lib_names_to_indices.at(lib)];
     }
 
     uint32_t covered_reference_length() const {
@@ -86,6 +87,6 @@ private:
     ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
     uint32_t _covered_ref_len;
     ConfigMap<std::string, size_t>::type _lib_names_to_indices;
-    std::vector<LibraryInfo> _library_info;
+    std::vector<LibraryConfig> _library_config;
     ConfigMap<std::string, std::string>::type _readgroup_library;
 };

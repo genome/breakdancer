@@ -144,7 +144,7 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
     , max_readlen(0)
     , _covered_ref_len(0)
 {
-    map<string, LibraryInfo> temp_lib_info;
+    map<string, LibraryConfig> temp_lib_config;
     string line;
     while(getline(in, line)) {
         if(line.empty())
@@ -188,15 +188,15 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
             ReadsOutTmp.close();
         }
 
-        LibraryInfo lib_info;
-        lib_info.name = lib;
-        lib_info.bam_file = fmap;
+        LibraryConfig lib_config;
+        lib_config.name = lib;
+        lib_config.bam_file = fmap;
 
         if(mqual_.compare("NA")){
             mqual = atoi(mqual_.c_str());
-            lib_info.min_mapping_quality = mqual;
+            lib_config.min_mapping_quality = mqual;
         } else {
-            lib_info.min_mapping_quality = -1;
+            lib_config.min_mapping_quality = -1;
         }
         _bam_library[fmap] = lib;
 
@@ -219,15 +219,15 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         }
         max_readlen = max_readlen < readlen ? readlen:max_readlen;
 
-        lib_info.mean_insertsize = mean;
-        lib_info.std_insertsize = std;
-        lib_info.uppercutoff = upper;
-        lib_info.lowercutoff = lower;
-        lib_info.readlens = readlen;
+        lib_config.mean_insertsize = mean;
+        lib_config.std_insertsize = std;
+        lib_config.uppercutoff = upper;
+        lib_config.lowercutoff = lower;
+        lib_config.readlens = readlen;
 
         // This is silly, library info can be repeated in the config file
         // hopefully whatever we are clobbering is equivalent!
-        temp_lib_info[lib] = lib_info;
+        temp_lib_config[lib] = lib_config;
 
         if(exes.find(fmap) == exes.end())
             exes[fmap] = exe.compare("NA")?exe:"cat";
@@ -242,10 +242,10 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
     }
 
 
-    for (map<string, LibraryInfo>::iterator i = temp_lib_info.begin(); i != temp_lib_info.end(); ++i) {
-        i->second.index = _library_info.size();
+    for (map<string, LibraryConfig>::iterator i = temp_lib_config.begin(); i != temp_lib_config.end(); ++i) {
+        i->second.index = _library_config.size();
         _lib_names_to_indices[i->first] = i->second.index;
-        _library_info.push_back(i->second);
+        _library_config.push_back(i->second);
     }
 
 
@@ -281,7 +281,7 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
             continue;
 
         size_t lib_idx = _lib_names_to_indices[lib];
-        LibraryInfo& lib_info = _library_info[lib_idx];
+        LibraryConfig& lib_config= _library_config[lib_idx];
 
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
@@ -297,7 +297,7 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
         // guess. This check really just wants to know if tid == mtid and if
         // flag & BAM_FPROPERPAIR != 0.
         if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
-            ++lib_info.read_count; // FIXME: this is a bad side effect modifying another object
+            ++lib_config.read_count; // FIXME: this is a bad side effect modifying another object
             ++read_count;
         }
 
@@ -306,8 +306,8 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
         //calculations before this is applied?
         //-dlarson
 
-        int min_mapq = lib_info.min_mapping_quality < 0 ?
-                opts.min_map_qual : lib_info.min_mapping_quality;
+        int min_mapq = lib_config.min_mapping_quality < 0 ?
+                opts.min_map_qual : lib_config.min_mapping_quality;
 
         if (aln.bdqual() <= min_mapq)
             continue;
@@ -351,24 +351,24 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
         //It would be nice if this was pulled into the Read class as well
         //for now, let's just set the bdflag directly here since it is public
         if(opts.Illumina_long_insert) {
-            if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_RF);
             }
-            if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_RF) {
+            if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == breakdancer::ARP_RF) {
                 aln.set_bdflag(breakdancer::NORMAL_RF);
             }
-            if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
             }
         }
         else{
-            if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
+            if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_big_insert);
             }
-            if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
+            if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
                 aln.set_bdflag(breakdancer::NORMAL_FR);
             }
-            if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
+            if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
         }
@@ -377,7 +377,7 @@ void BamConfig::_analyze_bam(IBamReader& reader, Options const& opts) {
             continue;
         }
 
-        ++lib_info.read_counts_by_flag[aln.bdflag()];
+        ++lib_config.read_counts_by_flag[aln.bdflag()];
     }
     bam_destroy1(b);
 
