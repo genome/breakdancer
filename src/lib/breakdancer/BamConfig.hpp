@@ -58,14 +58,6 @@ public:
         return _library_config[_lib_names_to_indices.at(lib)];
     }
 
-    uint32_t covered_reference_length() const {
-        return _covered_ref_len;
-    }
-
-    uint32_t read_count_in_bam(std::string const& key) const {
-        return _read_count_per_bam.at(key);
-    }
-
     std::string const& readgroup_library(std::string const& rg) const {
         ConfigMap<std::string, std::string>::type::const_iterator lib = _readgroup_library.find(rg);
         if(lib != _readgroup_library.end())
@@ -75,17 +67,12 @@ public:
     }
 
 private:
-    void _analyze_bam(IBamReader& reader, Options const& opts);
-
-private:
     ConfigMap<std::string, std::string>::type _bam_library;
 
     // FIXME: we don't need separate vectors for filenames and file summaries
     // we can do with one if the summary can report the name.
     std::vector<std::string> _bam_files;
     std::vector<BamSummary*> _bam_summaries;
-    ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
-    uint32_t _covered_ref_len;
     ConfigMap<std::string, size_t>::type _lib_names_to_indices;
     std::vector<LibraryConfig> _library_config;
     ConfigMap<std::string, std::string>::type _readgroup_library;

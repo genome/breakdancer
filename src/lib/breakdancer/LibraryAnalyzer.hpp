@@ -5,18 +5,34 @@
 #include <vector>
 
 class LibraryAnalyzer {
+    private:
+        ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
+        uint32_t _covered_ref_len;
+        std::vector<LibraryFlagDistribution> _library_flag_distribution;
+        ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
+
+
     public:
-        void analyze_bam(IBamReader& reads, Options const& opts, int number = -1);
+        //need a constructor
+        //it should construct flag distribution from what's in BamConfig. Also should be bam list from there and call analyze_bam for each bamfile
+        void analyze_bam(IBamReader& reads, Options const& opts, BamConfig const& bam_config, int number = -1);
 
-    private:
-        std::vector<LibraryInfo> _library_info;
-        void _analyze_read(Read const& aln);
+    uint32_t covered_reference_length() const {
+        return _covered_ref_len;
+    }
+
+    uint32_t read_count_in_bam(std::string const& key) const {
+        return _read_count_per_bam.at(key);
+    }
+
 };
 
-class LibraryInsertSizeAnalyzer : LibraryAnalyzer {
-    private:
-        void _analyze_read(Read const& aln);
-};
+/*
+   class LibraryInsertSizeAnalyzer : LibraryAnalyzer {
+   private:
+   void _analyze_read(Read const& aln);
+   };
+   */
 
 //what we want is to do two things
 //1. Accumulate information about both the counts of the flag types and the total number of types in the libraries
