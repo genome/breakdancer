@@ -4,9 +4,6 @@
 #include "Read.hpp"
 #include "ReadCountsByLib.hpp"
 
-#include <boost/function.hpp>
-#include <boost/iterator/filter_iterator.hpp>
-
 #include <map>
 #include <vector>
 #include <string>
@@ -18,10 +15,7 @@ public:
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
     typedef std::map<std::string, std::vector<int> > ReadsToRegionsMap;
-    typedef boost::filter_iterator<
-            boost::function<bool(ReadType const&)>,
-            ReadVector::const_iterator
-            > const_read_iterator;
+    typedef BasicRegion::const_read_iterator const_read_iterator;
 
     ~ReadRegionData();
 

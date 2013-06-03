@@ -68,15 +68,11 @@ void ReadRegionData::collapse_accumulated_data_into_last_region(ReadVector const
 }
 
 ReadRegionData::const_read_iterator ReadRegionData::region_read_begin(size_t region_idx) const {
-    ReadVector const& reads = reads_in_region(region_idx);
-    return const_read_iterator(boost::bind(&ReadRegionData::read_exists, this, _1),
-        reads.begin(), reads.end());
+    return _regions[region_idx]->reads_begin(boost::bind(&ReadRegionData::read_exists, this, _1));
 }
 
 ReadRegionData::const_read_iterator ReadRegionData::region_read_end(size_t region_idx) const {
-    ReadVector const& reads = reads_in_region(region_idx);
-    return const_read_iterator(boost::bind(&ReadRegionData::read_exists, this, _1),
-        reads.end(), reads.end());
+    return _regions[region_idx]->reads_end(boost::bind(&ReadRegionData::read_exists, this, _1));
 }
 
 void ReadRegionData::_add_current_read_counts_to_region(size_t region_idx) {
