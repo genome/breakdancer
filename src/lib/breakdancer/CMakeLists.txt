@@ -19,6 +19,7 @@ set(SOURCES
     IlluminaLIFlagCodec.hpp
     IlluminaStandardFlagCodec.hpp
     LibraryInfo.hpp
+    LibraryConfig.hpp
     Options.cpp
     Options.hpp
     Read.cpp

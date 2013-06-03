@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ReadFlags.hpp"
-#include "LibraryInfo.hpp"
 #include "LibraryConfig.hpp"
 #include "utility.hpp"
 
