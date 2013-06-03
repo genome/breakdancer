@@ -135,14 +135,12 @@ namespace {
 BamConfig::BamConfig()
     : max_read_window_size(1e8)
     , max_readlen(0)
-    , _covered_ref_len(0)
 {
 }
 
 BamConfig::BamConfig(std::istream& in, Options const& opts)
     : max_read_window_size(1e8)
     , max_readlen(0)
-    , _covered_ref_len(0)
 {
     map<string, LibraryConfig> temp_lib_config;
     string line;
@@ -252,8 +250,6 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
     typedef ConfigMap<string, string>::type::const_iterator IterType;
     for (IterType iter = _bam_library.begin(); iter != _bam_library.end(); ++iter) {
         _bam_files.push_back(iter->first);
-        auto_ptr<IBamReader> reader(openBam(iter->first, opts));
-        _analyze_bam(*reader, opts);
     }
 
     max_read_window_size = std::max(max_read_window_size, 50);
