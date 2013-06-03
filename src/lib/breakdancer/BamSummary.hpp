@@ -4,7 +4,7 @@
 #include "IBamReader.hpp"
 #include <vector>
 
-class LibraryAnalyzer {
+class BamSummary {
     private:
         ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
         uint32_t _covered_ref_len;
