@@ -4,6 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "ReadFlags.hpp"
 
 struct LibraryFlagDistribution {
     LibraryFlagDistribution()

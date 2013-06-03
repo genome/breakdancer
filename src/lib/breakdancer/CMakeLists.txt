@@ -11,6 +11,8 @@ set(SOURCES
     BamMerger.hpp
     BamReader.cpp
     BamReader.hpp
+    BamSummary.hpp
+    BamSummary.cpp
     BasicRegion.hpp
     BreakDancer.cpp
     BreakDancer.hpp
@@ -18,8 +20,9 @@ set(SOURCES
     IBamReader.hpp
     IlluminaLIFlagCodec.hpp
     IlluminaStandardFlagCodec.hpp
-    LibraryInfo.hpp
     LibraryConfig.hpp
+    LibraryFlagDistribution.hpp
+    LibraryInfo.hpp
     Options.cpp
     Options.hpp
     Read.cpp

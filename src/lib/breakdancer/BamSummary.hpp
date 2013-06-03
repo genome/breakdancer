@@ -1,6 +1,7 @@
 #pragma once
 
-#include "LibraryInfo.hpp"
+#include "LibraryFlagDistribution.hpp"
+#include "BamConfig.hpp"
 #include "IBamReader.hpp"
 #include <vector>
 
@@ -9,21 +10,19 @@ class BamSummary {
         ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
         uint32_t _covered_ref_len;
         std::vector<LibraryFlagDistribution> _library_flag_distribution;
-        ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
-
 
     public:
         //need a constructor
         //it should construct flag distribution from what's in BamConfig. Also should be bam list from there and call analyze_bam for each bamfile
         void analyze_bam(IBamReader& reads, Options const& opts, BamConfig const& bam_config, int number = -1);
 
-    uint32_t covered_reference_length() const {
-        return _covered_ref_len;
-    }
+        uint32_t covered_reference_length() const {
+            return _covered_ref_len;
+        }
 
-    uint32_t read_count_in_bam(std::string const& key) const {
-        return _read_count_per_bam.at(key);
-    }
+        uint32_t read_count_in_bam(std::string const& key) const {
+            return _read_count_per_bam.at(key);
+        }
 
 };
 

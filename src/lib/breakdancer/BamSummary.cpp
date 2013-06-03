@@ -1,7 +1,7 @@
 #include "BamSummary.hpp"
 
 //FIXME not sure what number does here
-void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig const& bam_config, int number = -1) {
+void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig const& bam_config, int number) {
     int last_pos = 0;
     int last_tid = -1;
 
