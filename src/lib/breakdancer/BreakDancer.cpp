@@ -548,8 +548,6 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         swap_reads_in_region(node, nonsupportives);
     }
 
-    //float score;//don't know if float; no usage actually
-    //int bestIndelSize;//don't know if int; no usage actually
     // START HERE
     if(nread_pairs >= _opts.min_read_pair) {
         map<bd::pair_orientation_flag, int> diffspans;
@@ -589,6 +587,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             if(_opts.CN_lib == 1){
                 for(map<string,int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
                     string const& sp = ii_type_lib_rc->first;
+                    int const& read_count = ii_type_lib_rc->second;
                     LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
                     // intialize to be zero, in case of no library, or DEL, or ITX.
 
@@ -604,12 +603,10 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                             copy_number_str = sstr.str();
                         }
                     }
-                    //string str_num_tmp;
-                    //sprintf(str_num_tmp, "%s", (*ii_type_lib_rc).second);
                     if(!sptype.empty())
                         sptype += ":";
 
-                    sptype += sp + "|" + lexical_cast<string>((*ii_type_lib_rc).second) + "," + copy_number_str;
+                    sptype += sp + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
 
                     diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
                 }
@@ -618,8 +615,9 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 map<string, int> type_bam_readcount;
                 for(map<string, int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
                     string const& sp = ii_type_lib_rc->first;
+                    int const& read_count = ii_type_lib_rc->second;
                     LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
-                    type_bam_readcount[lib_info.bam_file] += ii_type_lib_rc->second;
+                    type_bam_readcount[lib_info.bam_file] += read_count;
                     diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
                 }
                 for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
@@ -645,7 +643,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
 
             string SVT = _opts.SVtype.find(sv.flag)==_opts.SVtype.end()?"UN":_opts.SVtype.at(sv.flag); // UN stands for unknown
-            // make the coordinates with base 1
+            // Convert the coordinates to base 1
             ++sv.pos[0];
             ++sv.pos[1];
             if(PhredQ > _opts.score_threshold){
