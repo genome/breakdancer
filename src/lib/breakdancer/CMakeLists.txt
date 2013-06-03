@@ -23,6 +23,8 @@ set(SOURCES
     ReadCountsByLib.hpp
     ReadFlags.cpp
     ReadFlags.hpp
+    ReadRegionData.cpp
+    ReadRegionData.hpp
     RegionLimitedBamReader.hpp
     namespace.hpp
     utility.hpp
