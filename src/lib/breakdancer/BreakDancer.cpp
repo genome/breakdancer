@@ -532,8 +532,8 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     if(nread_pairs < _opts.min_read_pair)
         return;
 
-    map<bd::pair_orientation_flag, int> diffspans;
-    map<bd::pair_orientation_flag, string> sptypes;
+    bd::PerFlagArray<int>::type diffspans;
+    bd::PerFlagArray<string>::type sptypes;
     assert(snodes.size() == 1 || snodes.size() == 2);
     assert(snodes.size() == type_orient_counts.size());
     bd::pair_orientation_flag flag = choose_sv_flag(type);
