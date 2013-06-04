@@ -134,12 +134,6 @@ BreakDancer::BreakDancer(
 {
 }
 
-BreakDancer::~BreakDancer() {
-    for (size_t i = 0; i < _regions.size(); ++i) {
-        delete _regions[i];
-    }
-}
-
 void BreakDancer::run() {
     bam1_t* b = bam_init1();
     while (_merged_reader.next(b) >= 0) {
@@ -159,7 +153,7 @@ int BreakDancer::sum_of_region_sizes(std::vector<int> const& region_ids) const {
     typedef vector<int>::const_iterator IterType;
     int size(0);
     for (IterType i = region_ids.begin(); i != region_ids.end(); ++i)
-        size += _regions[*i]->size();
+        size += _rdata.region(*i).size();
     return size;
 }
 
@@ -192,8 +186,7 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
         && (aln.bdflag() == bd::NORMAL_FR || aln.bdflag() == bd::NORMAL_RF))
     {
         string const& key = _opts.CN_lib == 1 ? lib_info.name : lib_info.bam_file;
-        ++nread_ROI[key];
-        ++nread_FR[key];
+        _rdata.incr_normal_read_count(key);
     }
 
 
@@ -274,9 +267,8 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
         _max_readlen = 0;
         _ntotal_nucleotides = 0;
 
-        nread_ROI.clear();
-        // clear FR
-        nread_FR.clear();
+        _rdata.clear_region_accumulator();
+        _rdata.clear_flanking_region_accumulator();
     }
 
     reads_in_current_region.push_back(aln); // store each read in the region_sequence buffer
@@ -286,7 +278,9 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
         _collecting_normal_reads = true;
     _region_end_tid = aln.tid();
     _region_end_pos = aln.pos();
-    nread_ROI.clear(); //Not sure why this is cleared here...
+
+    _rdata.clear_region_accumulator();
+
     return;
 }
 
@@ -296,16 +290,9 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
             && seq_coverage < _opts.seq_coverage_lim) // skip short/unreliable flanking supporting regions
     {
         // register reliable region and supporting reads across gaps
-        int region_idx = add_region(new BasicRegion(_region_start_tid, _region_start_pos, _region_end_pos, _nnormal_reads));
-        add_current_read_counts_to_last_region();
-
-        // This adds the region id to an array of region ids
-        for(vector<bd::Read>::const_iterator iter = reads_in_current_region.begin(); iter != reads_in_current_region.end(); iter++) {
-            _read_regions[iter->query_name()].push_back(region_idx);
-        }
-        // we're essentially destroying reads_in_current_region here by swapping it with whatever
-        //reads this region had (probably none) this is ok because it is just about to be cleared anyway.
-        swap_reads_in_region(region_idx, reads_in_current_region);
+        //int region_idx = _rdata.add_region(new BasicRegion(_region_start_tid, _region_start_pos, _region_end_pos, _nnormal_reads));
+        //add_current_read_counts_to_last_region();
+        _rdata.add_region(_region_start_tid, _region_start_pos, _region_end_pos, _nnormal_reads, reads_in_current_region);
 
         ++_buffer_size; //increment tracking of number of regions in buffer???
         if(_buffer_size > _opts.buffer_size){
@@ -315,22 +302,7 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
         }
     }
     else {
-      // possible fake
-        // restore ROI for copy number since _region_end_pos will be cleared, but the new node has not been registered
-        // possible fake is off, never gone to possible fake before, save the ROI
-        // I don't understand exactly what this is doing. It is only hitting here to store the info if flanking region is too short or the coverage is too high
-        // It appears to be used to pull in nearby neighboring regions to the last region identified if the distance between them is too short
-        //
-        // Why doesn't this update the FR read counts as well?
-        // -ta
-        if(num_regions() > 0) {
-            add_per_lib_read_counts_to_last_region(nread_FR);
-        }
-
-        // remove any reads that are linking the last region with this new, merged in region
-        for(vector<bd::Read>::const_iterator it_reg_seq = reads_in_current_region.begin(); it_reg_seq != reads_in_current_region.end(); ++it_reg_seq) {
-            _read_regions.erase(it_reg_seq->query_name());
-        }
+        _rdata.collapse_accumulated_data_into_last_region(reads_in_current_region);
     }
 }
 
@@ -341,13 +313,18 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     // find paired regions that are supported by paired reads
     //warn("-- link regions\n");
     map<int, map<int, int> > clink;
-    ReadsToRegionsMap::const_iterator ii_read;
     //read is a map of readnames, each is associated with a vector of region ids
     // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
-    for(ii_read = _read_regions.begin(); ii_read != _read_regions.end(); ii_read++){
+    // -dl
+    //
+    // Alternate alignments can do it, but they break things in a bad way and are now
+    // filtered out at the BamReader level.
+    // -ta
+    ReadsToRegionsMap::const_iterator ii_read;
+    for(ii_read = _rdata.read_regions().begin(); ii_read != _rdata.read_regions().end(); ii_read++){
         // test
         vector<int> const& p = ii_read->second;
-        assert( p.size() < 3);
+        assert(p.size() < 3);
         if(p.size() != 2) // skip singleton read (non read pairs)
             continue;
 
@@ -373,14 +350,8 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     set<int> free_nodes;
     map<int, map<int, int> >::iterator ii_clink = clink.begin();
 
-    //for(vector<int>::const_iterator ii_s0_vec = s0_vec.begin(); ii_s0_vec != s0_vec.end(); ii_s0_vec ++){}
     while (ii_clink != clink.end()) {
         int const& s0 = ii_clink->first;
-        //cout << ",,,,," << s0 << endl;
-        // assert( clink.find(s0) != clink.end() ); THIS ASSERT TRIPS
-        //if(clink.find(s0) == clink.end())
-            //continue;
-        // construct a subgraph
         vector<int> tails;
         tails.push_back(s0);
         bool need_iter_increment = true;
@@ -389,13 +360,13 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
             vector<int>::const_iterator it_tails;
             for(it_tails = tails.begin(); it_tails != tails.end(); it_tails ++){
                 int const& tail = *it_tails;
-                //cout << ",,,," << tail << endl;
-                assert(region_exists(*it_tails));
+
                 // Make sure region with id "tail" hasn't already been deleted
-                if(!region_exists(tail))
+                assert(_rdata.region_exists(tail));
+                if(!_rdata.region_exists(tail))
                     continue;
 
-                //assert(clink.find(*it_tails) != clink.end()); THIS ASSERT TRIPS
+                //assert(clink.find(tail) != clink.end()); THIS ASSERT TRIPS
                 map<int, map<int, int> >::iterator found = clink.find(tail);
                 if (found == clink.end())
                     continue;
@@ -415,12 +386,14 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
 
                     map<int, map<int, int> > nodepair;
 
-                    if(nlinks < _opts.min_read_pair) {// require sufficient number of pairs
+                    // require sufficient number of pairs
+                    if(nlinks < _opts.min_read_pair) {
                         continue;
                     }
 
-                    assert(region_exists(s1));
-                    if(!region_exists(s1)) { // a node must be defined
+                    // a node must be defined
+                    assert(_rdata.region_exists(s1));
+                    if(!_rdata.region_exists(s1)) {
                         continue;
                     }
 
@@ -470,20 +443,16 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
             ++ii_clink;
     }
 
-    // free nodes
-    for(set<int>::const_iterator ii_free_nodes = free_nodes.begin(); ii_free_nodes != free_nodes.end(); ii_free_nodes++){
-        // remove reads in the regions
-        int const& node = *ii_free_nodes;
-        BasicRegion::ReadVector const& reads = reads_in_region(node);
-        if(reads.size() < unsigned(_opts.min_read_pair)){
-            for(vector<bd::Read>::const_iterator ii_reads = reads.begin(); ii_reads != reads.end(); ii_reads++){
-                bd::Read const& y = *ii_reads;
-                string const& readname = y.query_name();
-                _read_regions.erase(readname);
-            }
-            // remove regions
-            clear_region(node);
-        }
+    // free regions
+    for(set<int>::const_iterator i = free_nodes.begin(); i != free_nodes.end(); ++i) {
+        BasicRegion::ReadVector const& reads = _rdata.reads_in_region(*i);
+        // Hey, is it just me or does the following comparison double count
+        // reads with mates in the same region and then go on to compare that
+        // quantity to something measured in pairs?
+        //
+        // -ta
+        if(reads.size() < unsigned(_opts.min_read_pair))
+            _rdata.clear_region(*i);
     }
 }
 
@@ -491,24 +460,25 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     vector<string> free_reads;
     int nread_pairs = 0;
     map<string, bd::Read> read_pair; //unpaired reads
-    bd::PerFlagArray<int>::type type = {{0}}; // number of readpairs per each type/flag, initialized to 0
+    // number of readpairs per each type/flag, initialized to 0
+    bd::PerFlagArray<int>::type type = {{0}}; 
+    // number of readpairs per each type/flag (first key) then library (second key)
+    bd::PerFlagArray<map<string, int> >::type type_library_readcount;
+    // average ISIZE from BAM records
+    bd::PerFlagArray<map<string, int> >::type type_library_meanspan;
 
-    bd::PerFlagArray<map<string, int> >::type type_library_readcount; // number of readpairs per each type/flag (first key) then library (second key)
-
-    vector<boost::array<int, 2> > type_orient_counts; //vector of readcounts for each type/flag
-
-    bd::PerFlagArray<map<string, int> >::type type_library_meanspan; //average ISIZE from BAM records
+    // vector of readcounts for each type/flag
+    vector<boost::array<int, 2> > type_orient_counts;
 
     vector<bd::Read> support_reads; //reads supporting the SV
     for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++){
         int node = *ii_snodes;
         boost::array<int, 2> orient_count = {{0,0}}; // number of reads per each orientation (FWD or REV)
 
-        BasicRegion::ReadVector const& region_reads = reads_in_region(node);
+        BasicRegion::ReadVector const& region_reads = _rdata.reads_in_region(node);
         for(BasicRegion::ReadVector::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
             bd::Read const& y = *ii_regs;
-            //WHY ARE THESE CHECKS EVERYWHERE
-            if(_read_regions.count(y.query_name()) == 0)
+            if(!_rdata.read_exists(y.query_name()))
                 continue;
 
             ++orient_count[y.ori()];
@@ -538,14 +508,14 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
         int node = *ii_snodes;
         BasicRegion::ReadVector nonsupportives;
-        BasicRegion::ReadVector const& region_reads = reads_in_region(node);
+        BasicRegion::ReadVector const& region_reads = _rdata.reads_in_region(node);
         for(vector<bd::Read>::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
             bd::Read const& y = *ii_regs;
             if(read_pair.count(y.query_name()) == 0)
                 continue;
             nonsupportives.push_back(y);
         }
-        swap_reads_in_region(node, nonsupportives);
+        _rdata.swap_reads_in_region(node, nonsupportives);
     }
 
     // START HERE
@@ -558,11 +528,11 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         if(type[flag] >= _opts.min_read_pair) {
             // print out result
             ReadCountsByLib read_count_accumulator;
-            BasicRegion const* regions[2] = { &get_region_data(snodes[0]), 0 };
+            BasicRegion const* regions[2] = { &_rdata.region(snodes[0]), 0 };
 
             if (snodes.size() == 2) {
-                accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
-                regions[1] = &get_region_data(snodes[1]);
+                _rdata.accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
+                regions[1] = &_rdata.region(snodes[1]);
             }
 
             SvEntry sv(flag, _max_readlen, regions, type_orient_counts);
@@ -714,7 +684,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         }
         // free reads
         for(vector<string>::const_iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
-            _read_regions.erase(*ii_free_reads);
+            _rdata.erase_read(*ii_free_reads);
         }
         //free_reads.clear();
         for (vector<int>::const_iterator iter = snodes.begin(); iter != snodes.end(); ++iter)
