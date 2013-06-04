@@ -26,6 +26,9 @@ set(SOURCES
     ReadRegionData.cpp
     ReadRegionData.hpp
     RegionLimitedBamReader.hpp
+    SvBuilder.cpp
+    SvBuilder.hpp
+    SvEntry.hpp
     namespace.hpp
     utility.hpp
 )
