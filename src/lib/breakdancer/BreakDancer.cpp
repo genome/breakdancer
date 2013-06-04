@@ -6,14 +6,17 @@
 #include "SvEntry.hpp"
 
 #include <boost/array.hpp>
-#include <boost/math/distributions/poisson.hpp>
-#include <boost/math/distributions/chi_squared.hpp>
+#include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/math/distributions/chi_squared.hpp>
+#include <boost/math/distributions/poisson.hpp>
+#include <boost/ref.hpp>
 
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <functional>
 #include <set>
 #include <sstream>
 
@@ -458,7 +461,6 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
 void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free_nodes, bam_header_t const* bam_header) {
     vector<string> free_reads;
     int nread_pairs = 0;
-    map<string, bd::Read> read_pair; //unpaired reads
     // number of readpairs per each type/flag, initialized to 0
     bd::PerFlagArray<int>::type type = {{0}}; 
     // number of readpairs per each type/flag (first key) then library (second key)
@@ -468,6 +470,9 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
     // vector of readcounts for each type/flag
     vector<boost::array<int, 2> > type_orient_counts;
+
+    typedef map<string, bd::Read> ObservedReads;
+    ObservedReads read_pair; //unpaired reads
 
     vector<bd::Read> support_reads; //reads supporting the SV
     for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++) {
@@ -480,12 +485,14 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
             ++orient_count[y.ori()];
 
-            typedef map<string, bd::Read>::iterator IterType;
+            typedef ObservedReads::iterator IterType;
             pair<IterType, bool> inserted = read_pair.insert(make_pair(y.query_name(), y));
             if(inserted.second) {
+                // This is the first time we have seen a read with this name.
                 read_pair[y.query_name()] = y;
             }
-            else{
+            else {
+                // We just found an existing read's mate. Good for him/her.
                 bd::pair_orientation_flag bdflag = y.bdflag();
                 string libname = y.lib_info().name;
                 ++type[bdflag];
@@ -502,191 +509,198 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         type_orient_counts.push_back(orient_count);
     }
 
+    // This predicate takes a read and evaluates:
+    //      read_pair.count(read.query_name()) == 1
+    boost::function<bool(ReadType const&)> pred = boost::bind(
+        std::equal_to<ObservedReads::size_type>(),
+            1,
+            boost::bind(&ObservedReads::count, &read_pair,
+                        boost::bind(&ReadType::query_name, _1))
+        );
+
     for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
-        int node = *ii_snodes;
-        BasicRegion::ReadVector nonsupportives;
-        BasicRegion::ReadVector const& region_reads = _rdata.reads_in_region(node);
-        for(vector<bd::Read>::const_iterator ii_regs = region_reads.begin(); ii_regs != region_reads.end(); ii_regs++){
-            bd::Read const& y = *ii_regs;
-            if(read_pair.count(y.query_name()) == 0)
-                continue;
-            nonsupportives.push_back(y);
-        }
+        int const& node = *ii_snodes;
+        // Copy all reads for which ``pred'' holds into nonsupportives
+        BasicRegion::ReadVector nonsupportives(
+            _rdata.region(node).reads_begin(pred),
+            _rdata.region(node).reads_end(pred)
+            );
+
         _rdata.swap_reads_in_region(node, nonsupportives);
     }
 
-    // START HERE
-    if(nread_pairs >= _opts.min_read_pair) {
-        map<bd::pair_orientation_flag, int> diffspans;
-        map<bd::pair_orientation_flag, string> sptypes;
-        assert(snodes.size() == 1 || snodes.size() == 2);
-        assert(snodes.size() == type_orient_counts.size());
-        bd::pair_orientation_flag flag = choose_sv_flag(type);
-        if(type[flag] >= _opts.min_read_pair) {
-            // print out result
-            ReadCountsByLib read_count_accumulator;
-            BasicRegion const* regions[2] = { &_rdata.region(snodes[0]), 0 };
+    if(nread_pairs < _opts.min_read_pair)
+        return;
 
-            if (snodes.size() == 2) {
-                _rdata.accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
-                regions[1] = &_rdata.region(snodes[1]);
+    map<bd::pair_orientation_flag, int> diffspans;
+    map<bd::pair_orientation_flag, string> sptypes;
+    assert(snodes.size() == 1 || snodes.size() == 2);
+    assert(snodes.size() == type_orient_counts.size());
+    bd::pair_orientation_flag flag = choose_sv_flag(type);
+    if(type[flag] >= _opts.min_read_pair) {
+        // print out result
+        ReadCountsByLib read_count_accumulator;
+        BasicRegion const* regions[2] = { &_rdata.region(snodes[0]), 0 };
+
+        if (snodes.size() == 2) {
+            _rdata.accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
+            regions[1] = &_rdata.region(snodes[1]);
+        }
+
+        SvEntry sv(flag, _max_readlen, regions, type_orient_counts);
+
+        // get the copy_number from read_count_accumulator
+        map<string, float> copy_number;
+        float copy_number_sum = 0;
+        typedef map<string, uint32_t>::const_iterator IterType;
+        for(IterType iter = read_count_accumulator.begin(); iter != read_count_accumulator.end(); ++iter) {
+            string const& lib = iter->first;
+            copy_number[lib] = iter->second/(read_density.at(lib) * float(sv.pos[1] - sv.pos[0]))*2.0f;
+            copy_number_sum += copy_number[lib];
+        }
+        copy_number_sum /= 2.0f * read_count_accumulator.size();
+
+        if(sv.flag != bd::ARP_RF && sv.flag != bd::ARP_RR && sv.pos[0] + _max_readlen - 5 < sv.pos[1])
+            sv.pos[0] += _max_readlen - 5; // apply extra padding to the start coordinates
+
+        // deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
+        string sptype;
+        float diffspan = 0;
+        if(_opts.CN_lib == 1){
+            for(map<string,int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
+                string const& sp = ii_type_lib_rc->first;
+                int const& read_count = ii_type_lib_rc->second;
+                LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
+                // intialize to be zero, in case of no library, or DEL, or ITX.
+
+                string copy_number_str = "NA";
+                if(sv.flag != bd::ARP_CTX){
+                    float copy_number_ = 0;
+
+                    if(copy_number.find(sp) != copy_number.end()){
+                        copy_number_ = copy_number[sp];
+                        stringstream sstr;
+                        sstr << fixed;
+                        sstr << setprecision(2) << copy_number_;
+                        copy_number_str = sstr.str();
+                    }
+                }
+                if(!sptype.empty())
+                    sptype += ":";
+
+                sptype += sp + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
+
+                diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+            }
+        } // do lib for copy number and support reads
+        else{
+            map<string, int> type_bam_readcount;
+            for(map<string, int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
+                string const& sp = ii_type_lib_rc->first;
+                int const& read_count = ii_type_lib_rc->second;
+                LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
+                type_bam_readcount[lib_info.bam_file] += read_count;
+                diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+            }
+            for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
+                string const& sp = ii_type_bam_rc->first;
+                if(!sptype.empty())
+                    sptype += ":";
+                sptype += sp + "|" + lexical_cast<string>((*ii_type_bam_rc).second);
+            }
+            if(sptype.empty()) {
+                sptype = "NA";
+            }
+        } // do bam for support reads; copy number will be done later
+
+        diffspans[sv.flag] = int(diffspan/float(type[sv.flag]) + 0.5);
+        sptypes[sv.flag] = sptype;
+
+
+        int total_region_size = sum_of_region_sizes(snodes);
+        real_type LogPvalue = ComputeProbScore(total_region_size, type_library_readcount[sv.flag], sv.flag, _opts.fisher, _cfg);
+        real_type PhredQ_tmp = -10*LogPvalue/log(10);
+        int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
+        float AF = 1 - copy_number_sum;
+
+
+        string SVT = _opts.SVtype.find(sv.flag)==_opts.SVtype.end()?"UN":_opts.SVtype.at(sv.flag); // UN stands for unknown
+        // Convert the coordinates to base 1
+        ++sv.pos[0];
+        ++sv.pos[1];
+        if(PhredQ > _opts.score_threshold){
+            cout << bam_header->target_name[sv.chr[0]]
+                << "\t" << sv.pos[0]
+                << "\t" << sv.fwd_read_count[0] << "+" << sv.rev_read_count[0] << "-"
+                << "\t" << bam_header->target_name[sv.chr[1]]
+                << "\t" << sv.pos[1]
+                << "\t" << sv.fwd_read_count[1] << "+" << sv.rev_read_count[1] << "-"
+                << "\t" << SVT
+                << "\t" << diffspans[sv.flag]
+                << "\t" << PhredQ
+                << "\t" << type[sv.flag]
+                << "\t" << sptypes[sv.flag]
+                ;
+
+            if(_opts.print_AF == 1)
+                cout <<  "\t" << AF;
+
+            if(_opts.CN_lib == 0 && sv.flag != bd::ARP_CTX){
+                vector<string> const& bams = _cfg.bam_files();
+                for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
+                    map<string, float>::const_iterator cniter = copy_number.find(*iter);
+
+                    if(cniter  == copy_number.end())
+                        cout << "\tNA";
+                    else {
+                        cout << "\t";
+                        cout << fixed;
+                        cout << setprecision(2) << cniter->second;
+                    }
+                }
+            }
+            cout << "\n";
+
+
+            if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
+                write_fastq_for_flag(sv.flag, support_reads, _cfg.ReadsOut);
             }
 
-            SvEntry sv(flag, _max_readlen, regions, type_orient_counts);
+            if(!_opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
+                ofstream fh_BED(_opts.dump_BED.c_str(), ofstream::app);
 
-            // get the copy_number from read_count_accumulator
-            map<string, float> copy_number;
-            float copy_number_sum = 0;
-            typedef map<string, uint32_t>::const_iterator IterType;
-            for(IterType iter = read_count_accumulator.begin(); iter != read_count_accumulator.end(); ++iter) {
-                string const& lib = iter->first;
-                copy_number[lib] = iter->second/(read_density.at(lib) * float(sv.pos[1] - sv.pos[0]))*2.0f;
-                copy_number_sum += copy_number[lib];
-            }
-            copy_number_sum /= 2.0f * read_count_accumulator.size();
-
-            if(sv.flag != bd::ARP_RF && sv.flag != bd::ARP_RR && sv.pos[0] + _max_readlen - 5 < sv.pos[1])
-                sv.pos[0] += _max_readlen - 5; // apply extra padding to the start coordinates
-
-            // deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
-            string sptype;
-            float diffspan = 0;
-            if(_opts.CN_lib == 1){
-                for(map<string,int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
-                    string const& sp = ii_type_lib_rc->first;
-                    int const& read_count = ii_type_lib_rc->second;
-                    LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
-                    // intialize to be zero, in case of no library, or DEL, or ITX.
-
-                    string copy_number_str = "NA";
-                    if(sv.flag != bd::ARP_CTX){
-                        float copy_number_ = 0;
-
-                        if(copy_number.find(sp) != copy_number.end()){
-                            copy_number_ = copy_number[sp];
-                            stringstream sstr;
-                            sstr << fixed;
-                            sstr << setprecision(2) << copy_number_;
-                            copy_number_str = sstr.str();
-                        }
-                    }
-                    if(!sptype.empty())
-                        sptype += ":";
-
-                    sptype += sp + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
-
-                    diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+                string trackname(bam_header->target_name[sv.chr[0]]);
+                trackname = trackname.append("_").append(lexical_cast<string>(sv.pos[0])).append("_").append(SVT).append("_").append(lexical_cast<string>(diffspans[sv.flag]));
+                fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv.chr[0]] << " " << sv.pos[0] << " " << SVT << " " << diffspans[sv.flag] << "\"\tuseScore=0\n";
+                for(vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
+                    bd::Read const& y = *ii_support_reads;
+                    if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != sv.flag)
+                        continue;
+                    int aln_end = y.pos() - y.query_length() - 1;
+                    string color = y.ori() == FWD ? "0,0,255" : "255,0,0";
+                    //FIXME if the bam already used chr prefixed chromosome names this would duplicate them...
+                    fh_BED << "chr" << bam_header->target_name[y.tid()]
+                        << "\t" << y.pos()
+                        << "\t" << aln_end
+                        << "\t" << y.query_name() << "|" << y.lib_info().name
+                        << "\t" << y.bdqual() * 10
+                        << "\t" << y.ori()
+                        << "\t" << y.pos()
+                        << "\t" << aln_end
+                        << "\t" << color
+                        << "\n";
                 }
-            } // do lib for copy number and support reads
-            else{
-                map<string, int> type_bam_readcount;
-                for(map<string, int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
-                    string const& sp = ii_type_lib_rc->first;
-                    int const& read_count = ii_type_lib_rc->second;
-                    LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
-                    type_bam_readcount[lib_info.bam_file] += read_count;
-                    diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
-                }
-                for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
-                    string const& sp = ii_type_bam_rc->first;
-                    if(!sptype.empty())
-                        sptype += ":";
-                    sptype += sp + "|" + lexical_cast<string>((*ii_type_bam_rc).second);
-                }
-                if(sptype.empty()) {
-                    sptype = "NA";
-                }
-            } // do bam for support reads; copy number will be done later
-
-            diffspans[sv.flag] = int(diffspan/float(type[sv.flag]) + 0.5);
-            sptypes[sv.flag] = sptype;
-
-
-            int total_region_size = sum_of_region_sizes(snodes);
-            real_type LogPvalue = ComputeProbScore(total_region_size, type_library_readcount[sv.flag], sv.flag, _opts.fisher, _cfg);
-            real_type PhredQ_tmp = -10*LogPvalue/log(10);
-            int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
-            float AF = 1 - copy_number_sum;
-
-
-            string SVT = _opts.SVtype.find(sv.flag)==_opts.SVtype.end()?"UN":_opts.SVtype.at(sv.flag); // UN stands for unknown
-            // Convert the coordinates to base 1
-            ++sv.pos[0];
-            ++sv.pos[1];
-            if(PhredQ > _opts.score_threshold){
-                cout << bam_header->target_name[sv.chr[0]]
-                    << "\t" << sv.pos[0]
-                    << "\t" << sv.fwd_read_count[0] << "+" << sv.rev_read_count[0] << "-"
-                    << "\t" << bam_header->target_name[sv.chr[1]]
-                    << "\t" << sv.pos[1]
-                    << "\t" << sv.fwd_read_count[1] << "+" << sv.rev_read_count[1] << "-"
-                    << "\t" << SVT
-                    << "\t" << diffspans[sv.flag]
-                    << "\t" << PhredQ
-                    << "\t" << type[sv.flag]
-                    << "\t" << sptypes[sv.flag]
-                    ;
-
-                if(_opts.print_AF == 1)
-                    cout <<  "\t" << AF;
-
-                if(_opts.CN_lib == 0 && sv.flag != bd::ARP_CTX){
-                    vector<string> const& bams = _cfg.bam_files();
-                    for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
-                        map<string, float>::const_iterator cniter = copy_number.find(*iter);
-
-                        if(cniter  == copy_number.end())
-                            cout << "\tNA";
-                        else {
-                            cout << "\t";
-                            cout << fixed;
-                            cout << setprecision(2) << cniter->second;
-                        }
-                    }
-                }
-                cout << "\n";
-
-
-                if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
-                    write_fastq_for_flag(sv.flag, support_reads, _cfg.ReadsOut);
-                }
-
-                if(!_opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
-                    ofstream fh_BED(_opts.dump_BED.c_str(), ofstream::app);
-
-                    string trackname(bam_header->target_name[sv.chr[0]]);
-                    trackname = trackname.append("_").append(lexical_cast<string>(sv.pos[0])).append("_").append(SVT).append("_").append(lexical_cast<string>(diffspans[sv.flag]));
-                    fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv.chr[0]] << " " << sv.pos[0] << " " << SVT << " " << diffspans[sv.flag] << "\"\tuseScore=0\n";
-                    for(vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
-                        bd::Read const& y = *ii_support_reads;
-                        if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != sv.flag)
-                            continue;
-                        int aln_end = y.pos() - y.query_length() - 1;
-                        string color = y.ori() == FWD ? "0,0,255" : "255,0,0";
-                        //FIXME if the bam already used chr prefixed chromosome names this would duplicate them...
-                        fh_BED << "chr" << bam_header->target_name[y.tid()]
-                            << "\t" << y.pos()
-                            << "\t" << aln_end
-                            << "\t" << y.query_name() << "|" << y.lib_info().name
-                            << "\t" << y.bdqual() * 10
-                            << "\t" << y.ori()
-                            << "\t" << y.pos()
-                            << "\t" << aln_end
-                            << "\t" << color
-                            << "\n";
-                    }
-                    fh_BED.close();
-                }
+                fh_BED.close();
             }
         }
-        // free reads
-        for(vector<string>::const_iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
-            _rdata.erase_read(*ii_free_reads);
-        }
-        //free_reads.clear();
-        for (vector<int>::const_iterator iter = snodes.begin(); iter != snodes.end(); ++iter)
-            free_nodes.insert(*iter);
     }
+    // free reads
+    for(vector<string>::const_iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
+        _rdata.erase_read(*ii_free_reads);
+    }
+    //free_reads.clear();
+    for (vector<int>::const_iterator iter = snodes.begin(); iter != snodes.end(); ++iter)
+        free_nodes.insert(*iter);
 }
 
 void BreakDancer::process_final_region(bam_header_t const* bam_header) {

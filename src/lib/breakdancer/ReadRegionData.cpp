@@ -47,7 +47,7 @@ size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int
 }
 
 void ReadRegionData::clear_region(size_t region_idx) {
-    BasicRegion::ReadVector const& reads = reads_in_region(region_idx);
+    BasicRegion::ReadVector const& reads = _reads_in_region(region_idx);
 
     for(ReadVector::const_iterator i = reads.begin(); i != reads.end(); ++i)
         erase_read(i->query_name());

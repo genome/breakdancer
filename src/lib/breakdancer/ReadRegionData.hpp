@@ -4,9 +4,10 @@
 #include "Read.hpp"
 #include "ReadCountsByLib.hpp"
 
+#include <cassert>
 #include <map>
-#include <vector>
 #include <string>
+#include <vector>
 
 class ReadRegionData {
 public:
@@ -24,7 +25,6 @@ public:
     void swap_reads_in_region(size_t region_idx, ReadVector& reads);
 
     size_t num_reads_in_region(size_t region_idx) const;
-    ReadVector const& reads_in_region(size_t region_idx) const;
     bool region_exists(size_t region_idx) const;
 
     size_t add_region(int start_tid, int start_pos, int end_pos, int normal_reads,
@@ -47,6 +47,7 @@ public:
 private:
     void _add_current_read_counts_to_region(size_t region_idx);
     void _add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts);
+    ReadVector const& _reads_in_region(size_t region_idx) const;
 
 
 private:
@@ -62,17 +63,17 @@ private:
 
 inline
 void ReadRegionData::swap_reads_in_region(size_t region_idx, ReadVector& reads) {
+    assert(_regions[region_idx] != 0);
     _regions[region_idx]->swap_reads(reads);
 }
 
-
 inline
 size_t ReadRegionData::num_reads_in_region(size_t region_idx) const {
-    return reads_in_region(region_idx).size();
+    return _reads_in_region(region_idx).size();
 }
 
 inline
-ReadRegionData::ReadVector const& ReadRegionData::reads_in_region(size_t region_idx) const {
+ReadRegionData::ReadVector const& ReadRegionData::_reads_in_region(size_t region_idx) const {
     return _regions[region_idx]->reads();
 }
 
