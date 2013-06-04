@@ -4,6 +4,8 @@
 #include "Read.hpp"
 #include "ReadCountsByLib.hpp"
 
+#include <boost/unordered_map.hpp>
+
 #include <cassert>
 #include <map>
 #include <string>
@@ -15,7 +17,7 @@ public:
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
-    typedef std::map<std::string, std::vector<int> > ReadsToRegionsMap;
+    typedef boost::unordered_map<std::string, std::vector<int> > ReadsToRegionsMap;
     typedef BasicRegion::const_read_iterator const_read_iterator;
 
     ~ReadRegionData();

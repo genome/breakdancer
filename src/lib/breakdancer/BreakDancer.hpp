@@ -27,7 +27,7 @@ public:
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
-    typedef std::map<std::string, std::vector<int> > ReadsToRegionsMap;
+    typedef ReadRegionData::ReadsToRegionsMap ReadsToRegionsMap;
 
     BreakDancer(
         Options const& opts,
