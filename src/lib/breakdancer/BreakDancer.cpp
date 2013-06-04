@@ -306,47 +306,17 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
 void BreakDancer::build_connection(bam_header_t const* bam_header) {
     // build connections
     // find paired regions that are supported by paired reads
-    //warn("-- link regions\n");
-    map<int, map<int, int> > clink;
-    //read is a map of readnames, each is associated with a vector of region ids
-    // wtf is this using a vector? How would we ever have more than two regions? Multi-mapping?
-    // -dl
-    //
-    // Alternate alignments can do it, but they break things in a bad way and are now
-    // filtered out at the BamReader level.
-    // -ta
-    ReadsToRegionsMap::const_iterator ii_read;
-    for(ii_read = _rdata.read_regions().begin(); ii_read != _rdata.read_regions().end(); ii_read++){
-        // test
-        vector<int> const& p = ii_read->second;
-        assert(p.size() < 3);
-        if(p.size() != 2) // skip singleton read (non read pairs)
-            continue;
 
-        int const& r1 = p[0];
-        int const& r2 = p[1];
+    typedef ReadRegionData::Subgraph Subgraph;
+    typedef ReadRegionData::Graph Graph;
+    Graph graph(_rdata.region_graph());
 
-        //track the number of links between two nodes
-        //
-        // This doesn't make a lot of sense to me. When r1 == r2 and r1 is not
-        // in the map, both are set to one. If r1 is in the map, then we increment
-        // twice. We should either double count or not. Doing a mixture of both is
-        // silly. -ta
-        if(clink.find(r1) != clink.end() && clink[r1].find(r2) != clink[r1].end()){
-            ++clink[r1][r2];
-            ++clink[r2][r1];
-        }
-        else{
-            clink[r1][r2] = 1;
-            clink[r2][r1] = 1;
-        }
-    }
     // segregate graph, find nodes that have connections
     set<int> free_nodes;
-    map<int, map<int, int> >::iterator ii_clink = clink.begin();
+    Graph::iterator ii_graph = graph.begin();
 
-    while (ii_clink != clink.end()) {
-        int const& s0 = ii_clink->first;
+    while (ii_graph != graph.end()) {
+        int const& s0 = ii_graph->first;
         vector<int> tails;
         tails.push_back(s0);
         bool need_iter_increment = true;
@@ -361,25 +331,24 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                 if(!_rdata.region_exists(tail))
                     continue;
 
-                //assert(clink.find(tail) != clink.end()); THIS ASSERT TRIPS
-                map<int, map<int, int> >::iterator found = clink.find(tail);
-                if (found == clink.end())
+                //assert(graph.find(tail) != graph.end()); THIS ASSERT TRIPS
+                Graph::iterator found = graph.find(tail);
+                if (found == graph.end())
                     continue;
 
-                map<int, int>& clink_tail = found->second;
+                Subgraph& graph_tail = found->second;
 
-                map<int, int>::iterator ii_clink_tail = clink_tail.begin();
-                //for(vector<int>::const_iterator ii_s1s = s1s.begin(); ii_s1s != s1s.end(); ii_s1s++){}
-                while (ii_clink_tail != clink_tail.end()) {
-                    int s1 = ii_clink_tail->first;
-                    int nlinks = ii_clink_tail->second;
+                Subgraph::iterator ii_graph_tail = graph_tail.begin();
+                while (ii_graph_tail != graph_tail.end()) {
+                    int s1 = ii_graph_tail->first;
+                    int nlinks = ii_graph_tail->second;
 
                     // save the current iterator so we can safely delete it
-                    map<int, int>::iterator iter_to_delete = ii_clink_tail;
+                    Subgraph::iterator iter_to_delete = ii_graph_tail;
                     // increment the iterator so deleting iter_to_delete won't invalidate it
-                    ++ii_clink_tail;
+                    ++ii_graph_tail;
 
-                    map<int, map<int, int> > nodepair;
+                    Graph nodepair;
 
                     // require sufficient number of pairs
                     if(nlinks < _opts.min_read_pair) {
@@ -397,18 +366,17 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                     //NOTE it is entirely possible that tail and s1 are the same.
                     if(tail != s1){
                         nodepair[tail][s1] = nlinks;
-                        //clink[s1].erase(tail);
+                        graph[s1].erase(tail);
                     }
 
-                    //clink_tail.erase(iter_to_delete);
+                    graph_tail.erase(iter_to_delete);
 
                     newtails.push_back(s1);
 
                     // analysis a nodepair
                     vector<int> snodes;
-                    for(map<int,map<int,int> >::const_iterator ii_nodepair = nodepair.begin(); ii_nodepair != nodepair.end(); ii_nodepair ++){
+                    for(Graph::const_iterator ii_nodepair = nodepair.begin(); ii_nodepair != nodepair.end(); ii_nodepair ++){
                         snodes.push_back((*ii_nodepair).first);
-                        //cout << "," << (*ii_nodepair).first << endl;
                     }
 
                     assert(snodes.size() < 3);
@@ -424,18 +392,18 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
 
                     process_sv(snodes, free_nodes, bam_header);
                 }
-                if (tail == ii_clink->first) {
+                if (tail == ii_graph->first) {
                     // The fact that this is postincrement is critical
-                    clink.erase(ii_clink++);
+                    graph.erase(ii_graph++);
                     need_iter_increment = false;
                 } else {
-                    clink.erase(tail);
+                    graph.erase(tail);
                 }
             }
             tails.swap(newtails);
         }
         if (need_iter_increment)
-            ++ii_clink;
+            ++ii_graph;
     }
 
     // free regions

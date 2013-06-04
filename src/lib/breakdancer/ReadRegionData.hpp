@@ -15,12 +15,16 @@ class ReadRegionData {
 public:
     typedef breakdancer::Read ReadType;
     typedef BasicRegion::ReadVector ReadVector;
+    typedef BasicRegion::const_read_iterator const_read_iterator;
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
     typedef boost::unordered_map<std::string, std::vector<int> > ReadsToRegionsMap;
-    typedef BasicRegion::const_read_iterator const_read_iterator;
+    typedef std::map<int, int> Subgraph;
+    typedef std::map<int, Subgraph> Graph;
 
     ~ReadRegionData();
+
+    Graph region_graph() const;
 
     void accumulate_reads_between_regions(ReadCountsByLib& acc, size_t begin, size_t end) const;
     uint32_t region_lib_read_count(size_t region_idx, std::string const& lib) const;

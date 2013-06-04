@@ -8,6 +8,37 @@ ReadRegionData::~ReadRegionData() {
     }
 }
 
+ReadRegionData::Graph ReadRegionData::region_graph() const {
+    Graph graph;
+    typedef ReadsToRegionsMap::const_iterator IterType;
+    for(IterType i = read_regions().begin(); i != read_regions().end(); i++){
+        // test
+        std::vector<int> const& p = i->second;
+        assert(p.size() < 3);
+        if(p.size() != 2) // skip singleton read (non read pairs)
+            continue;
+
+        int const& r1 = p[0];
+        int const& r2 = p[1];
+
+        //track the number of links between two nodes
+        //
+        // This doesn't make a lot of sense to me. When r1 == r2 and r1 is not
+        // in the map, both are set to one. If r1 is in the map, then we increment
+        // twice. We should either double count or not. Doing a mixture of both is
+        // silly. -ta
+        if(graph.find(r1) != graph.end() && graph[r1].find(r2) != graph[r1].end()){
+            ++graph[r1][r2];
+            ++graph[r2][r1];
+        }
+        else{
+            graph[r1][r2] = 1;
+            graph[r2][r1] = 1;
+        }
+    }
+    return graph;
+}
+
 void ReadRegionData::accumulate_reads_between_regions(ReadCountsByLib& acc, size_t begin, size_t end) const {
     for(size_t i = begin; i < std::min(end, _read_count_ROI_map.size()); i++){
         acc += _read_count_ROI_map[i];
