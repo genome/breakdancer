@@ -18,14 +18,16 @@ public:
 
 
     BasicRegion() {}
-    BasicRegion(int chr, int start, int end, int normal_read_pairs)
-        : chr(chr)
+    BasicRegion(int idx, int chr, int start, int end, int normal_read_pairs)
+        : index(idx)
+        , chr(chr)
         , start(start)
         , end(end)
         , normal_read_pairs(normal_read_pairs)
     {
     }
 
+    int index;
     int chr;
     int start;
     int end;

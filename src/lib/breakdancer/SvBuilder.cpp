@@ -34,12 +34,12 @@ bd::pair_orientation_flag SvBuilder::choose_sv_flag() {
     return flag;
 }
 
-void SvBuilder::observe_read(Read const& read, int region) {
-    if (region != current_region) {
+void SvBuilder::observe_read(Read const& read, BasicRegion const& region) {
+    if (region.index != current_region) {
         if (++num_regions > 2) {
             throw runtime_error("Attempted to build sv with more than 2 regions");
         }
-        current_region = region;
+        current_region = region.index;
     }
     int region_idx = num_regions - 1;
 

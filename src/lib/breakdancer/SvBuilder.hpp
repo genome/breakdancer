@@ -1,5 +1,6 @@
 #pragma once
 
+#include "BasicRegion.hpp"
 #include "Read.hpp"
 
 #include <boost/array.hpp>
@@ -14,7 +15,7 @@ struct SvBuilder {
 
     SvBuilder();
 
-    void observe_read(Read const& read, int region);
+    void observe_read(Read const& read, BasicRegion const& region);
     breakdancer::pair_orientation_flag choose_sv_flag();
 
 // data

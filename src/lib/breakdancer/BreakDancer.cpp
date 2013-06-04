@@ -329,13 +329,10 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                 Subgraph& graph_tail = found->second;
                 Subgraph::iterator ii_graph_tail = graph_tail.begin();
                 while (ii_graph_tail != graph_tail.end()) {
-                    int const& s1 = ii_graph_tail->first;
-                    int const& nlinks = ii_graph_tail->second;
+                    int s1 = ii_graph_tail->first;
+                    int nlinks = ii_graph_tail->second;
 
-                    // save the current iterator so we can safely delete it
-                    Subgraph::iterator iter_to_delete = ii_graph_tail;
-                    // increment the iterator so deleting iter_to_delete won't invalidate it
-                    ++ii_graph_tail;
+                    graph_tail.erase(ii_graph_tail++);
 
                     assert(_rdata.region_exists(s1));
                     // require sufficient number of pairs
@@ -352,7 +349,6 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                     else
                         snodes.push_back(s1);
 
-                    graph_tail.erase(iter_to_delete);
                     newtails.push_back(s1);
                     process_sv(snodes, free_nodes, bam_header);
                 }
@@ -388,7 +384,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         int node = *ii_snodes;
         typedef ReadRegionData::const_read_iterator IterType;
         for (IterType ii_regs = _rdata.region_read_begin(node); ii_regs != _rdata.region_read_end(node); ++ii_regs) {
-            svb.observe_read(*ii_regs, node);
+            svb.observe_read(*ii_regs, _rdata.region(node));
         }
     }
 
@@ -416,7 +412,6 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         return;
 
     assert(snodes.size() == 1 || snodes.size() == 2);
-    assert(snodes.size() == svb.type_orient_counts.size());
     bd::pair_orientation_flag flag = svb.choose_sv_flag();
     if(svb.flag_counts[flag] >= _opts.min_read_pair) {
         int diffspan;

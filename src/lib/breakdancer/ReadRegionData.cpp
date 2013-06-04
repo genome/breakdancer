@@ -61,8 +61,8 @@ uint32_t ReadRegionData::region_lib_read_count(size_t region_idx, std::string co
 size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int normal_reads,
         ReadVector& reads)
 {
-    _regions.push_back(new BasicRegion(start_tid, start_pos, end_pos, normal_reads));
-    size_t region_idx = _regions.size() - 1;
+    size_t region_idx = _regions.size();
+    _regions.push_back(new BasicRegion(region_idx, start_tid, start_pos, end_pos, normal_reads));
     _add_current_read_counts_to_region(region_idx);
 
     // This adds the region id to an array of region ids
