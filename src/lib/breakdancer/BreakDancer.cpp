@@ -112,11 +112,13 @@ namespace {
 BreakDancer::BreakDancer(
         Options const& opts,
         BamConfig const& cfg,
+        LibraryInfo const& lib_info,
         IBamReader& merged_reader,
         int max_read_window_size
         )
     : _opts(opts)
     , _cfg(cfg)
+    , _lib_info(lib_info)
     , _merged_reader(merged_reader)
     , _max_read_window_size(max_read_window_size)
 

@@ -18,7 +18,8 @@
 #include <boost/unordered_map.hpp>
 
 class Options;
-class BamConfig;
+class BamConfig; //FIXME we probably won't need to store this once done stubbing in LibraryInfo
+class LibraryInfo;
 class IBamReader;
 
 class BreakDancer {
@@ -32,6 +33,7 @@ public:
     BreakDancer(
         Options const& opts,
         BamConfig const& cfg,
+        LibraryInfo const& lib_info,
         IBamReader& merged_reader,
         int max_read_window_size
         );
@@ -63,6 +65,7 @@ private:
     ReadRegionData _rdata;
     Options const& _opts;
     BamConfig const& _cfg;
+    LibraryInfo const& _lib_info;
     IBamReader& _merged_reader;
     int _max_read_window_size;
 
