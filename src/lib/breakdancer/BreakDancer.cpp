@@ -152,14 +152,6 @@ void BreakDancer::run() {
     bam_destroy1(b);
 }
 
-int BreakDancer::sum_of_region_sizes(std::vector<int> const& region_ids) const {
-    typedef vector<int>::const_iterator IterType;
-    int size(0);
-    for (IterType i = region_ids.begin(); i != region_ids.end(); ++i)
-        size += _rdata.region(*i).size();
-    return size;
-}
-
 
 
 void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
@@ -617,7 +609,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         sptypes[sv.flag] = sptype;
 
 
-        int total_region_size = sum_of_region_sizes(snodes);
+        int total_region_size = _rdata.sum_of_region_sizes(snodes);
         real_type LogPvalue = ComputeProbScore(total_region_size, type_library_readcount[sv.flag], sv.flag, _opts.fisher, _cfg);
         real_type PhredQ_tmp = -10*LogPvalue/log(10);
         int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);

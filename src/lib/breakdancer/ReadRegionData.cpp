@@ -46,6 +46,14 @@ size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int
     return region_idx;
 }
 
+int ReadRegionData::sum_of_region_sizes(std::vector<int> const& region_ids) const {
+    typedef std::vector<int>::const_iterator IterType;
+    int size(0);
+    for (IterType i = region_ids.begin(); i != region_ids.end(); ++i)
+        size += region(*i).size();
+    return size;
+}
+
 void ReadRegionData::clear_region(size_t region_idx) {
     BasicRegion::ReadVector const& reads = _reads_in_region(region_idx);
 

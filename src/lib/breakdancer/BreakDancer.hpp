@@ -38,7 +38,6 @@ public:
 
     void push_read(ReadType& aln, bam_header_t const* bam_header);
     void build_connection(bam_header_t const* bam_header);
-    int sum_of_region_sizes(std::vector<int> const& region_ids) const;
 
     void set_max_read_window_size(int val) {
         _max_read_window_size = val;

@@ -29,6 +29,8 @@ public:
 
     size_t add_region(int start_tid, int start_pos, int end_pos, int normal_reads,
             ReadVector& reads);
+    int sum_of_region_sizes(std::vector<int> const& region_ids) const;
+
     void clear_region(size_t region_idx);
     size_t num_regions() const;
     BasicRegion const& region(size_t region_idx) const;
@@ -89,6 +91,7 @@ size_t ReadRegionData::num_regions() const {
 
 inline
 BasicRegion const& ReadRegionData::region(size_t region_idx) const {
+    assert(_regions[region_idx] != 0);
     return *_regions[region_idx];
 }
 
