@@ -686,13 +686,11 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             }
         }
     }
-    // free reads
-    for(vector<string>::const_iterator ii_free_reads = free_reads.begin(); ii_free_reads != free_reads.end(); ii_free_reads ++){
-        _rdata.erase_read(*ii_free_reads);
-    }
-    //free_reads.clear();
-    for (vector<int>::const_iterator iter = snodes.begin(); iter != snodes.end(); ++iter)
-        free_nodes.insert(*iter);
+
+    std::for_each(free_reads.begin(), free_reads.end(),
+        boost::bind(&ReadRegionData::erase_read, &_rdata, _1));
+
+    free_nodes.insert(snodes.begin(), snodes.end());
 }
 
 void BreakDancer::process_final_region(bam_header_t const* bam_header) {
