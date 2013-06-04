@@ -415,12 +415,13 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
     if(svb.num_pairs < _opts.min_read_pair)
         return;
 
-    bd::PerFlagArray<int>::type diffspans;
-    bd::PerFlagArray<string>::type sptypes;
     assert(snodes.size() == 1 || snodes.size() == 2);
     assert(snodes.size() == svb.type_orient_counts.size());
     bd::pair_orientation_flag flag = svb.choose_sv_flag();
     if(svb.flag_counts[flag] >= _opts.min_read_pair) {
+        int diffspan;
+        string sptype;
+
         // print out result
         ReadCountsByLib read_count_accumulator;
         BasicRegion const* regions[2] = { &_rdata.region(snodes[0]), 0 };
@@ -446,9 +447,8 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         if(sv.flag != bd::ARP_RF && sv.flag != bd::ARP_RR && sv.pos[0] + _max_readlen - 5 < sv.pos[1])
             sv.pos[0] += _max_readlen - 5; // apply extra padding to the start coordinates
 
-        // deal with directly flag, rather than for each 'fl', since flag is already known, and diffspans and sptypes are only used for flag;
-        string sptype;
-        float diffspan = 0;
+        string sptype_tmp;
+        float diff = 0;
         if(_opts.CN_lib == 1){
             for(map<string,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[sv.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
                 string const& sp = ii_type_lib_rc->first;
@@ -468,12 +468,12 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                         copy_number_str = sstr.str();
                     }
                 }
-                if(!sptype.empty())
-                    sptype += ":";
+                if(!sptype_tmp.empty())
+                    sptype_tmp += ":";
 
-                sptype += sp + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
+                sptype_tmp += sp + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
 
-                diffspan += float(svb.type_library_meanspan[sv.flag][sp]) - float(svb.type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+                diff += float(svb.type_library_meanspan[sv.flag][sp]) - float(svb.type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
             }
         } // do lib for copy number and support reads
         else{
@@ -483,21 +483,21 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 int const& read_count = ii_type_lib_rc->second;
                 LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
                 type_bam_readcount[lib_info.bam_file] += read_count;
-                diffspan += float(svb.type_library_meanspan[sv.flag][sp]) - float(svb.type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+                diff += float(svb.type_library_meanspan[sv.flag][sp]) - float(svb.type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
             }
             for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
                 string const& sp = ii_type_bam_rc->first;
-                if(!sptype.empty())
-                    sptype += ":";
-                sptype += sp + "|" + lexical_cast<string>((*ii_type_bam_rc).second);
+                if(!sptype_tmp.empty())
+                    sptype_tmp += ":";
+                sptype_tmp += sp + "|" + lexical_cast<string>((*ii_type_bam_rc).second);
             }
-            if(sptype.empty()) {
-                sptype = "NA";
+            if(sptype_tmp.empty()) {
+                sptype_tmp = "NA";
             }
         } // do bam for support reads; copy number will be done later
 
-        diffspans[sv.flag] = int(diffspan/float(svb.flag_counts[sv.flag]) + 0.5);
-        sptypes[sv.flag] = sptype;
+        diffspan = int(diff/float(svb.flag_counts[sv.flag]) + 0.5);
+        sptype = sptype_tmp;
 
 
         int total_region_size = _rdata.sum_of_region_sizes(snodes);
@@ -519,10 +519,10 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 << "\t" << sv.pos[1]
                 << "\t" << sv.fwd_read_count[1] << "+" << sv.rev_read_count[1] << "-"
                 << "\t" << SVT
-                << "\t" << diffspans[sv.flag]
+                << "\t" << diffspan
                 << "\t" << PhredQ
                 << "\t" << svb.flag_counts[sv.flag]
-                << "\t" << sptypes[sv.flag]
+                << "\t" << sptype
                 ;
 
             if(_opts.print_AF == 1)
@@ -553,8 +553,8 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 ofstream fh_BED(_opts.dump_BED.c_str(), ofstream::app);
 
                 string trackname(bam_header->target_name[sv.chr[0]]);
-                trackname = trackname.append("_").append(lexical_cast<string>(sv.pos[0])).append("_").append(SVT).append("_").append(lexical_cast<string>(diffspans[sv.flag]));
-                fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv.chr[0]] << " " << sv.pos[0] << " " << SVT << " " << diffspans[sv.flag] << "\"\tuseScore=0\n";
+                trackname = trackname.append("_").append(lexical_cast<string>(sv.pos[0])).append("_").append(SVT).append("_").append(lexical_cast<string>(diffspan));
+                fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv.chr[0]] << " " << sv.pos[0] << " " << SVT << " " << diffspan << "\"\tuseScore=0\n";
                 for(vector<bd::Read>::const_iterator ii_support_reads = svb.support_reads.begin(); ii_support_reads != svb.support_reads.end(); ii_support_reads ++){
                     bd::Read const& y = *ii_support_reads;
                     if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != sv.flag)
