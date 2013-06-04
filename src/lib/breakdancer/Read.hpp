@@ -29,7 +29,7 @@ public:
         , _ori(FWD)
         , _abs_isize(0)
         , _bdqual(0)
-        , _lib_info(0)
+        , _lib_index(-1)
     {}
 
     void set_bdflag(pair_orientation_flag const& new_flag);
@@ -45,10 +45,10 @@ public:
     int const& query_length() const;
     strand_e const& ori() const;
     int const& isize() const;
-    int const& abs_isize() const;
 
-    LibraryInfo const& lib_info() const;
-    void set_lib_info(LibraryInfo const* lib_info);
+    void set_lib_index(std::size_t const& index);
+    std::size_t const& lib_index() const;
+    int const& abs_isize() const;
 
     void to_fastq(std::ostream& stream) const;
 
@@ -75,7 +75,7 @@ private: // Data
 
     std::string _bam_data;
 
-    LibraryInfo const* _lib_info;
+    std::size_t _lib_index;
 };
 
 inline
@@ -156,15 +156,14 @@ std::string const& Read::quality_string() const {
 }
 
 inline
-void Read::set_lib_info(LibraryInfo const* lib_info) {
-    _lib_info = lib_info;
+void Read::set_lib_index(std::size_t const& index) {
+    _lib_index = index;
 }
 
 
 inline
-LibraryInfo const& Read::lib_info() const {
-    assert(_lib_info != 0);
-    return *_lib_info;
+std::size_t const& Read::lib_index() const {
+    return _lib_index;
 }
 
 inline

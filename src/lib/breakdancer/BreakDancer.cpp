@@ -49,7 +49,7 @@ namespace {
             map<string,int> &rlibrary_readcount,
             bd::pair_orientation_flag type,
             int fisher,
-            BamConfig const& cfg
+            LibraryInfo const& lib_info
             )
     {
         real_type lambda;
@@ -58,10 +58,11 @@ namespace {
         for(map<string,int>::const_iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
             string const& lib = ii_rlibrary_readcount->first;
             int const& readcount = ii_rlibrary_readcount->second;
-            LibraryInfo const& lib_info = cfg.library_info_by_name(lib);
+            LibraryConfig const& lib_config = lib_info._cfg.library_config_by_name(lib);
+            LibraryFlagDistribution const& lib_flags = lib_info._summary.library_flag_distribution_for_index(lib_config.index);
 
-            uint32_t read_count_for_flag = lib_info.read_counts_by_flag[type];
-            lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(cfg.covered_reference_length()));
+            uint32_t read_count_for_flag = lib_flags.read_counts_by_flag[type];
+            lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(lib_info._summary.covered_reference_length()));
             lambda = max(real_type(1.0e-10), lambda);
             poisson_distribution<real_type> poisson(lambda);
             real_type tmp_a = log(cdf(complement(poisson, readcount))) - err;
@@ -143,7 +144,7 @@ void BreakDancer::run() {
 
         string const& lib = _cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
-            aln.set_lib_info(&_cfg.library_info_by_name(lib));
+            aln.set_lib_index(_lib_info._cfg.library_config_by_name(lib).index);
             push_read(aln, _merged_reader.header());
         }
     }

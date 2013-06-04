@@ -32,5 +32,10 @@ class BamSummary {
         uint32_t read_count_in_bam(std::string const& key) const {
             return _read_count_per_bam.at(key);
         }
+
+        LibraryFlagDistribution const& library_flag_distribution_for_index(size_t const& index) const {
+            return _library_flag_distribution[index];
+        }
+
         void analyze_bams();
 };
