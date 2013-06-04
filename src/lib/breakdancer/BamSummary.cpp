@@ -1,7 +1,10 @@
 #include "BamSummary.hpp"
+#include "Read.hpp"
+#include <iostream>
+#include "BamIO.hpp"
 
-//FIXME not sure what number does here
-void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig const& bam_config, int number) {
+using namespace std;
+void BamSummary::_analyze_bam(IBamReader& reader) {
     int last_pos = 0;
     int last_tid = -1;
 
@@ -18,12 +21,12 @@ void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig 
         // updated version as the "final" flag value.
         breakdancer::Read aln(b, false);
 
-        string const& lib = bam_config.readgroup_library(aln.readgroup());
+        string const& lib = _bam_config.readgroup_library(aln.readgroup());
         if (lib.empty())
             continue;
 
-        LibraryConfig& lib_config= bam_config.library_config_by_name(lib);
-        LibraryFlagDistribution& lib_flag_dist = _library_flag_distribution_by_name(lib);   //FIXME this function needs to be created. Flag Distributions should be created on construction from lib_config.
+        LibraryConfig const& lib_config = _bam_config.library_config_by_name(lib);
+        LibraryFlagDistribution& lib_flag_dist = _library_flag_distribution[lib_config.index];   //FIXME This is bad encapsulation
 
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
@@ -38,7 +41,7 @@ void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig 
         // like there is no reason for making the FR/RF distinction in the
         // guess. This check really just wants to know if tid == mtid and if
         // flag & BAM_FPROPERPAIR != 0.
-        if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
+        if(aln.bdqual() > _opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
             ++lib_flag_dist.read_count; // FIXME: this is a bad side effect modifying another object. Switch to use a setter or something.
             ++read_count;
         }
@@ -49,7 +52,7 @@ void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig 
         //-dlarson
 
         int min_mapq = lib_config.min_mapping_quality < 0 ?
-                opts.min_map_qual : lib_config.min_mapping_quality;
+                _opts.min_map_qual : lib_config.min_mapping_quality;
 
         if (aln.bdqual() <= min_mapq)
             continue;
@@ -78,7 +81,7 @@ void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig 
         // seems silly...), so we can't immediately filter them in the bam
         // readers. However, being unmapped or having an unmapped mate could
         // be a separate method call that doesn't involve "bdflag".
-        if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
+        if((_opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
             continue;
 
         // FLAGMESS:
@@ -92,7 +95,7 @@ void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig 
 
         //It would be nice if this was pulled into the Read class as well
         //for now, let's just set the bdflag directly here since it is public
-        if(opts.Illumina_long_insert) {
+        if(_opts.Illumina_long_insert) {
             if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_RF);
             }
@@ -134,4 +137,12 @@ void BamSummary::analyze_bam(IBamReader& reader, Options const& opts, BamConfig 
 
     if (_covered_ref_len < ref_len)
         _covered_ref_len = ref_len;
+}
+
+void BamSummary::analyze_bams() {
+    std::vector<std::string> bam_files = _bam_config.bam_files();
+    for(std::vector<std::string>::const_iterator iter = bam_files.begin(); iter != bam_files.end(); ++iter) {
+        auto_ptr<IBamReader> reader(openBam(*iter, _opts));
+        _analyze_bam(*reader);
+    }
 }
