@@ -316,14 +316,13 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     Graph::iterator ii_graph = graph.begin();
 
     while (ii_graph != graph.end()) {
-        int const& s0 = ii_graph->first;
         vector<int> tails;
-        tails.push_back(s0);
+        tails.push_back(ii_graph->first);
         bool need_iter_increment = true;
         while(tails.size() > 0) {
             vector<int> newtails;
             vector<int>::const_iterator it_tails;
-            for(it_tails = tails.begin(); it_tails != tails.end(); it_tails ++){
+            for(it_tails = tails.begin(); it_tails != tails.end(); ++it_tails) {
                 int const& tail = *it_tails;
 
                 // Make sure region with id "tail" hasn't already been deleted
@@ -337,59 +336,33 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                     continue;
 
                 Subgraph& graph_tail = found->second;
-
                 Subgraph::iterator ii_graph_tail = graph_tail.begin();
                 while (ii_graph_tail != graph_tail.end()) {
-                    int s1 = ii_graph_tail->first;
-                    int nlinks = ii_graph_tail->second;
+                    int const& s1 = ii_graph_tail->first;
+                    int const& nlinks = ii_graph_tail->second;
 
                     // save the current iterator so we can safely delete it
                     Subgraph::iterator iter_to_delete = ii_graph_tail;
                     // increment the iterator so deleting iter_to_delete won't invalidate it
                     ++ii_graph_tail;
 
-                    Graph nodepair;
-
-                    // require sufficient number of pairs
-                    if(nlinks < _opts.min_read_pair) {
-                        continue;
-                    }
-
-                    // a node must be defined
                     assert(_rdata.region_exists(s1));
-                    if(!_rdata.region_exists(s1)) {
+                    // require sufficient number of pairs
+                    if(nlinks < _opts.min_read_pair || !_rdata.region_exists(s1)) {
                         continue;
                     }
 
-                    nodepair[s1][tail] = nlinks;
-
-                    //NOTE it is entirely possible that tail and s1 are the same.
-                    if(tail != s1){
-                        nodepair[tail][s1] = nlinks;
+                    vector<int> snodes;
+                    if(tail != s1) {
                         graph[s1].erase(tail);
+                        snodes.push_back(std::min(s1, tail));
+                        snodes.push_back(std::max(s1, tail));
                     }
+                    else
+                        snodes.push_back(s1);
 
                     graph_tail.erase(iter_to_delete);
-
                     newtails.push_back(s1);
-
-                    // analysis a nodepair
-                    vector<int> snodes;
-                    for(Graph::const_iterator ii_nodepair = nodepair.begin(); ii_nodepair != nodepair.end(); ii_nodepair ++){
-                        snodes.push_back((*ii_nodepair).first);
-                    }
-
-                    assert(snodes.size() < 3);
-                    // track node1 and node2 as nodes that could potentially be freed
-                    int node1 = snodes[0];
-                    int node2;
-                    if(snodes.size() == 1)
-                        node2 = snodes[0];
-                    else
-                        node2 = snodes[1];
-                    if(nodepair.find(node1) == nodepair.end() || nodepair[node1].find(node2) == nodepair[node1].end())
-                        continue;
-
                     process_sv(snodes, free_nodes, bam_header);
                 }
                 if (tail == ii_graph->first) {
