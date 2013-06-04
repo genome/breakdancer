@@ -4,6 +4,7 @@
 
 #include <boost/function.hpp>
 #include <boost/iterator/filter_iterator.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <vector>
 
@@ -15,6 +16,8 @@ public:
             boost::function<bool(ReadType const&)>,
             ReadVector::const_iterator
             > const_read_iterator;
+
+    typedef boost::iterator_range<const_read_iterator> iterator_range;
 
 
     BasicRegion() {}
@@ -43,6 +46,11 @@ public:
 
     ReadVector const& reads() const {
         return _reads;
+    }
+
+    template<typename PredType>
+    iterator_range reads_range(PredType pred) const {
+        return make_iterator_range(reads_begin(pred), reads_end(pred));
     }
 
     template<typename PredType>

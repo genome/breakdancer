@@ -34,6 +34,34 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
         self.assertEqual(0, rv)
         self.assertFilesEqual(expected_file, output_file, filter_regex="#Command|#Software")
 
+    def test_breakdancer_cn_per_lib_af(self):
+        expected_file = "expected_output.cn_per_lib.af"
+        config_file = "inv_del_bam_config"
+        output_file = self.tempFile("output")
+        cmdline = " ".join([self.exe_path, '-a', '-h', '-o', '21', config_file, '>', output_file])
+        print "Executing", cmdline
+        print "CWD", os.getcwd()
+        #params = [ "-o 21", " > ", output_file ]
+        #rv, err = self.execute_through_shell(params)
+        rv = subprocess.call(cmdline, shell=True)
+        print "Return value:", rv
+        self.assertEqual(0, rv)
+        self.assertFilesEqual(expected_file, output_file, filter_regex="#Command|#Software")
+
+    def test_breakdancer_af(self):
+        expected_file = "expected_output.af"
+        config_file = "inv_del_bam_config"
+        output_file = self.tempFile("output")
+        cmdline = " ".join([self.exe_path, '-h', '-o', '21', config_file, '>', output_file])
+        print "Executing", cmdline
+        print "CWD", os.getcwd()
+        #params = [ "-o 21", " > ", output_file ]
+        #rv, err = self.execute_through_shell(params)
+        rv = subprocess.call(cmdline, shell=True)
+        print "Return value:", rv
+        self.assertEqual(0, rv)
+        self.assertFilesEqual(expected_file, output_file, filter_regex="#Command|#Software")
+
     def test_breakdancer(self):
         expected_file = "expected_output"
         config_file = "inv_del_bam_config"
@@ -53,6 +81,20 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
         config_file = "inv_del_bam_config"
         output_file = self.tempFile("output")
         cmdline = " ".join([self.exe_path, config_file, '>', output_file])
+        print "Executing", cmdline
+        print "CWD", os.getcwd()
+        #params = [ "-o 21", " > ", output_file ]
+        #rv, err = self.execute_through_shell(params)
+        rv = subprocess.call(cmdline, shell=True)
+        print "Return value:", rv
+        self.assertEqual(0, rv)
+        self.assertFilesEqual(expected_file, output_file, filter_regex="#Command|#Software")
+
+    def test_breakdancer_all_seqs_af(self):
+        expected_file = "expected_output.af"
+        config_file = "inv_del_bam_config"
+        output_file = self.tempFile("output")
+        cmdline = " ".join([self.exe_path, '-h', config_file, '>', output_file])
         print "Executing", cmdline
         print "CWD", os.getcwd()
         #params = [ "-o 21", " > ", output_file ]

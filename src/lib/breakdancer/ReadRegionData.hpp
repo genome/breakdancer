@@ -4,9 +4,12 @@
 #include "Read.hpp"
 #include "ReadCountsByLib.hpp"
 
+#include <boost/function.hpp>
+#include <boost/range/algorithm/remove_copy_if.hpp>
 #include <boost/unordered_map.hpp>
 
 #include <cassert>
+#include <iterator>
 #include <map>
 #include <string>
 #include <vector>
@@ -16,6 +19,7 @@ public:
     typedef breakdancer::Read ReadType;
     typedef BasicRegion::ReadVector ReadVector;
     typedef BasicRegion::const_read_iterator const_read_iterator;
+    typedef BasicRegion::iterator_range read_iter_range;
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
     typedef boost::unordered_map<std::string, std::vector<int> > ReadsToRegionsMap;
@@ -29,6 +33,13 @@ public:
     void accumulate_reads_between_regions(ReadCountsByLib& acc, size_t begin, size_t end) const;
     uint32_t region_lib_read_count(size_t region_idx, std::string const& lib) const;
     void swap_reads_in_region(size_t region_idx, ReadVector& reads);
+
+    void remove_reads_in_region_if(size_t region_idx, boost::function<bool(ReadType const&)> pred) {
+        BasicRegion::ReadVector filtered;
+        boost::remove_copy_if(region_reads_range(region_idx),
+            std::back_inserter(filtered), pred);
+        swap_reads_in_region(region_idx, filtered);
+    }
 
     size_t num_reads_in_region(size_t region_idx) const;
     bool region_exists(size_t region_idx) const;
@@ -49,8 +60,7 @@ public:
     void erase_read(std::string const& read_name);
     bool read_exists(ReadType const& read) const;
 
-    const_read_iterator region_read_begin(size_t region_idx) const;
-    const_read_iterator region_read_end(size_t region_idx) const;
+    read_iter_range region_reads_range(size_t region_idx) const;
 
 private:
     void _add_current_read_counts_to_region(size_t region_idx);

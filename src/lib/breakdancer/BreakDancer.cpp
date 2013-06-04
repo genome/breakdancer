@@ -4,7 +4,6 @@
 #include "IBamReader.hpp"
 #include "Options.hpp"
 #include "SvBuilder.hpp"
-#include "SvEntry.hpp"
 
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
@@ -379,84 +378,60 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
 }
 
 void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free_nodes, bam_header_t const* bam_header) {
-    SvBuilder svb;
-    for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes < snodes.end(); ii_snodes++) {
-        int node = *ii_snodes;
-        typedef ReadRegionData::const_read_iterator IterType;
-        for (IterType ii_regs = _rdata.region_read_begin(node); ii_regs != _rdata.region_read_end(node); ++ii_regs) {
-            svb.observe_read(*ii_regs, _rdata.region(node));
-        }
+    typedef ReadRegionData::read_iter_range ReadRange;
+    BasicRegion const* regions[2] = {0};
+    ReadRange read_ranges[2];
+    for (size_t i = 0; i < snodes.size(); ++i) {
+        int const& region_idx = snodes[i];
+        regions[i] = &_rdata.region(region_idx);
+        read_ranges[i] = _rdata.region_reads_range(region_idx);
     }
+    SvBuilder svb(snodes.size(), regions, read_ranges, _max_readlen);
 
     // This predicate takes a read and evaluates:
-    //      read_pair.count(read.query_name()) == 1
-    boost::function<bool(ReadType const&)> pred = boost::bind(
-        std::equal_to<SvBuilder::ObservedReads::size_type>(),
-            1,
-            boost::bind(&SvBuilder::ObservedReads::count, &svb.observed_reads,
-                        boost::bind(&ReadType::query_name, _1))
-        );
+    //      read_pair.count(read.query_name()) == 0
+    using boost::bind;
+    boost::function<bool(ReadType const&)> is_supportive = bind(
+        std::equal_to<size_t>(), 0, bind(&SvBuilder::ObservedReads::count,
+            &svb.observed_reads, bind(&ReadType::query_name, _1)));
 
-    for(vector<int>::const_iterator ii_snodes = snodes.begin(); ii_snodes != snodes.end(); ii_snodes++){
-        int const& node = *ii_snodes;
-        // Copy all reads for which ``pred'' holds into nonsupportives
-        BasicRegion::ReadVector nonsupportives(
-            _rdata.region(node).reads_begin(pred),
-            _rdata.region(node).reads_end(pred)
-            );
-
-        _rdata.swap_reads_in_region(node, nonsupportives);
-    }
+    for (vector<int>::const_iterator i = snodes.begin(); i != snodes.end(); ++i)
+        _rdata.remove_reads_in_region_if(*i, is_supportive);
 
     if(svb.num_pairs < _opts.min_read_pair)
         return;
 
     assert(snodes.size() == 1 || snodes.size() == 2);
-    bd::pair_orientation_flag flag = svb.choose_sv_flag();
-    if(svb.flag_counts[flag] >= _opts.min_read_pair) {
+    if(svb.flag_counts[svb.flag] >= _opts.min_read_pair) {
         int diffspan;
         string sptype;
 
         // print out result
         ReadCountsByLib read_count_accumulator;
-        BasicRegion const* regions[2] = { &_rdata.region(snodes[0]), 0 };
-
         if (snodes.size() == 2) {
             _rdata.accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
-            regions[1] = &_rdata.region(snodes[1]);
         }
+        svb.compute_copy_number(read_count_accumulator, read_density);
 
-        SvEntry sv(flag, _max_readlen, regions, svb.type_orient_counts);
 
-        // get the copy_number from read_count_accumulator
-        map<string, float> copy_number;
-        float copy_number_sum = 0;
-        typedef map<string, uint32_t>::const_iterator IterType;
-        for(IterType iter = read_count_accumulator.begin(); iter != read_count_accumulator.end(); ++iter) {
-            string const& lib = iter->first;
-            copy_number[lib] = iter->second/(read_density.at(lib) * float(sv.pos[1] - sv.pos[0]))*2.0f;
-            copy_number_sum += copy_number[lib];
-        }
-        copy_number_sum /= 2.0f * read_count_accumulator.size();
-
-        if(sv.flag != bd::ARP_RF && sv.flag != bd::ARP_RR && sv.pos[0] + _max_readlen - 5 < sv.pos[1])
-            sv.pos[0] += _max_readlen - 5; // apply extra padding to the start coordinates
+        if(svb.flag != bd::ARP_RF && svb.flag != bd::ARP_RR && svb.pos[0] + _max_readlen - 5 < svb.pos[1])
+            svb.pos[0] += _max_readlen - 5; // apply extra padding to the start coordinates
 
         string sptype_tmp;
         float diff = 0;
         if(_opts.CN_lib == 1){
-            for(map<string,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[sv.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
+            for(map<string,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
                 string const& sp = ii_type_lib_rc->first;
                 int const& read_count = ii_type_lib_rc->second;
                 LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
                 // intialize to be zero, in case of no library, or DEL, or ITX.
 
                 string copy_number_str = "NA";
-                if(sv.flag != bd::ARP_CTX){
+                if(svb.flag != bd::ARP_CTX){
                     float copy_number_ = 0;
 
-                    if(copy_number.find(sp) != copy_number.end()){
-                        copy_number_ = copy_number[sp];
+                    if(svb.copy_number.find(sp) != svb.copy_number.end()){
+                        copy_number_ = svb.copy_number[sp];
                         stringstream sstr;
                         sstr << fixed;
                         sstr << setprecision(2) << copy_number_;
@@ -468,17 +443,17 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
                 sptype_tmp += sp + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
 
-                diff += float(svb.type_library_meanspan[sv.flag][sp]) - float(svb.type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+                diff += float(svb.type_library_meanspan[svb.flag][sp]) - float(svb.type_library_readcount[svb.flag][sp])*lib_info.mean_insertsize;
             }
         } // do lib for copy number and support reads
         else{
             map<string, int> type_bam_readcount;
-            for(map<string, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[sv.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
+            for(map<string, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
                 string const& sp = ii_type_lib_rc->first;
                 int const& read_count = ii_type_lib_rc->second;
                 LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
                 type_bam_readcount[lib_info.bam_file] += read_count;
-                diff += float(svb.type_library_meanspan[sv.flag][sp]) - float(svb.type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+                diff += float(svb.type_library_meanspan[svb.flag][sp]) - float(svb.type_library_readcount[svb.flag][sp])*lib_info.mean_insertsize;
             }
             for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
                 string const& sp = ii_type_bam_rc->first;
@@ -491,44 +466,42 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             }
         } // do bam for support reads; copy number will be done later
 
-        diffspan = int(diff/float(svb.flag_counts[sv.flag]) + 0.5);
+        diffspan = int(diff/float(svb.flag_counts[svb.flag]) + 0.5);
         sptype = sptype_tmp;
 
 
         int total_region_size = _rdata.sum_of_region_sizes(snodes);
-        real_type LogPvalue = ComputeProbScore(total_region_size, svb.type_library_readcount[sv.flag], sv.flag, _opts.fisher, _cfg);
+        real_type LogPvalue = ComputeProbScore(total_region_size, svb.type_library_readcount[svb.flag], svb.flag, _opts.fisher, _cfg);
         real_type PhredQ_tmp = -10*LogPvalue/log(10);
         int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
-        float AF = 1 - copy_number_sum;
 
-
-        string SVT = _opts.SVtype.find(sv.flag)==_opts.SVtype.end()?"UN":_opts.SVtype.at(sv.flag); // UN stands for unknown
+        string SVT = _opts.SVtype.find(svb.flag)==_opts.SVtype.end()?"UN":_opts.SVtype.at(svb.flag); // UN stands for unknown
         // Convert the coordinates to base 1
-        ++sv.pos[0];
-        ++sv.pos[1];
+        ++svb.pos[0];
+        ++svb.pos[1];
         if(PhredQ > _opts.score_threshold){
-            cout << bam_header->target_name[sv.chr[0]]
-                << "\t" << sv.pos[0]
-                << "\t" << sv.fwd_read_count[0] << "+" << sv.rev_read_count[0] << "-"
-                << "\t" << bam_header->target_name[sv.chr[1]]
-                << "\t" << sv.pos[1]
-                << "\t" << sv.fwd_read_count[1] << "+" << sv.rev_read_count[1] << "-"
+            cout << bam_header->target_name[svb.chr[0]]
+                << "\t" << svb.pos[0]
+                << "\t" << svb.fwd_read_count[0] << "+" << svb.rev_read_count[0] << "-"
+                << "\t" << bam_header->target_name[svb.chr[1]]
+                << "\t" << svb.pos[1]
+                << "\t" << svb.fwd_read_count[1] << "+" << svb.rev_read_count[1] << "-"
                 << "\t" << SVT
                 << "\t" << diffspan
                 << "\t" << PhredQ
-                << "\t" << svb.flag_counts[sv.flag]
+                << "\t" << svb.flag_counts[svb.flag]
                 << "\t" << sptype
                 ;
 
             if(_opts.print_AF == 1)
-                cout <<  "\t" << AF;
+                cout <<  "\t" << svb.allele_frequency;
 
-            if(_opts.CN_lib == 0 && sv.flag != bd::ARP_CTX){
+            if(_opts.CN_lib == 0 && svb.flag != bd::ARP_CTX){
                 vector<string> const& bams = _cfg.bam_files();
                 for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
-                    map<string, float>::const_iterator cniter = copy_number.find(*iter);
+                    map<string, float>::const_iterator cniter = svb.copy_number.find(*iter);
 
-                    if(cniter  == copy_number.end())
+                    if(cniter  == svb.copy_number.end())
                         cout << "\tNA";
                     else {
                         cout << "\t";
@@ -541,18 +514,18 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
 
             if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
-                write_fastq_for_flag(sv.flag, svb.support_reads, _cfg.ReadsOut);
+                write_fastq_for_flag(svb.flag, svb.support_reads, _cfg.ReadsOut);
             }
 
             if(!_opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
                 ofstream fh_BED(_opts.dump_BED.c_str(), ofstream::app);
 
-                string trackname(bam_header->target_name[sv.chr[0]]);
-                trackname = trackname.append("_").append(lexical_cast<string>(sv.pos[0])).append("_").append(SVT).append("_").append(lexical_cast<string>(diffspan));
-                fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[sv.chr[0]] << " " << sv.pos[0] << " " << SVT << " " << diffspan << "\"\tuseScore=0\n";
+                string trackname(bam_header->target_name[svb.chr[0]]);
+                trackname = trackname.append("_").append(lexical_cast<string>(svb.pos[0])).append("_").append(SVT).append("_").append(lexical_cast<string>(diffspan));
+                fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[svb.chr[0]] << " " << svb.pos[0] << " " << SVT << " " << diffspan << "\"\tuseScore=0\n";
                 for(vector<bd::Read>::const_iterator ii_support_reads = svb.support_reads.begin(); ii_support_reads != svb.support_reads.end(); ii_support_reads ++){
                     bd::Read const& y = *ii_support_reads;
-                    if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != sv.flag)
+                    if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != svb.flag)
                         continue;
                     int aln_end = y.pos() - y.query_length() - 1;
                     string color = y.ori() == FWD ? "0,0,255" : "255,0,0";

@@ -28,7 +28,6 @@ set(SOURCES
     RegionLimitedBamReader.hpp
     SvBuilder.cpp
     SvBuilder.hpp
-    SvEntry.hpp
     namespace.hpp
     utility.hpp
 )

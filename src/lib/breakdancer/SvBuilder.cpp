@@ -1,7 +1,11 @@
 #include "SvBuilder.hpp"
 #include "LibraryInfo.hpp"
 
+#include <boost/bind.hpp>
+#include <boost/range/algorithm/for_each.hpp>
+
 #include <algorithm>
+#include <cassert>
 #include <stdexcept>
 
 using namespace std;
@@ -11,18 +15,72 @@ namespace {
     const static bd::PerFlagArray<int>::type ZEROS = {{0}};
 }
 
-SvBuilder::SvBuilder()
+SvBuilder::SvBuilder(int n, BasicRegion const* regions[2], ReadsRange read_ranges[2], int max_readlen)
     : current_region(-1)
-    , num_regions(0)
+    , num_regions(n)
     , num_pairs(0)
     , flag_counts(ZEROS)
-    , type_orient_counts(2)
+    , chr(_init_zero())
+    , pos(_init_zero())
+    , fwd_read_count(_init_zero())
+    , rev_read_count(_init_zero())
+    , allele_frequency(0.0f)
 {
-    for (int i = 0; i < 2; ++i) {
-        type_orient_counts[i][FWD] = 0;
-        type_orient_counts[i][REV] = 0;
+    assert(n == 1 || n == 2);
+
+    for (int i = 0; i < n; ++i) {
+        boost::range::for_each(read_ranges[i],
+            boost::bind(&SvBuilder::_observe_read, this, _1, i));
+    }
+
+    flag = choose_sv_flag();
+
+    chr[0] = regions[0]->chr;
+    pos[0] = regions[0]->start;
+    pos[1] = regions[0]->end;
+
+    // the sv may be contained in a single region, in which case
+    // regions[1] will be null.
+    if (n == 2) {
+        if(flag == bd::ARP_RF) {
+            pos[1] = regions[1]->end + max_readlen - 5;
+        }
+        else if(flag == bd::ARP_FF) {
+            pos[0] = pos[1];
+            pos[1] = regions[1]->end + max_readlen - 5;
+        }
+        else if(flag == bd::ARP_RR) {
+            pos[1] = regions[1]->start;
+        }
+        else {
+            pos[0] = pos[1];
+            pos[1] = regions[1]->start;
+        }
+        chr[1] = regions[1]->chr;
+    }
+    else {
+        fwd_read_count[1] = fwd_read_count[0];
+        rev_read_count[1] = rev_read_count[0];
+        chr[1] = regions[0]->chr;
+        pos[1] = regions[0]->end;
     }
 }
+
+void SvBuilder::compute_copy_number(ReadCountsByLib const& counts,
+    std::map<std::string, float> const& read_density)
+{
+    typedef ReadCountsByLib::const_iterator IterType;
+    float copy_number_sum = 0.0f;
+    for(IterType iter = counts.begin(); iter != counts.end(); ++iter) {
+        string const& lib = iter->first;
+        copy_number[lib] = iter->second/(read_density.at(lib) * float(pos[1] - pos[0]))*2.0f;
+        copy_number_sum += copy_number[lib];
+    }
+    copy_number_sum /= 2.0f * counts.size();
+    allele_frequency = 1 - copy_number_sum;
+}
+
+
 
 // choose the predominant type of read in a region
 bd::pair_orientation_flag SvBuilder::choose_sv_flag() {
@@ -34,16 +92,11 @@ bd::pair_orientation_flag SvBuilder::choose_sv_flag() {
     return flag;
 }
 
-void SvBuilder::observe_read(Read const& read, BasicRegion const& region) {
-    if (region.index != current_region) {
-        if (++num_regions > 2) {
-            throw runtime_error("Attempted to build sv with more than 2 regions");
-        }
-        current_region = region.index;
-    }
-    int region_idx = num_regions - 1;
-
-    ++type_orient_counts[region_idx][read.ori()];
+void SvBuilder::_observe_read(Read const& read, int region_idx) {
+    if (read.ori() == FWD)
+        ++fwd_read_count[region_idx];
+    else
+        ++rev_read_count[region_idx];
 
     typedef ObservedReads::iterator IterType;
     pair<IterType, bool> inserted = observed_reads.insert(make_pair(read.query_name(), read));
