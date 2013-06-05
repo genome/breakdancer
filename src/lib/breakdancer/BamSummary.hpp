@@ -23,6 +23,7 @@ class BamSummary {
             , _bam_config(bam_config)
             , _covered_ref_len(0)
         {
+            _library_flag_distribution.resize(bam_config.num_libs());
         }
 
         uint32_t covered_reference_length() const {

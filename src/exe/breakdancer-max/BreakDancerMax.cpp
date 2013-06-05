@@ -150,8 +150,8 @@ int main(int argc, char *argv[]) {
                 << "\tphycov:" << physical_coverage
                 ;
 
-            for (size_t i = 0; i < lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag.size(); ++i) {
-                bd::pair_orientation_flag flag = bd::pair_orientation_flag(i);
+            for (size_t j = 0; j < lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag.size(); ++j) {
+                bd::pair_orientation_flag flag = bd::pair_orientation_flag(j);
                 uint32_t count = lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag[flag];
                 if (count)
                     cout << "\t" << bd::FLAG_VALUES[flag] << ":" << count;
