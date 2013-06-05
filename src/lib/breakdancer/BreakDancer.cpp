@@ -87,7 +87,7 @@ namespace {
         return logpvalue;
     }
 
-    void write_fastq_for_flag(bd::pair_orientation_flag const& flag, const vector<bd::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
+    void write_fastq_for_flag(LibraryInfo const& lib_info, bd::pair_orientation_flag const& flag, const vector<bd::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
         map<string,int> pairing;
         for( vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
             bd::Read const& y = *ii_support_reads;
@@ -97,7 +97,7 @@ namespace {
 
             //Paradoxically, the first read seen is put in file 2 and the second in file 1
             string suffix = pairing.count(y.query_name()) ? "1" : "2";
-            string fh_tmp_str = ReadsOut.at(y.lib_info().name + suffix);
+            string fh_tmp_str = ReadsOut.at(lib_info._cfg.library_config_by_index(y.lib_index()).name + suffix);
             ofstream fh;
             // This is causing horrible amounts of network IO and needs to be managed by something
             // external. That's in the works.
@@ -163,7 +163,7 @@ int BreakDancer::sum_of_region_sizes(std::vector<int> const& region_ids) const {
 
 
 void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
-    LibraryInfo const& lib_info = aln.lib_info();
+    LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(aln.lib_index());
 
     //main analysis code
     if(aln.bdflag() == bd::NA)
@@ -174,8 +174,8 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     // XXX: this value can be missing in the config (indicated by a value of -1),
     // in which case we'll wan't to use the default from the cmdline rather than
     // admit everything.
-    int min_mapq = lib_info.min_mapping_quality < 0 ?
-            _opts.min_map_qual : lib_info.min_mapping_quality;
+    int min_mapq = lib_config.min_mapping_quality < 0 ?
+            _opts.min_map_qual : lib_config.min_mapping_quality;
 
     if (aln.bdqual() <= min_mapq)
         return;
@@ -188,7 +188,7 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     if(aln.bdqual() > _opts.min_map_qual
         && (aln.bdflag() == bd::NORMAL_FR || aln.bdflag() == bd::NORMAL_RF))
     {
-        string const& key = _opts.CN_lib == 1 ? lib_info.name : lib_info.bam_file;
+        string const& key = _opts.CN_lib == 1 ? lib_config.name : lib_config.bam_file;
         _rdata.incr_normal_read_count(key);
     }
 
@@ -211,24 +211,24 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
     if(_opts.Illumina_long_insert){
-        if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == bd::NORMAL_RF) {
+        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == bd::NORMAL_RF) {
             aln.set_bdflag(bd::ARP_RF);
         }
-        if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == bd::ARP_RF) {
+        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == bd::ARP_RF) {
             aln.set_bdflag(bd::NORMAL_RF);
         }
-        if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == bd::NORMAL_RF) {
+        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == bd::NORMAL_RF) {
             aln.set_bdflag(bd::ARP_FR_small_insert);
         }
     }
     else{
-        if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == bd::NORMAL_FR) {
+        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == bd::NORMAL_FR) {
             aln.set_bdflag(bd::ARP_FR_big_insert);
         }
-        if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == bd::ARP_FR_big_insert) {
+        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == bd::ARP_FR_big_insert) {
             aln.set_bdflag(bd::NORMAL_FR);
         }
-        if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == bd::NORMAL_FR) {
+        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == bd::NORMAL_FR) {
             aln.set_bdflag(bd::ARP_FR_small_insert);
         }
         if(aln.bdflag() == bd::NORMAL_RF) {
@@ -493,7 +493,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
             }
             else{
                 bd::pair_orientation_flag bdflag = y.bdflag();
-                string libname = y.lib_info().name;
+                string libname = _lib_info._cfg.library_config_by_index(y.lib_index()).name;
                 ++type[bdflag];
                 ++type_library_readcount[bdflag][libname];
                 type_library_meanspan[bdflag][libname] += y.abs_isize();
@@ -561,7 +561,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 for(map<string,int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
                     string const& sp = ii_type_lib_rc->first;
                     int const& read_count = ii_type_lib_rc->second;
-                    LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
+                    LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_name(sp);
                     // intialize to be zero, in case of no library, or DEL, or ITX.
 
                     string copy_number_str = "NA";
@@ -581,7 +581,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
                     sptype += sp + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
 
-                    diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+                    diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_config.mean_insertsize;
                 }
             } // do lib for copy number and support reads
             else{
@@ -589,9 +589,9 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 for(map<string, int>::const_iterator ii_type_lib_rc = type_library_readcount[sv.flag].begin(); ii_type_lib_rc != type_library_readcount[sv.flag].end(); ii_type_lib_rc ++){
                     string const& sp = ii_type_lib_rc->first;
                     int const& read_count = ii_type_lib_rc->second;
-                    LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
-                    type_bam_readcount[lib_info.bam_file] += read_count;
-                    diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_info.mean_insertsize;
+                    LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_name(sp);
+                    type_bam_readcount[lib_config.bam_file] += read_count;
+                    diffspan += float(type_library_meanspan[sv.flag][sp]) - float(type_library_readcount[sv.flag][sp])*lib_config.mean_insertsize;
                 }
                 for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
                     string const& sp = ii_type_bam_rc->first;
@@ -609,7 +609,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
 
             int total_region_size = sum_of_region_sizes(snodes);
-            real_type LogPvalue = ComputeProbScore(total_region_size, type_library_readcount[sv.flag], sv.flag, _opts.fisher, _cfg);
+            real_type LogPvalue = ComputeProbScore(total_region_size, type_library_readcount[sv.flag], sv.flag, _opts.fisher, _lib_info);
             real_type PhredQ_tmp = -10*LogPvalue/log(10);
             int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
             float AF = 1 - copy_number_sum;
@@ -654,7 +654,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
 
                 if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
-                    write_fastq_for_flag(sv.flag, support_reads, _cfg.ReadsOut);
+                    write_fastq_for_flag(_lib_info, sv.flag, support_reads, _cfg.ReadsOut);
                 }
 
                 if(!_opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
@@ -673,7 +673,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                         fh_BED << "chr" << bam_header->target_name[y.tid()]
                             << "\t" << y.pos()
                             << "\t" << aln_end
-                            << "\t" << y.query_name() << "|" << y.lib_info().name
+                            << "\t" << y.query_name() << "|" << _lib_info._cfg.library_config_by_index(y.lib_index()).name
                             << "\t" << y.bdqual() * 10
                             << "\t" << y.ori()
                             << "\t" << y.pos()

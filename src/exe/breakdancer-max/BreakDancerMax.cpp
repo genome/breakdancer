@@ -109,13 +109,13 @@ int main(int argc, char *argv[]) {
             LibraryConfig const& lib_config = lib_info._cfg.library_config_by_index(i);
             string const& lib = lib_config.name;
 
-            uint32_t lib_read_count = lib_info._summary._library_flag_distribution[i].read_count;
+            uint32_t lib_read_count = lib_info._summary.library_flag_distribution_for_index(i).read_count;
 
             float sequence_coverage = float(lib_read_count*lib_config.readlens)/covered_ref_len;
 
             // compute read_density
             if(opts.CN_lib == 1){
-                if(lib_info.read_count != 0) {
+                if(lib_read_count != 0) {
                     bdancer.read_density[lib] = float(lib_read_count)/covered_ref_len;
                 }
                 else{
@@ -130,29 +130,29 @@ int main(int argc, char *argv[]) {
 
             float physical_coverage = float(lib_read_count*lib_config.mean_insertsize)/covered_ref_len/2;
 
-            int nread_lengthDiscrepant = lib_info._summary._library_flag_distribution[i].read_counts_by_flag[bd::ARP_FR_big_insert] +
-                lib_info._summary._library_flag_distribution[i].read_counts_by_flag[bd::ARP_FR_small_insert];
+            int nread_lengthDiscrepant = lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag[bd::ARP_FR_big_insert] +
+                lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag[bd::ARP_FR_small_insert];
 
 
             int tmp = (nread_lengthDiscrepant > 0)?(float)covered_ref_len/(float)nread_lengthDiscrepant:50;
             max_read_window_size = std::min(max_read_window_size, tmp);
             bdancer.set_max_read_window_size(max_read_window_size);
 
-            cout << "#" << lib_info.bam_file
-                << "\tmean:" << lib_info.mean_insertsize
-                << "\tstd:" << lib_info.std_insertsize
-                << "\tuppercutoff:" << lib_info.uppercutoff
-                << "\tlowercutoff:" << lib_info.lowercutoff
-                << "\treadlen:" << lib_info.readlens
+            cout << "#" << lib_config.bam_file
+                << "\tmean:" << lib_config.mean_insertsize
+                << "\tstd:" << lib_config.std_insertsize
+                << "\tuppercutoff:" << lib_config.uppercutoff
+                << "\tlowercutoff:" << lib_config.lowercutoff
+                << "\treadlen:" << lib_config.readlens
                 << "\tlibrary:" << lib
                 << "\treflen:" << covered_ref_len
                 << "\tseqcov:" << sequence_coverage
                 << "\tphycov:" << physical_coverage
                 ;
 
-            for (size_t i = 0; i < lib_info._summary._library_flag_distribution[i].read_counts_by_flag.size(); ++i) {
+            for (size_t i = 0; i < lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag.size(); ++i) {
                 bd::pair_orientation_flag flag = bd::pair_orientation_flag(i);
-                uint32_t count = lib_info._summary._library_flag_distribution[i].read_counts_by_flag[flag];
+                uint32_t count = lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag[flag];
                 if (count)
                     cout << "\t" << bd::FLAG_VALUES[flag] << ":" << count;
             }
