@@ -4,31 +4,24 @@
 #include <map>
 #include <string>
 #include <vector>
+#include "BamConfig.hpp"
+#include "BamSummary.hpp"
 
-struct LibraryInfo {
-    LibraryInfo()
-        : index(0)
-        , mean_insertsize(0)
-        , std_insertsize(0)
-        , uppercutoff(0)
-        , lowercutoff(0)
-        , readlens(0)
-        , min_mapping_quality(-1)
-        , read_count(0)
-        , read_counts_by_flag(breakdancer::NUM_ORIENTATION_FLAGS, 0u)
+class LibraryInfo {
+
+public:
+    LibraryInfo(BamConfig const& cfg, BamSummary const& summary)
+        : _cfg(cfg)
+        , _summary(summary)
     {
     }
 
-    size_t index;
-    std::string name;
-    std::string bam_file;
-    float mean_insertsize;
-    float std_insertsize;
-    float uppercutoff;
-    float lowercutoff;
-    float readlens;
-    int min_mapping_quality;
-    size_t read_count;
+    //leaving the underscore until such a time as we add encapsulation
+    BamConfig _cfg;
+    BamSummary _summary;
+    
+    size_t const& index_for_readgroup(std::string const& rg) const {
+        return _cfg.library_config_by_name(_cfg.readgroup_library(rg)).index;
+    }
 
-    std::vector<uint32_t> read_counts_by_flag;
 };

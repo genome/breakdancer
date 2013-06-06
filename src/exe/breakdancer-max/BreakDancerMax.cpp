@@ -1,5 +1,8 @@
 #include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamConfig.hpp"
+#include "breakdancer/LibraryInfo.hpp"
+#include "breakdancer/LibraryConfig.hpp"
+#include "breakdancer/BamSummary.hpp"
 #include "breakdancer/BamIO.hpp"
 #include "breakdancer/BamMerger.hpp"
 #include "breakdancer/BreakDancer.hpp"
@@ -67,6 +70,11 @@ int main(int argc, char *argv[]) {
 
         config_stream.close();
 
+        BamSummary summaries(opts, cfg);
+        summaries.analyze_bams();
+        LibraryInfo lib_info(cfg, summaries);
+
+
         // WTH, max_readlen just gets reset to zero before ever being used??? -ta
         int max_readlen = cfg.max_readlen;
         int max_read_window_size = cfg.max_read_window_size; // this gets updated, so we copy it
@@ -84,7 +92,7 @@ int main(int argc, char *argv[]) {
             readers.push_back(sp_readers[i].get());
 
         BamMerger merged_reader(readers);
-        BreakDancer bdancer(opts, cfg, merged_reader, max_read_window_size);
+        BreakDancer bdancer(opts, cfg, lib_info, merged_reader, max_read_window_size);
 
         cout << "#Software: " << __g_prog_version << " (commit "
             << __g_commit_hash << ")" << endl;
@@ -94,19 +102,21 @@ int main(int argc, char *argv[]) {
         }
         cout << endl;
         cout << "#Library Statistics:" << endl;
-        size_t num_libs = cfg.num_libs();
+        size_t num_libs = lib_info._cfg.num_libs();
         for(size_t i = 0; i < num_libs; ++i) {
-            LibraryInfo const& lib_info = cfg.library_info_by_index(i);
-            string const& lib = lib_info.name;
 
-            uint32_t lib_read_count = lib_info.read_count;
+            uint32_t covered_ref_len = lib_info._summary.covered_reference_length();
+            LibraryConfig const& lib_config = lib_info._cfg.library_config_by_index(i);
+            string const& lib = lib_config.name;
 
-            float sequence_coverage = float(lib_read_count*lib_info.readlens)/cfg.covered_reference_length();
+            uint32_t lib_read_count = lib_info._summary.library_flag_distribution_for_index(i).read_count;
+
+            float sequence_coverage = float(lib_read_count*lib_config.readlens)/covered_ref_len;
 
             // compute read_density
             if(opts.CN_lib == 1){
-                if(lib_info.read_count != 0) {
-                    bdancer.read_density[lib] = float(lib_info.read_count)/cfg.covered_reference_length();
+                if(lib_read_count != 0) {
+                    bdancer.read_density[lib] = float(lib_read_count)/covered_ref_len;
                 }
                 else{
                     bdancer.read_density[lib] = 0.000001;
@@ -114,35 +124,35 @@ int main(int argc, char *argv[]) {
                 }
             }
             else{
-                uint32_t nreads = cfg.read_count_in_bam(lib_info.bam_file);
-                bdancer.read_density[lib_info.bam_file] = float(nreads)/cfg.covered_reference_length();
+                uint32_t nreads = lib_info._summary.read_count_in_bam(lib_config.bam_file);
+                bdancer.read_density[lib_config.bam_file] = float(nreads)/covered_ref_len;
             }
 
-            float physical_coverage = float(lib_read_count*lib_info.mean_insertsize)/cfg.covered_reference_length()/2;
+            float physical_coverage = float(lib_read_count*lib_config.mean_insertsize)/covered_ref_len/2;
 
-            int nread_lengthDiscrepant = lib_info.read_counts_by_flag[bd::ARP_FR_big_insert] +
-                lib_info.read_counts_by_flag[bd::ARP_FR_small_insert];
+            int nread_lengthDiscrepant = lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag[bd::ARP_FR_big_insert] +
+                lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag[bd::ARP_FR_small_insert];
 
 
-            int tmp = (nread_lengthDiscrepant > 0)?(float)cfg.covered_reference_length()/(float)nread_lengthDiscrepant:50;
+            int tmp = (nread_lengthDiscrepant > 0)?(float)covered_ref_len/(float)nread_lengthDiscrepant:50;
             max_read_window_size = std::min(max_read_window_size, tmp);
             bdancer.set_max_read_window_size(max_read_window_size);
 
-            cout << "#" << lib_info.bam_file
-                << "\tmean:" << lib_info.mean_insertsize
-                << "\tstd:" << lib_info.std_insertsize
-                << "\tuppercutoff:" << lib_info.uppercutoff
-                << "\tlowercutoff:" << lib_info.lowercutoff
-                << "\treadlen:" << lib_info.readlens
+            cout << "#" << lib_config.bam_file
+                << "\tmean:" << lib_config.mean_insertsize
+                << "\tstd:" << lib_config.std_insertsize
+                << "\tuppercutoff:" << lib_config.uppercutoff
+                << "\tlowercutoff:" << lib_config.lowercutoff
+                << "\treadlen:" << lib_config.readlens
                 << "\tlibrary:" << lib
-                << "\treflen:" << cfg.covered_reference_length()
+                << "\treflen:" << covered_ref_len
                 << "\tseqcov:" << sequence_coverage
                 << "\tphycov:" << physical_coverage
                 ;
 
-            for (size_t i = 0; i < lib_info.read_counts_by_flag.size(); ++i) {
-                bd::pair_orientation_flag flag = bd::pair_orientation_flag(i);
-                uint32_t count = lib_info.read_counts_by_flag[flag];
+            for (size_t j = 0; j < lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag.size(); ++j) {
+                bd::pair_orientation_flag flag = bd::pair_orientation_flag(j);
+                uint32_t count = lib_info._summary.library_flag_distribution_for_index(i).read_counts_by_flag[flag];
                 if (count)
                     cout << "\t" << bd::FLAG_VALUES[flag] << ":" << count;
             }

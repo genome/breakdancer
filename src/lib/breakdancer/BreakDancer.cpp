@@ -42,7 +42,7 @@ namespace {
             map<string,int> &rlibrary_readcount,
             bd::pair_orientation_flag type,
             int fisher,
-            BamConfig const& cfg
+            LibraryInfo const& lib_info
             )
     {
         real_type lambda;
@@ -51,10 +51,11 @@ namespace {
         for(map<string,int>::const_iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
             string const& lib = ii_rlibrary_readcount->first;
             int const& readcount = ii_rlibrary_readcount->second;
-            LibraryInfo const& lib_info = cfg.library_info_by_name(lib);
+            LibraryConfig const& lib_config = lib_info._cfg.library_config_by_name(lib);
+            LibraryFlagDistribution const& lib_flags = lib_info._summary.library_flag_distribution_for_index(lib_config.index);
 
-            uint32_t read_count_for_flag = lib_info.read_counts_by_flag[type];
-            lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(cfg.covered_reference_length()));
+            uint32_t read_count_for_flag = lib_flags.read_counts_by_flag[type];
+            lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(lib_info._summary.covered_reference_length()));
             lambda = max(real_type(1.0e-10), lambda);
             poisson_distribution<real_type> poisson(lambda);
             real_type tmp_a = log(cdf(complement(poisson, readcount))) - err;
@@ -79,7 +80,7 @@ namespace {
         return logpvalue;
     }
 
-    void write_fastq_for_flag(bd::pair_orientation_flag const& flag, const vector<bd::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
+    void write_fastq_for_flag(LibraryInfo const& lib_info, bd::pair_orientation_flag const& flag, const vector<bd::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
         map<string,int> pairing;
         for( vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
             bd::Read const& y = *ii_support_reads;
@@ -89,7 +90,7 @@ namespace {
 
             //Paradoxically, the first read seen is put in file 2 and the second in file 1
             string suffix = pairing.count(y.query_name()) ? "1" : "2";
-            string fh_tmp_str = ReadsOut.at(y.lib_info().name + suffix);
+            string fh_tmp_str = ReadsOut.at(lib_info._cfg.library_config_by_index(y.lib_index()).name + suffix);
             ofstream fh;
             // This is causing horrible amounts of network IO and needs to be managed by something
             // external. That's in the works.
@@ -105,11 +106,13 @@ namespace {
 BreakDancer::BreakDancer(
         Options const& opts,
         BamConfig const& cfg,
+        LibraryInfo const& lib_info,
         IBamReader& merged_reader,
         int max_read_window_size
         )
     : _opts(opts)
     , _cfg(cfg)
+    , _lib_info(lib_info)
     , _merged_reader(merged_reader)
     , _max_read_window_size(max_read_window_size)
 
@@ -134,7 +137,7 @@ void BreakDancer::run() {
 
         string const& lib = _cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
-            aln.set_lib_info(&_cfg.library_info_by_name(lib));
+            aln.set_lib_index(_lib_info._cfg.library_config_by_name(lib).index);
             push_read(aln, _merged_reader.header());
         }
     }
@@ -145,7 +148,7 @@ void BreakDancer::run() {
 
 
 void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
-    LibraryInfo const& lib_info = aln.lib_info();
+    LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(aln.lib_index());
 
     //main analysis code
     if(aln.bdflag() == bd::NA)
@@ -156,8 +159,8 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     // XXX: this value can be missing in the config (indicated by a value of -1),
     // in which case we'll wan't to use the default from the cmdline rather than
     // admit everything.
-    int min_mapq = lib_info.min_mapping_quality < 0 ?
-            _opts.min_map_qual : lib_info.min_mapping_quality;
+    int min_mapq = lib_config.min_mapping_quality < 0 ?
+            _opts.min_map_qual : lib_config.min_mapping_quality;
 
     if (aln.bdqual() <= min_mapq)
         return;
@@ -170,7 +173,7 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     if(aln.bdqual() > _opts.min_map_qual
         && (aln.bdflag() == bd::NORMAL_FR || aln.bdflag() == bd::NORMAL_RF))
     {
-        string const& key = _opts.CN_lib == 1 ? lib_info.name : lib_info.bam_file;
+        string const& key = _opts.CN_lib == 1 ? lib_config.name : lib_config.bam_file;
         _rdata.incr_normal_read_count(key);
     }
 
@@ -193,24 +196,24 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
     if(_opts.Illumina_long_insert){
-        if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == bd::NORMAL_RF) {
+        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == bd::NORMAL_RF) {
             aln.set_bdflag(bd::ARP_RF);
         }
-        if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == bd::ARP_RF) {
+        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == bd::ARP_RF) {
             aln.set_bdflag(bd::NORMAL_RF);
         }
-        if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == bd::NORMAL_RF) {
+        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == bd::NORMAL_RF) {
             aln.set_bdflag(bd::ARP_FR_small_insert);
         }
     }
     else{
-        if(aln.abs_isize() > lib_info.uppercutoff && aln.bdflag() == bd::NORMAL_FR) {
+        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == bd::NORMAL_FR) {
             aln.set_bdflag(bd::ARP_FR_big_insert);
         }
-        if(aln.abs_isize() < lib_info.uppercutoff && aln.bdflag() == bd::ARP_FR_big_insert) {
+        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == bd::ARP_FR_big_insert) {
             aln.set_bdflag(bd::NORMAL_FR);
         }
-        if(aln.abs_isize() < lib_info.lowercutoff && aln.bdflag() == bd::NORMAL_FR) {
+        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == bd::NORMAL_FR) {
             aln.set_bdflag(bd::ARP_FR_small_insert);
         }
         if(aln.bdflag() == bd::NORMAL_RF) {
