@@ -107,10 +107,10 @@ void SvBuilder::_observe_read(Read const& read, int region_idx) {
     else {
         // We just found an existing read's mate. Good for him/her.
         bd::pair_orientation_flag bdflag = read.bdflag();
-        string const& libname = read.lib_info().name;
+        size_t const& index = read.lib_index();
         ++flag_counts[bdflag];
-        ++type_library_readcount[bdflag][libname];
-        type_library_meanspan[bdflag][libname] += read.abs_isize();
+        ++type_library_readcount[bdflag][index];
+        type_library_meanspan[bdflag][index] += read.abs_isize();
 
         ++num_pairs;
         reads_to_free.push_back(read.query_name());

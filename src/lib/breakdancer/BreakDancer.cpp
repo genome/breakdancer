@@ -39,7 +39,7 @@ namespace {
     // compute the probability score
     real_type ComputeProbScore(
             int total_region_size,
-            map<string,int> &rlibrary_readcount,
+            map<size_t,int> &rlibrary_readcount,
             bd::pair_orientation_flag type,
             int fisher,
             LibraryInfo const& lib_info
@@ -48,10 +48,10 @@ namespace {
         real_type lambda;
         real_type logpvalue = 0.0;
         real_type err = 0.0;
-        for(map<string,int>::const_iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
-            string const& lib = ii_rlibrary_readcount->first;
+        for(map<size_t,int>::const_iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
+            size_t const& libindex = ii_rlibrary_readcount->first;
             int const& readcount = ii_rlibrary_readcount->second;
-            LibraryConfig const& lib_config = lib_info._cfg.library_config_by_name(lib);
+            LibraryConfig const& lib_config = lib_info._cfg.library_config_by_index(libindex);
             LibraryFlagDistribution const& lib_flags = lib_info._summary.library_flag_distribution_for_index(lib_config.index);
 
             uint32_t read_count_for_flag = lib_flags.read_counts_by_flag[type];
@@ -423,18 +423,18 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         string sptype_tmp;
         float diff = 0;
         if(_opts.CN_lib == 1){
-            for(map<string,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
-                string const& sp = ii_type_lib_rc->first;
+            for(map<size_t,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
+                size_t const& index = ii_type_lib_rc->first;
                 int const& read_count = ii_type_lib_rc->second;
-                LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
+                LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(index);
                 // intialize to be zero, in case of no library, or DEL, or ITX.
 
                 string copy_number_str = "NA";
                 if(svb.flag != bd::ARP_CTX){
                     float copy_number_ = 0;
 
-                    if(svb.copy_number.find(sp) != svb.copy_number.end()){
-                        copy_number_ = svb.copy_number[sp];
+                    if(svb.copy_number.find(lib_config.name) != svb.copy_number.end()){
+                        copy_number_ = svb.copy_number[lib_config.name];
                         stringstream sstr;
                         sstr << fixed;
                         sstr << setprecision(2) << copy_number_;
@@ -444,19 +444,19 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                 if(!sptype_tmp.empty())
                     sptype_tmp += ":";
 
-                sptype_tmp += sp + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
+                sptype_tmp += lib_config.name + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
 
-                diff += float(svb.type_library_meanspan[svb.flag][sp]) - float(svb.type_library_readcount[svb.flag][sp])*lib_info.mean_insertsize;
+                diff += float(svb.type_library_meanspan[svb.flag][index]) - float(svb.type_library_readcount[svb.flag][index])*lib_config.mean_insertsize;
             }
         } // do lib for copy number and support reads
         else{
             map<string, int> type_bam_readcount;
-            for(map<string, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
-                string const& sp = ii_type_lib_rc->first;
+            for(map<size_t, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
+                size_t const& index = ii_type_lib_rc->first;
                 int const& read_count = ii_type_lib_rc->second;
-                LibraryInfo const& lib_info = _cfg.library_info_by_name(sp);
-                type_bam_readcount[lib_info.bam_file] += read_count;
-                diff += float(svb.type_library_meanspan[svb.flag][sp]) - float(svb.type_library_readcount[svb.flag][sp])*lib_info.mean_insertsize;
+                LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(index);
+                type_bam_readcount[lib_config.bam_file] += read_count;
+                diff += float(svb.type_library_meanspan[svb.flag][index]) - float(svb.type_library_readcount[svb.flag][index])*lib_config.mean_insertsize;
             }
             for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
                 string const& sp = ii_type_bam_rc->first;
@@ -474,7 +474,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
 
         int total_region_size = _rdata.sum_of_region_sizes(snodes);
-        real_type LogPvalue = ComputeProbScore(total_region_size, svb.type_library_readcount[svb.flag], svb.flag, _opts.fisher, _cfg);
+        real_type LogPvalue = ComputeProbScore(total_region_size, svb.type_library_readcount[svb.flag], svb.flag, _opts.fisher, _lib_info);
         real_type PhredQ_tmp = -10*LogPvalue/log(10);
         int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
 
@@ -517,7 +517,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
 
             if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
-                write_fastq_for_flag(svb.flag, svb.support_reads, _cfg.ReadsOut);
+                write_fastq_for_flag(_lib_info, svb.flag, svb.support_reads, _cfg.ReadsOut);
             }
 
             if(!_opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
@@ -536,7 +536,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
                     fh_BED << "chr" << bam_header->target_name[y.tid()]
                         << "\t" << y.pos()
                         << "\t" << aln_end
-                        << "\t" << y.query_name() << "|" << y.lib_info().name
+                        << "\t" << y.query_name() << "|" << _lib_info._cfg.library_config_by_index(y.lib_index()).name
                         << "\t" << y.bdqual() * 10
                         << "\t" << y.ori()
                         << "\t" << y.pos()

@@ -29,9 +29,9 @@ struct SvBuilder {
     std::vector<std::string> reads_to_free;
 
     // number of readpairs per each type/flag (first key) then library (second key)
-    breakdancer::PerFlagArray<std::map<std::string, int> >::type type_library_readcount;
+    breakdancer::PerFlagArray<std::map<std::size_t, int> >::type type_library_readcount;
     // average ISIZE from BAM records
-    breakdancer::PerFlagArray<std::map<std::string, int> >::type type_library_meanspan;
+    breakdancer::PerFlagArray<std::map<std::size_t, int> >::type type_library_meanspan;
 
     ObservedReads observed_reads; //unpaired reads
 
