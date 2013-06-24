@@ -1,8 +1,9 @@
 #pragma once
 
+#include "BasicRegion.hpp"
+#include "FastqWriter.hpp"
 #include "ReadCountsByLib.hpp"
 #include "ReadRegionData.hpp"
-#include "BasicRegion.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -49,6 +50,8 @@ public:
     void process_breakpoint(bam_header_t const* bam_header);
     void process_final_region(bam_header_t const* bam_header);
 
+    void dump_fastq(breakdancer::pair_orientation_flag const& flag, std::vector<ReadType> const& support_reads);
+
     void run();
 
 private:
@@ -81,6 +84,7 @@ private:
     int _region_end_pos; // global
 
     ReadVector reads_in_current_region;
+    FastqWriter _fastq_writer;
 
 public:
     std::map<std::string, float> read_density;

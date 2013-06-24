@@ -11,11 +11,13 @@ set(SOURCES
     BamMerger.hpp
     BamReader.cpp
     BamReader.hpp
-    BamSummary.hpp
     BamSummary.cpp
+    BamSummary.hpp
     BasicRegion.hpp
     BreakDancer.cpp
     BreakDancer.hpp
+    FastqWriter.cpp
+    FastqWriter.hpp
     FlagCodec.hpp
     IBamReader.hpp
     IlluminaLIFlagCodec.hpp

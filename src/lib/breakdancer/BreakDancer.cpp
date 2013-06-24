@@ -79,28 +79,6 @@ namespace {
 
         return logpvalue;
     }
-
-    void write_fastq_for_flag(LibraryInfo const& lib_info, bd::pair_orientation_flag const& flag, const vector<bd::Read> &support_reads, ConfigMap<string, string>::type const& ReadsOut) {
-        map<string,int> pairing;
-        for( vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
-            bd::Read const& y = *ii_support_reads;
-
-            if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
-                continue;
-
-            //Paradoxically, the first read seen is put in file 2 and the second in file 1
-            string suffix = pairing.count(y.query_name()) ? "1" : "2";
-            string fh_tmp_str = ReadsOut.at(lib_info._cfg.library_config_by_index(y.lib_index()).name + suffix);
-            ofstream fh;
-            // This is causing horrible amounts of network IO and needs to be managed by something
-            // external. That's in the works.
-            fh.open(fh_tmp_str.c_str(), ofstream::app);
-            pairing[y.query_name()] = 1;
-            //Note that no transformation on read bases based on read orientation is done here
-            y.to_fastq(fh);
-            fh.close();
-        }
-    }
 }
 
 BreakDancer::BreakDancer(
@@ -517,7 +495,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
 
             if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
-                write_fastq_for_flag(_lib_info, svb.flag, svb.support_reads, _cfg.ReadsOut);
+                dump_fastq(svb.flag, svb.support_reads);
             }
 
             if(!_opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
@@ -553,6 +531,22 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         boost::bind(&ReadRegionData::erase_read, &_rdata, _1));
 
     free_nodes.insert(snodes.begin(), snodes.end());
+}
+
+void BreakDancer::dump_fastq(breakdancer::pair_orientation_flag const& flag, std::vector<ReadType> const& support_reads) {
+    map<string,int> pairing;
+    for( vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
+        bd::Read const& y = *ii_support_reads;
+
+        if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
+            continue;
+
+        //Paradoxically, the first read seen is put in file 2 and the second in file 1
+        string suffix = pairing.count(y.query_name()) ? "1" : "2";
+        string fh_tmp_str = _cfg.ReadsOut.at(_lib_info._cfg.library_config_by_index(y.lib_index()).name + suffix);
+        _fastq_writer.write(fh_tmp_str, y);
+        pairing[y.query_name()] = 1;
+    }
 }
 
 void BreakDancer::process_final_region(bam_header_t const* bam_header) {
