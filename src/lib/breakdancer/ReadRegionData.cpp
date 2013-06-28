@@ -49,7 +49,6 @@ ReadRegionData::Graph ReadRegionData::region_graph() const {
     }
     size_t n_regions = graph.size();
     timer << "Graph contains: " << n_regions << " regions.\n";
-    timer << "and also this";
 
     return graph;
 }
