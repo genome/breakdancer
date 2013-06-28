@@ -4,6 +4,7 @@
 #include "FastqWriter.hpp"
 #include "ReadCountsByLib.hpp"
 #include "ReadRegionData.hpp"
+#include "Timer.hpp"
 
 #include <algorithm>
 #include <cassert>

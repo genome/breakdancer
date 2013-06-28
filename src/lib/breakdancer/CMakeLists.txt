@@ -37,6 +37,7 @@ set(SOURCES
     RegionLimitedBamReader.hpp
     SvBuilder.cpp
     SvBuilder.hpp
+    Timer.hpp
     namespace.hpp
     utility.hpp
 )

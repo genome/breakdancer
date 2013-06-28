@@ -1,6 +1,9 @@
 #include "ReadRegionData.hpp"
+#include "Timer.hpp"
 
+#include <boost/format.hpp>
 #include <boost/bind.hpp>
+#include <iostream>
 
 ReadRegionData::~ReadRegionData() {
     for (size_t i = 0; i < _regions.size(); ++i) {
@@ -11,7 +14,15 @@ ReadRegionData::~ReadRegionData() {
 ReadRegionData::Graph ReadRegionData::region_graph() const {
     Graph graph;
     typedef ReadsToRegionsMap::const_iterator IterType;
-    for(IterType i = read_regions().begin(); i != read_regions().end(); i++){
+
+    using namespace boost::chrono;
+    using std::cerr;
+    using boost::format;
+
+    size_t num_reads = read_regions().size();
+    ScopedTimer<high_resolution_clock, milliseconds> timer(cerr,
+        str(format("build graph for %1% reads") % num_reads));
+    for(IterType i = read_regions().begin(); i != read_regions().end(); i++) {
         // test
         std::vector<int> const& p = i->second;
         assert(p.size() < 3);
@@ -36,6 +47,10 @@ ReadRegionData::Graph ReadRegionData::region_graph() const {
             graph[r2][r1] = 1;
         }
     }
+    size_t n_regions = graph.size();
+    timer << "Graph contains: " << n_regions << " regions.\n";
+    timer << "and also this";
+
     return graph;
 }
 

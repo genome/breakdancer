@@ -4,6 +4,7 @@
 #include "IBamReader.hpp"
 #include "Options.hpp"
 #include "SvBuilder.hpp"
+#include "Timer.hpp"
 
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
@@ -31,6 +32,9 @@ using boost::math::cdf;
 using boost::math::complement;
 using boost::math::poisson_distribution;
 using boost::math::chi_squared;
+using boost::chrono::high_resolution_clock;
+using boost::chrono::milliseconds;
+
 
 
 namespace {
@@ -251,6 +255,8 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
 }
 
 void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
+    ScopedTimer<high_resolution_clock, milliseconds> timer(cerr, "process_breakpoint");
+
     float seq_coverage = _ntotal_nucleotides/float(_region_end_pos - _region_start_pos + 1 + _max_readlen);
     if(_region_end_pos - _region_start_pos > _opts.min_len
             && seq_coverage < _opts.seq_coverage_lim) // skip short/unreliable flanking supporting regions
@@ -275,6 +281,7 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
 
 
 void BreakDancer::build_connection(bam_header_t const* bam_header) {
+    ScopedTimer<high_resolution_clock, milliseconds> timer(cerr, "build_connection");
     // build connections
     // find paired regions that are supported by paired reads
 
