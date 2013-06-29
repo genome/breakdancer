@@ -24,7 +24,7 @@ TEST(utility, merge_maps) {
 
     merge_maps(a, b, std::plus<int>());
 
-    ASSERT_EQ(5, a.size());
+    ASSERT_EQ(5u, a.size());
     ASSERT_EQ(50, a["a"]);
     ASSERT_EQ(60, a["b"]);
     ASSERT_EQ(11, a["x"]);
@@ -44,7 +44,7 @@ TEST(utility, merge_maps_self) {
 
     merge_maps(a, a, std::plus<int>());
 
-    ASSERT_EQ(4, a.size());
+    ASSERT_EQ(4u, a.size());
     ASSERT_EQ(100, a["a"]);
     ASSERT_EQ(2, a["x"]);
     ASSERT_EQ(4, a["y"]);

@@ -57,9 +57,9 @@ TEST_F(TestConfig, legacyParse) {
     BamConfig cfg(_cfg_stream, _opts);
 
     // test "fmaps", mapping input files -> first library they contain?
-    ASSERT_EQ(2, cfg.fmaps.size());
-    ASSERT_EQ(1, cfg.fmaps.count("x.bam"));
-    ASSERT_EQ(1, cfg.fmaps.count("y.bam"));
+    ASSERT_EQ(2u, cfg.fmaps.size());
+    ASSERT_EQ(1u, cfg.fmaps.count("x.bam"));
+    ASSERT_EQ(1u, cfg.fmaps.count("y.bam"));
     ASSERT_EQ("lib1", cfg.fmaps.find("x.bam")->second);
     ASSERT_EQ("lib2", cfg.fmaps.find("y.bam")->second);
 
@@ -83,7 +83,7 @@ TEST_F(TestConfig, legacyParse) {
 
 TEST_F(TestConfig, bdConfigRawParse) {
     TestableBDConfig cfg(_cfg_stream);
-    ASSERT_EQ(14, cfg._entries.size());
+    ASSERT_EQ(14u, cfg._entries.size());
 
     set<string> expected_readgroups;
     for (size_t i = 0; i < 14; ++i) {

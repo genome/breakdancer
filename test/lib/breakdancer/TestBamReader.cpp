@@ -16,7 +16,10 @@ class TestRegionLimitedBamReader : public ::testing::Test {
         void SetUp() {
             _bam_path = getenv("BD_TEST_BAM_FILE");
             _temp_dir = "/tmp/BD_TestBamReader.XXXXXX";
-            mkdtemp(&_temp_dir[0]);
+            char* tmp = mkdtemp(&_temp_dir[0]);
+            if (!tmp) {
+                throw runtime_error("Failed to create temp directory");
+            }
         }
 
 

@@ -3,11 +3,12 @@ cmake_minimum_required(VERSION 2.8)
 set(TEST_LIBS breakdancer ${Boost_LIBRARIES})
 include_directories(${GTEST_INCLUDE_DIRS})
 
-#def_test(Region)
-def_test(BamReader)
-def_test(BreakDancer)
-def_test(Config)
-def_test(Poisson)
-def_test(Read)
-def_test(ReadCountsByLib)
-def_test(Utility)
+add_unit_tests(TestBdLib
+    TestBamReader.cpp
+    TestBreakDancer.cpp
+    TestConfig.cpp
+    TestPoisson.cpp
+    TestRead.cpp
+    TestReadCountsByLib.cpp
+    TestUtility.cpp
+)

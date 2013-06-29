@@ -25,42 +25,42 @@ TEST_F(TestReadCountsByLib, accessors) {
     ReadCountsByLib counts;
 
     counts["x"] += 3;
-    ASSERT_EQ(1, counts.size());
+    ASSERT_EQ(1u, counts.size());
     ASSERT_NO_THROW(counts.at("x"));
-    ASSERT_EQ(3, counts.at("x"));
+    ASSERT_EQ(3u, counts.at("x"));
 
     counts["y"] += 4;
-    ASSERT_EQ(2, counts.size());
+    ASSERT_EQ(2u, counts.size());
     ASSERT_NO_THROW(counts.at("y"));
-    ASSERT_EQ(3, counts.at("x"));
-    ASSERT_EQ(4, counts.at("y"));
+    ASSERT_EQ(3u, counts.at("x"));
+    ASSERT_EQ(4u, counts.at("y"));
 
     counts["y"] += counts["x"];
-    ASSERT_EQ(7, counts.at("y"));
+    ASSERT_EQ(7u, counts.at("y"));
 }
 
 TEST_F(TestReadCountsByLib, addition) {
     // Test normal addition
     ReadCountsByLib c = a + b;
-    ASSERT_EQ(3, c.size());
-    ASSERT_EQ(5, c.at("x"));
-    ASSERT_EQ(13, c.at("y"));
-    ASSERT_EQ(8, c.at("z"));
+    ASSERT_EQ(3u, c.size());
+    ASSERT_EQ(5u, c.at("x"));
+    ASSERT_EQ(13u, c.at("y"));
+    ASSERT_EQ(8u, c.at("z"));
 
-    ASSERT_EQ(5, a.at("x"));
-    ASSERT_EQ(6, a.at("y"));
-    ASSERT_EQ(7, b.at("y"));
-    ASSERT_EQ(8, b.at("z"));
+    ASSERT_EQ(5u, a.at("x"));
+    ASSERT_EQ(6u, a.at("y"));
+    ASSERT_EQ(7u, b.at("y"));
+    ASSERT_EQ(8u, b.at("z"));
 
     // Test +=
     a += b;
-    ASSERT_EQ(3, a.size());
-    ASSERT_EQ(5, a.at("x"));
-    ASSERT_EQ(13, a.at("y"));
-    ASSERT_EQ(8, a.at("z"));
+    ASSERT_EQ(3u, a.size());
+    ASSERT_EQ(5u, a.at("x"));
+    ASSERT_EQ(13u, a.at("y"));
+    ASSERT_EQ(8u, a.at("z"));
 
-    ASSERT_EQ(7, b.at("y"));
-    ASSERT_EQ(8, b.at("z"));
+    ASSERT_EQ(7u, b.at("y"));
+    ASSERT_EQ(8u, b.at("z"));
 }
 
 TEST_F(TestReadCountsByLib, subtraction) {

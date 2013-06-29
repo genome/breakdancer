@@ -34,7 +34,7 @@ if (CMAKE_COMPILER_IS_GNUCC)
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS "-Wno-long-long -Wall -ansi -pedantic")
+    set(CMAKE_CXX_FLAGS "-Wno-long-long -Wall -ansi -pedantic -Wno-variadic-macros")
 endif ()
 
 # make sure to pick up headers from library dirs
@@ -44,17 +44,8 @@ include_directories("src/lib")
 find_package(Threads)
 link_libraries(${CMAKE_THREAD_LIBS_INIT})
 
-# unit tests
-find_package(GTest)
-if(GTEST_FOUND)
-    message("Google Test framework found, building unit tests")
-    enable_testing(true)
-    add_projects(test/lib)
-else()
-    message("Google Test framework not found, no tests will be built")
-    message("GTest is available at http://code.google.com/p/googletest/")
-    message("Ubuntu users can likely sudo apt-get install gtest")
-endif()
+enable_testing(true)
+add_projects(test/lib)
 
 # integration testing
 add_subdirectory(integration-test)
