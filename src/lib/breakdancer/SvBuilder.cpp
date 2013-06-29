@@ -15,16 +15,19 @@ namespace {
     const static bd::PerFlagArray<int>::type ZEROS = {{0}};
 }
 
-SvBuilder::SvBuilder(int n, BasicRegion const* regions[2], ReadsRange read_ranges[2], int max_readlen)
+SvBuilder::SvBuilder(Options const& opts, int n, BasicRegion const* regions[2],
+        ReadsRange read_ranges[2], int max_readlen)
     : current_region(-1)
     , num_regions(n)
     , num_pairs(0)
+    , diffspan(0)
     , flag_counts(ZEROS)
     , chr(_init_zero())
     , pos(_init_zero())
     , fwd_read_count(_init_zero())
     , rev_read_count(_init_zero())
     , allele_frequency(0.0f)
+    , _opts(opts)
 {
     assert(n == 1 || n == 2);
 

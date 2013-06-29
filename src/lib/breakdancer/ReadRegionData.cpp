@@ -19,9 +19,6 @@ ReadRegionData::Graph ReadRegionData::region_graph() const {
     using std::cerr;
     using boost::format;
 
-    size_t num_reads = read_regions().size();
-    ScopedTimer<high_resolution_clock, milliseconds> timer(cerr,
-        str(format("build graph for %1% reads") % num_reads));
     for(IterType i = read_regions().begin(); i != read_regions().end(); i++) {
         // test
         std::vector<int> const& p = i->second;
@@ -47,8 +44,6 @@ ReadRegionData::Graph ReadRegionData::region_graph() const {
             graph[r2][r1] = 1;
         }
     }
-    size_t n_regions = graph.size();
-    timer << "Graph contains: " << n_regions << " regions.\n";
 
     return graph;
 }

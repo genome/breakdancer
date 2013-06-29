@@ -110,6 +110,10 @@ BreakDancer::BreakDancer(
     , _region_end_pos(-1)
 
 {
+    if (!_opts.dump_BED.empty()) {
+        _bed_stream.reset(new ofstream(_opts.dump_BED.c_str()));
+        _bed_writer.reset(new BedWriter(*_bed_stream, _opts, _lib_info, _merged_reader.header()));
+    }
 }
 
 void BreakDancer::run() {
@@ -255,8 +259,6 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
 }
 
 void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
-    ScopedTimer<high_resolution_clock, milliseconds> timer(cerr, "process_breakpoint");
-
     float seq_coverage = _ntotal_nucleotides/float(_region_end_pos - _region_start_pos + 1 + _max_readlen);
     if(_region_end_pos - _region_start_pos > _opts.min_len
             && seq_coverage < _opts.seq_coverage_lim) // skip short/unreliable flanking supporting regions
@@ -278,10 +280,7 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
     }
 }
 
-
-
 void BreakDancer::build_connection(bam_header_t const* bam_header) {
-    ScopedTimer<high_resolution_clock, milliseconds> timer(cerr, "build_connection");
     // build connections
     // find paired regions that are supported by paired reads
 
@@ -374,7 +373,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         regions[i] = &_rdata.region(region_idx);
         read_ranges[i] = _rdata.region_reads_range(region_idx);
     }
-    SvBuilder svb(snodes.size(), regions, read_ranges, _max_readlen);
+    SvBuilder svb(_opts, snodes.size(), regions, read_ranges, _max_readlen);
 
     // This predicate takes a read and evaluates:
     //      read_pair.count(read.query_name()) == 0
@@ -390,148 +389,124 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
         return;
 
     assert(snodes.size() == 1 || snodes.size() == 2);
-    if(svb.flag_counts[svb.flag] >= _opts.min_read_pair) {
-        int diffspan;
-        string sptype;
+    if(svb.flag_counts[svb.flag] < _opts.min_read_pair)
+        return;
 
-        // print out result
-        ReadCountsByLib read_count_accumulator;
-        if (snodes.size() == 2) {
-            _rdata.accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
+    string sptype;
+
+    // print out result
+    ReadCountsByLib read_count_accumulator;
+    if (snodes.size() == 2) {
+        _rdata.accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
+    }
+    svb.compute_copy_number(read_count_accumulator, read_density);
+
+
+    if(svb.flag != bd::ARP_RF && svb.flag != bd::ARP_RR && svb.pos[0] + _max_readlen - 5 < svb.pos[1])
+        svb.pos[0] += _max_readlen - 5; // apply extra padding to the start coordinates
+
+    string sptype_tmp;
+    float diff = 0;
+    if(_opts.CN_lib == 1){
+        for(map<size_t,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
+            size_t const& index = ii_type_lib_rc->first;
+            int const& read_count = ii_type_lib_rc->second;
+            LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(index);
+            // intialize to be zero, in case of no library, or DEL, or ITX.
+
+            string copy_number_str = "NA";
+            if(svb.flag != bd::ARP_CTX){
+                float copy_number_ = 0;
+
+                if(svb.copy_number.find(lib_config.name) != svb.copy_number.end()){
+                    copy_number_ = svb.copy_number[lib_config.name];
+                    stringstream sstr;
+                    sstr << fixed;
+                    sstr << setprecision(2) << copy_number_;
+                    copy_number_str = sstr.str();
+                }
+            }
+            if(!sptype_tmp.empty())
+                sptype_tmp += ":";
+
+            sptype_tmp += lib_config.name + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
+
+            diff += float(svb.type_library_meanspan[svb.flag][index]) - float(svb.type_library_readcount[svb.flag][index])*lib_config.mean_insertsize;
         }
-        svb.compute_copy_number(read_count_accumulator, read_density);
+    } // do lib for copy number and support reads
+    else{
+        map<string, int> type_bam_readcount;
+        for(map<size_t, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
+            size_t const& index = ii_type_lib_rc->first;
+            int const& read_count = ii_type_lib_rc->second;
+            LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(index);
+            type_bam_readcount[lib_config.bam_file] += read_count;
+            diff += float(svb.type_library_meanspan[svb.flag][index]) - float(svb.type_library_readcount[svb.flag][index])*lib_config.mean_insertsize;
+        }
+        for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
+            string const& sp = ii_type_bam_rc->first;
+            if(!sptype_tmp.empty())
+                sptype_tmp += ":";
+            sptype_tmp += sp + "|" + lexical_cast<string>((*ii_type_bam_rc).second);
+        }
+        if(sptype_tmp.empty()) {
+            sptype_tmp = "NA";
+        }
+    } // do bam for support reads; copy number will be done later
+
+    svb.diffspan = int(diff/float(svb.flag_counts[svb.flag]) + 0.5);
+    sptype = sptype_tmp;
 
 
-        if(svb.flag != bd::ARP_RF && svb.flag != bd::ARP_RR && svb.pos[0] + _max_readlen - 5 < svb.pos[1])
-            svb.pos[0] += _max_readlen - 5; // apply extra padding to the start coordinates
+    int total_region_size = _rdata.sum_of_region_sizes(snodes);
+    real_type LogPvalue = ComputeProbScore(total_region_size, svb.type_library_readcount[svb.flag], svb.flag, _opts.fisher, _lib_info);
+    real_type PhredQ_tmp = -10*LogPvalue/log(10);
+    int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
 
-        string sptype_tmp;
-        float diff = 0;
-        if(_opts.CN_lib == 1){
-            for(map<size_t,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
-                size_t const& index = ii_type_lib_rc->first;
-                int const& read_count = ii_type_lib_rc->second;
-                LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(index);
-                // intialize to be zero, in case of no library, or DEL, or ITX.
+    // Convert the coordinates to base 1
+    ++svb.pos[0];
+    ++svb.pos[1];
+    if(PhredQ > _opts.score_threshold){
+        cout << bam_header->target_name[svb.chr[0]]
+            << "\t" << svb.pos[0]
+            << "\t" << svb.fwd_read_count[0] << "+" << svb.rev_read_count[0] << "-"
+            << "\t" << bam_header->target_name[svb.chr[1]]
+            << "\t" << svb.pos[1]
+            << "\t" << svb.fwd_read_count[1] << "+" << svb.rev_read_count[1] << "-"
+            << "\t" << svb.sv_type()
+            << "\t" << svb.diffspan
+            << "\t" << PhredQ
+            << "\t" << svb.flag_counts[svb.flag]
+            << "\t" << sptype
+            ;
 
-                string copy_number_str = "NA";
-                if(svb.flag != bd::ARP_CTX){
-                    float copy_number_ = 0;
+        if(_opts.print_AF == 1)
+            cout <<  "\t" << svb.allele_frequency;
 
-                    if(svb.copy_number.find(lib_config.name) != svb.copy_number.end()){
-                        copy_number_ = svb.copy_number[lib_config.name];
-                        stringstream sstr;
-                        sstr << fixed;
-                        sstr << setprecision(2) << copy_number_;
-                        copy_number_str = sstr.str();
-                    }
+        if(_opts.CN_lib == 0 && svb.flag != bd::ARP_CTX){
+            vector<string> const& bams = _cfg.bam_files();
+            for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
+                map<string, float>::const_iterator cniter = svb.copy_number.find(*iter);
+
+                if(cniter  == svb.copy_number.end())
+                    cout << "\tNA";
+                else {
+                    cout << "\t";
+                    cout << fixed;
+                    cout << setprecision(2) << cniter->second;
                 }
-                if(!sptype_tmp.empty())
-                    sptype_tmp += ":";
-
-                sptype_tmp += lib_config.name + "|" + lexical_cast<string>(read_count) + "," + copy_number_str;
-
-                diff += float(svb.type_library_meanspan[svb.flag][index]) - float(svb.type_library_readcount[svb.flag][index])*lib_config.mean_insertsize;
-            }
-        } // do lib for copy number and support reads
-        else{
-            map<string, int> type_bam_readcount;
-            for(map<size_t, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
-                size_t const& index = ii_type_lib_rc->first;
-                int const& read_count = ii_type_lib_rc->second;
-                LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(index);
-                type_bam_readcount[lib_config.bam_file] += read_count;
-                diff += float(svb.type_library_meanspan[svb.flag][index]) - float(svb.type_library_readcount[svb.flag][index])*lib_config.mean_insertsize;
-            }
-            for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
-                string const& sp = ii_type_bam_rc->first;
-                if(!sptype_tmp.empty())
-                    sptype_tmp += ":";
-                sptype_tmp += sp + "|" + lexical_cast<string>((*ii_type_bam_rc).second);
-            }
-            if(sptype_tmp.empty()) {
-                sptype_tmp = "NA";
-            }
-        } // do bam for support reads; copy number will be done later
-
-        diffspan = int(diff/float(svb.flag_counts[svb.flag]) + 0.5);
-        sptype = sptype_tmp;
-
-
-        int total_region_size = _rdata.sum_of_region_sizes(snodes);
-        real_type LogPvalue = ComputeProbScore(total_region_size, svb.type_library_readcount[svb.flag], svb.flag, _opts.fisher, _lib_info);
-        real_type PhredQ_tmp = -10*LogPvalue/log(10);
-        int PhredQ = PhredQ_tmp>99 ? 99:int(PhredQ_tmp+0.5);
-
-        string SVT = _opts.SVtype.find(svb.flag)==_opts.SVtype.end()?"UN":_opts.SVtype.at(svb.flag); // UN stands for unknown
-        // Convert the coordinates to base 1
-        ++svb.pos[0];
-        ++svb.pos[1];
-        if(PhredQ > _opts.score_threshold){
-            cout << bam_header->target_name[svb.chr[0]]
-                << "\t" << svb.pos[0]
-                << "\t" << svb.fwd_read_count[0] << "+" << svb.rev_read_count[0] << "-"
-                << "\t" << bam_header->target_name[svb.chr[1]]
-                << "\t" << svb.pos[1]
-                << "\t" << svb.fwd_read_count[1] << "+" << svb.rev_read_count[1] << "-"
-                << "\t" << SVT
-                << "\t" << diffspan
-                << "\t" << PhredQ
-                << "\t" << svb.flag_counts[svb.flag]
-                << "\t" << sptype
-                ;
-
-            if(_opts.print_AF == 1)
-                cout <<  "\t" << svb.allele_frequency;
-
-            if(_opts.CN_lib == 0 && svb.flag != bd::ARP_CTX){
-                vector<string> const& bams = _cfg.bam_files();
-                for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
-                    map<string, float>::const_iterator cniter = svb.copy_number.find(*iter);
-
-                    if(cniter  == svb.copy_number.end())
-                        cout << "\tNA";
-                    else {
-                        cout << "\t";
-                        cout << fixed;
-                        cout << setprecision(2) << cniter->second;
-                    }
-                }
-            }
-            cout << "\n";
-
-
-            if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
-                dump_fastq(svb.flag, svb.support_reads);
-            }
-
-            if(!_opts.dump_BED.empty()){  // print out SV and supporting reads in BED format
-                ofstream fh_BED(_opts.dump_BED.c_str(), ofstream::app);
-
-                string trackname(bam_header->target_name[svb.chr[0]]);
-                trackname = trackname.append("_").append(lexical_cast<string>(svb.pos[0])).append("_").append(SVT).append("_").append(lexical_cast<string>(diffspan));
-                fh_BED << "track name=" << trackname << "\tdescription=\"BreakDancer" << " " << bam_header->target_name[svb.chr[0]] << " " << svb.pos[0] << " " << SVT << " " << diffspan << "\"\tuseScore=0\n";
-                for(vector<bd::Read>::const_iterator ii_support_reads = svb.support_reads.begin(); ii_support_reads != svb.support_reads.end(); ii_support_reads ++){
-                    bd::Read const& y = *ii_support_reads;
-                    if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != svb.flag)
-                        continue;
-                    int aln_end = y.pos() - y.query_length() - 1;
-                    string color = y.ori() == FWD ? "0,0,255" : "255,0,0";
-                    //FIXME if the bam already used chr prefixed chromosome names this would duplicate them...
-                    fh_BED << "chr" << bam_header->target_name[y.tid()]
-                        << "\t" << y.pos()
-                        << "\t" << aln_end
-                        << "\t" << y.query_name() << "|" << _lib_info._cfg.library_config_by_index(y.lib_index()).name
-                        << "\t" << y.bdqual() * 10
-                        << "\t" << y.ori()
-                        << "\t" << y.pos()
-                        << "\t" << aln_end
-                        << "\t" << color
-                        << "\n";
-                }
-                fh_BED.close();
             }
         }
+        cout << "\n";
+
+        if (_bed_writer) {
+            _bed_writer->write(svb);
+        }
+
+        if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
+            dump_fastq(svb.flag, svb.support_reads);
+        }
+
     }
 
     std::for_each(svb.reads_to_free.begin(), svb.reads_to_free.end(),

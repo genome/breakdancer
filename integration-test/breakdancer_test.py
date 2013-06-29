@@ -18,6 +18,7 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
         os.chdir(self.data_dir)
 
     def tearDown(self):
+        IntegrationTest.tearDown(self)
         os.chdir(self.orig_path)
 
     def test_breakdancer_cn_per_lib(self):
@@ -103,6 +104,19 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
         print "Return value:", rv
         self.assertEqual(0, rv)
         self.assertFilesEqual(expected_file, output_file, filter_regex="#Command|#Software")
+
+    def test_breakdancer_bed_dump(self):
+        expected_file = "expected.bed"
+        config_file = "inv_del_bam_config"
+        output_file = self.tempFile("output")
+        output_bed = self.tempFile("output")
+        cmdline = " ".join([self.exe_path, '-g', output_bed, config_file, '>', output_file])
+        print "Executing", cmdline
+        print "CWD", os.getcwd()
+        rv = subprocess.call(cmdline, shell=True)
+        print "Return value:", rv
+        self.assertEqual(0, rv)
+        self.assertFilesEqual(expected_file, output_bed, filter_regex="#Command|#Software")
 
     def test_breakdancer_fastq_dump(self):
         expected_files = ["expected_output", 

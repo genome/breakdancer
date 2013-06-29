@@ -14,6 +14,8 @@ set(SOURCES
     BamSummary.cpp
     BamSummary.hpp
     BasicRegion.hpp
+    BedWriter.cpp
+    BedWriter.hpp
     BreakDancer.cpp
     BreakDancer.hpp
     FastqWriter.cpp

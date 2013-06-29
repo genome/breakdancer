@@ -48,7 +48,7 @@ struct Options {
     std::string bam_file;
     std::string prefix_fastq;
     std::string dump_BED;
-    ConfigMap<breakdancer::pair_orientation_flag, std::string>::type SVtype;
+    breakdancer::PerFlagArray<std::string>::type SVtype;
 
     bool need_sequence_data() const {
         // we'll need to keep sequence/quality data if we are dumping

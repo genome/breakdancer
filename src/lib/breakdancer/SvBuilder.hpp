@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BasicRegion.hpp"
+#include "Options.hpp"
 #include "ReadCountsByLib.hpp"
 #include "Read.hpp"
 
@@ -10,12 +11,16 @@
 #include <string>
 #include <vector>
 
-struct SvBuilder {
+class Options;
+
+class SvBuilder {
+public:
     typedef breakdancer::Read Read;
     typedef std::map<std::string, Read> ObservedReads;
     typedef BasicRegion::iterator_range ReadsRange;
 
-    SvBuilder(int n, BasicRegion const* regions[2], ReadsRange read_ranges[2], int max_readlen);
+    SvBuilder(Options const& options, int n, BasicRegion const* regions[2],
+        ReadsRange read_ranges[2], int max_readlen);
 
     void compute_copy_number(ReadCountsByLib const& counts,
         std::map<std::string, float> const& read_density);
@@ -24,6 +29,7 @@ struct SvBuilder {
     int current_region;
     size_t num_regions;
     int num_pairs;
+    int diffspan;
 
     breakdancer::PerFlagArray<int>::type flag_counts;
     std::vector<std::string> reads_to_free;
@@ -46,7 +52,13 @@ struct SvBuilder {
     std::map<std::string, float> copy_number;
     float allele_frequency;
 
+    std::string const& sv_type() const {
+        return _opts.SVtype[flag];
+    }
+
 private:
+    Options const& _opts;
+
     breakdancer::pair_orientation_flag choose_sv_flag();
     void _observe_read(Read const& read, int region_idx);
 

@@ -26,6 +26,7 @@ public:
     typedef std::map<int, int> Subgraph;
     typedef std::map<int, Subgraph> Graph;
 
+
     ~ReadRegionData();
 
     Graph region_graph() const;

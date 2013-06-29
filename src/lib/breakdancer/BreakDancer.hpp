@@ -1,10 +1,14 @@
 #pragma once
 
 #include "BasicRegion.hpp"
+#include "BedWriter.hpp"
 #include "FastqWriter.hpp"
 #include "ReadCountsByLib.hpp"
 #include "ReadRegionData.hpp"
 #include "Timer.hpp"
+
+#include <boost/scoped_ptr.hpp>
+#include <boost/unordered_map.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -18,12 +22,11 @@
 #include <string>
 #include <vector>
 
-#include <boost/unordered_map.hpp>
-
 class Options;
 class BamConfig; //FIXME we probably won't need to store this once done stubbing in LibraryInfo
 class LibraryInfo;
 class IBamReader;
+class Logger;
 
 class BreakDancer {
 public:
@@ -86,6 +89,9 @@ private:
 
     ReadVector reads_in_current_region;
     FastqWriter _fastq_writer;
+    boost::scoped_ptr<std::ofstream> _bed_stream;
+    boost::scoped_ptr<BedWriter> _bed_writer;
+
 
 public:
     std::map<std::string, float> read_density;
