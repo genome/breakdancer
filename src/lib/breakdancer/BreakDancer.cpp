@@ -284,7 +284,6 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     // build connections
     // find paired regions that are supported by paired reads
 
-    typedef ReadRegionData::Subgraph Subgraph;
     typedef ReadRegionData::Graph Graph;
     Graph graph(_rdata.region_graph());
 
@@ -312,8 +311,8 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                 if (found == graph.end())
                     continue;
 
-                Subgraph& graph_tail = found->second;
-                Subgraph::iterator ii_graph_tail = graph_tail.begin();
+                Graph::EdgeMap& graph_tail = found->second;
+                Graph::EdgeMap::iterator ii_graph_tail = graph_tail.begin();
                 while (ii_graph_tail != graph_tail.end()) {
                     int s1 = ii_graph_tail->first;
                     int nlinks = ii_graph_tail->second;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BasicRegion.hpp"
+#include "Graph.hpp"
 #include "Options.hpp"
 #include "Read.hpp"
 #include "ReadCountsByLib.hpp"
@@ -25,8 +26,7 @@ public:
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
     typedef boost::unordered_map<std::string, std::vector<int> > ReadsToRegionsMap;
-    typedef std::map<int, int> Subgraph;
-    typedef std::map<int, Subgraph> Graph;
+    typedef UndirectedWeightedGraph<int, int> Graph; // tmpl params=vertex type, weight type.
 
 public:
     ReadRegionData(Options const& opts)

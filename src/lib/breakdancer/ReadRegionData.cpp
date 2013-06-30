@@ -141,8 +141,10 @@ int ReadRegionData::sum_of_region_sizes(std::vector<int> const& region_ids) cons
 }
 
 void ReadRegionData::clear_region(size_t region_idx) {
-    BasicRegion::ReadVector const& reads = _reads_in_region(region_idx);
+    if (!region_exists(region_idx))
+        return;
 
+    BasicRegion::ReadVector const& reads = _reads_in_region(region_idx);
     for(ReadVector::const_iterator i = reads.begin(); i != reads.end(); ++i) {
         ReadsToRegionsMap::iterator found = _read_regions.find(i->query_name());
         if (found != _read_regions.end()) {

@@ -21,6 +21,7 @@ set(SOURCES
     FastqWriter.cpp
     FastqWriter.hpp
     FlagCodec.hpp
+    Graph.hpp
     IBamReader.hpp
     IlluminaLIFlagCodec.hpp
     IlluminaStandardFlagCodec.hpp
