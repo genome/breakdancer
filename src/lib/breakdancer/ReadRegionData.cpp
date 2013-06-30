@@ -116,7 +116,7 @@ size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int
 }
 
 bool ReadRegionData::is_region_final(size_t region_idx) const {
-    if (region_idx == !region_exists(region_idx))
+    if (!region_exists(region_idx))
         return false;
 
     ReadVector const& v = _reads_in_region(region_idx);
