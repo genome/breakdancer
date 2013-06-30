@@ -1,14 +1,15 @@
 #include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamConfig.hpp"
-#include "breakdancer/LibraryInfo.hpp"
-#include "breakdancer/LibraryConfig.hpp"
-#include "breakdancer/BamSummary.hpp"
 #include "breakdancer/BamIO.hpp"
 #include "breakdancer/BamMerger.hpp"
+#include "breakdancer/BamSummary.hpp"
 #include "breakdancer/BreakDancer.hpp"
+#include "breakdancer/LibraryConfig.hpp"
+#include "breakdancer/LibraryInfo.hpp"
 #include "breakdancer/Options.hpp"
 #include "breakdancer/Read.hpp"
 #include "breakdancer/ReadCountsByLib.hpp"
+#include "breakdancer/ReadRegionData.hpp"
 
 #include "version.h"
 
@@ -92,7 +93,14 @@ int main(int argc, char *argv[]) {
             readers.push_back(sp_readers[i].get());
 
         BamMerger merged_reader(readers);
-        BreakDancer bdancer(opts, cfg, lib_info, merged_reader, max_read_window_size);
+        ReadRegionData read_regions(opts);
+        BreakDancer bdancer(
+            opts,
+            cfg,
+            lib_info,
+            read_regions,
+            merged_reader,
+            max_read_window_size);
 
         cout << "#Software: " << __g_prog_version << " (commit "
             << __g_commit_hash << ")" << endl;

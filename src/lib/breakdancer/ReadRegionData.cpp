@@ -5,10 +5,38 @@
 #include <boost/bind.hpp>
 #include <iostream>
 
+using std::cerr;
+
 ReadRegionData::~ReadRegionData() {
+    if (getenv("BD_DUMP_REGION_SUMMARY"))
+        summary(cerr);
+
     for (size_t i = 0; i < _regions.size(); ++i) {
         delete _regions[i];
     }
+}
+
+void ReadRegionData::summary(std::ostream& out) const {
+    out << "Region summary:\n";
+    size_t n_total(0);
+    size_t n_active(0);
+    size_t n_deleted(0);
+    for (size_t i = 0; i < _regions.size(); ++i) {
+        bool active = _regions[i] != 0;
+        ++n_total;
+        if (active)
+            ++n_active;
+        else
+            ++n_deleted;
+
+        out << i << "\t" << (active ? "ACTIVE" : "DELETED")
+            << "\t" << (active ? _regions[i]->size() : 0)
+            << "\t" << __DEBUG_unpaired_reads(i)
+            << "\n";
+    }
+    out << "Total regions: " << n_total << "\n";
+    out << "Active regions: " << n_active << "\n";
+    out << "Deleted regions: " << n_deleted << "\n";
 }
 
 ReadRegionData::Graph ReadRegionData::region_graph() const {
@@ -76,7 +104,8 @@ size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int
 
     // This adds the region id to an array of region ids
     for(ReadVector::const_iterator iter = reads.begin(); iter != reads.end(); ++iter) {
-        _read_regions[iter->query_name()].push_back(region_idx);
+        std::vector<int>& regions = _read_regions[iter->query_name()];
+        regions.push_back(region_idx);
     }
 
     // we're essentially destroying reads_in_current_region here by swapping it with whatever
@@ -84,6 +113,23 @@ size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int
     swap_reads_in_region(region_idx, reads);
 
     return region_idx;
+}
+
+bool ReadRegionData::is_region_final(size_t region_idx) const {
+    if (region_idx == !region_exists(region_idx))
+        return false;
+
+    ReadVector const& v = _reads_in_region(region_idx);
+    for (ReadVector::const_iterator i = v.begin(); i != v.end(); ++i) {
+        if (_opts.chr != "0" && i->bdflag() == breakdancer::ARP_CTX)
+            continue;
+
+        ReadsToRegionsMap::const_iterator found = _read_regions.find(i->query_name());
+        if (found == _read_regions.end() || found->second.size() != 2)
+            return false;
+    }
+
+    return true;
 }
 
 int ReadRegionData::sum_of_region_sizes(std::vector<int> const& region_ids) const {
@@ -97,8 +143,21 @@ int ReadRegionData::sum_of_region_sizes(std::vector<int> const& region_ids) cons
 void ReadRegionData::clear_region(size_t region_idx) {
     BasicRegion::ReadVector const& reads = _reads_in_region(region_idx);
 
-    for(ReadVector::const_iterator i = reads.begin(); i != reads.end(); ++i)
-        erase_read(i->query_name());
+    for(ReadVector::const_iterator i = reads.begin(); i != reads.end(); ++i) {
+        ReadsToRegionsMap::iterator found = _read_regions.find(i->query_name());
+        if (found != _read_regions.end()) {
+            std::vector<int> new_regions;
+            std::vector<int>& old_regions(found->second);
+            for (size_t j = 0; j != old_regions.size(); ++j) {
+                if (old_regions[j] != int(region_idx))
+                    new_regions.push_back(old_regions[j]);
+            }
+            if (!new_regions.empty())
+                found->second.swap(new_regions);
+            else
+                _read_regions.erase(found);
+        }
+    }
 
     delete _regions[region_idx];
     _regions[region_idx] = 0;
@@ -134,7 +193,7 @@ void ReadRegionData::_add_current_read_counts_to_region(size_t region_idx) {
 void ReadRegionData::_add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts) {
     assert(num_regions() > 0);
 
-    size_t region_idx = num_regions()-1;
+    size_t region_idx = last_region_idx();
     if (region_idx >= _read_count_ROI_map.size())
         _read_count_ROI_map.resize(2*(region_idx+1));
 

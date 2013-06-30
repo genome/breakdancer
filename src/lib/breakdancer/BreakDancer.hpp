@@ -40,6 +40,7 @@ public:
         Options const& opts,
         BamConfig const& cfg,
         LibraryInfo const& lib_info,
+        ReadRegionData& read_regions,
         IBamReader& merged_reader,
         int max_read_window_size
         );
@@ -69,10 +70,10 @@ private:
     }
 
 private:
-    ReadRegionData _rdata;
     Options const& _opts;
     BamConfig const& _cfg;
     LibraryInfo const& _lib_info;
+    ReadRegionData& _rdata;
     IBamReader& _merged_reader;
     int _max_read_window_size;
 

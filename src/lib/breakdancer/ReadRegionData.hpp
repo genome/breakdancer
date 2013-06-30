@@ -1,6 +1,7 @@
 #pragma once
 
 #include "BasicRegion.hpp"
+#include "Options.hpp"
 #include "Read.hpp"
 #include "ReadCountsByLib.hpp"
 
@@ -11,6 +12,7 @@
 #include <cassert>
 #include <iterator>
 #include <map>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -26,8 +28,15 @@ public:
     typedef std::map<int, int> Subgraph;
     typedef std::map<int, Subgraph> Graph;
 
+public:
+    ReadRegionData(Options const& opts)
+        : _opts(opts)
+    {
+    }
 
     ~ReadRegionData();
+
+    void summary(std::ostream& s) const;
 
     Graph region_graph() const;
 
@@ -47,10 +56,13 @@ public:
 
     size_t add_region(int start_tid, int start_pos, int end_pos, int normal_reads,
             ReadVector& reads);
+    bool is_region_final(size_t region_idx) const;
+
     int sum_of_region_sizes(std::vector<int> const& region_ids) const;
 
     void clear_region(size_t region_idx);
     size_t num_regions() const;
+    size_t last_region_idx() const;
     BasicRegion const& region(size_t region_idx) const;
 
     void incr_normal_read_count(ReadCountsByLib::LibId const& key);
@@ -68,8 +80,22 @@ private:
     void _add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts);
     ReadVector const& _reads_in_region(size_t region_idx) const;
 
+    size_t __DEBUG_unpaired_reads(size_t region_idx) const {
+        if (!region_exists(region_idx))
+            return 0u;
+
+        size_t rv = 0;
+        ReadVector const& v = _reads_in_region(region_idx);
+        for (ReadVector::const_iterator i = v.begin(); i != v.end(); ++i) {
+            ReadsToRegionsMap::const_iterator found = _read_regions.find(i->query_name());
+            if (found == _read_regions.end() || found->second.size() != 2)
+                ++rv;
+        }
+        return rv;
+    }
 
 private:
+    Options const& _opts;
     RoiReadCounts _read_count_ROI_map;
     RoiReadCounts _read_count_FR_map;
     RegionData _regions;
@@ -104,6 +130,11 @@ bool ReadRegionData::region_exists(size_t region_idx) const {
 inline
 size_t ReadRegionData::num_regions() const {
     return _regions.size();
+}
+
+inline
+size_t ReadRegionData::last_region_idx() const {
+    return num_regions() - 1;
 }
 
 inline

@@ -35,8 +35,6 @@ using boost::math::chi_squared;
 using boost::chrono::high_resolution_clock;
 using boost::chrono::milliseconds;
 
-
-
 namespace {
     typedef SCORE_FLOAT_TYPE real_type;
 
@@ -89,12 +87,14 @@ BreakDancer::BreakDancer(
         Options const& opts,
         BamConfig const& cfg,
         LibraryInfo const& lib_info,
+        ReadRegionData& read_regions,
         IBamReader& merged_reader,
         int max_read_window_size
         )
     : _opts(opts)
     , _cfg(cfg)
     , _lib_info(lib_info)
+    , _rdata(read_regions)
     , _merged_reader(merged_reader)
     , _max_read_window_size(max_read_window_size)
 
@@ -359,8 +359,12 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
         // quantity to something measured in pairs?
         //
         // -ta
-        if(_rdata.num_reads_in_region(*i) < unsigned(_opts.min_read_pair))
+
+        if(_rdata.num_reads_in_region(*i) < unsigned(_opts.min_read_pair)
+            || _rdata.is_region_final(*i))
+        {
             _rdata.clear_region(*i);
+        }
     }
 }
 
