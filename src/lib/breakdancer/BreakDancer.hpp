@@ -97,5 +97,5 @@ private:
 public:
     std::map<std::string, float> read_density;
 
-    void process_sv(std::vector<int> const& snodes, std::set<int>& free_nodes, bam_header_t const* bam_header);
+    void process_sv(std::vector<int> const& snodes, bam_header_t const* bam_header);
 };

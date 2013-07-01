@@ -57,6 +57,9 @@ ReadRegionData::Graph ReadRegionData::region_graph() const {
         int const& r1 = p[0];
         int const& r2 = p[1];
 
+        if (!region_exists(r1) || !region_exists(r2))
+            continue;
+
         //track the number of links between two nodes
         //
         // This doesn't make a lot of sense to me. When r1 == r2 and r1 is not

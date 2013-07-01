@@ -287,10 +287,13 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     typedef ReadRegionData::Graph Graph;
     Graph graph(_rdata.region_graph());
 
-    // segregate graph, find nodes that have connections
-    set<int> free_nodes;
-    Graph::iterator ii_graph = graph.begin();
+    vector<int> active_nodes(graph.size());
+    Graph::size_type i = 0;
+    for (Graph::const_iterator gi = graph.begin(); gi != graph.end(); ++gi, ++i) {
+        active_nodes[i] = gi->first;
+    }
 
+    Graph::iterator ii_graph = graph.begin();
     while (ii_graph != graph.end()) {
         vector<int> tails;
         tails.push_back(ii_graph->first);
@@ -302,7 +305,6 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                 int const& tail = *it_tails;
 
                 // Make sure region with id "tail" hasn't already been deleted
-                assert(_rdata.region_exists(tail));
                 if(!_rdata.region_exists(tail))
                     continue;
 
@@ -335,7 +337,7 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                         snodes.push_back(s1);
 
                     newtails.push_back(s1);
-                    process_sv(snodes, free_nodes, bam_header);
+                    process_sv(snodes, bam_header);
                 }
                 if (tail == ii_graph->first) {
                     // The fact that this is postincrement is critical
@@ -351,23 +353,13 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
             ++ii_graph;
     }
 
-    // free regions
-    for(set<int>::const_iterator i = free_nodes.begin(); i != free_nodes.end(); ++i) {
-        // Hey, is it just me or does the following comparison double count
-        // reads with mates in the same region and then go on to compare that
-        // quantity to something measured in pairs?
-        //
-        // -ta
-
-        if(_rdata.num_reads_in_region(*i) < unsigned(_opts.min_read_pair)
-            || _rdata.is_region_final(*i))
-        {
+    for (vector<int>::const_iterator i = active_nodes.begin(); i != active_nodes.end(); ++i) {
+        if (_rdata.is_region_final(*i))
             _rdata.clear_region(*i);
-        }
     }
 }
 
-void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free_nodes, bam_header_t const* bam_header) {
+void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const* bam_header) {
     typedef ReadRegionData::read_iter_range ReadRange;
     BasicRegion const* regions[2] = {0};
     ReadRange read_ranges[2];
@@ -514,8 +506,6 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, std::set<int>& free
 
     std::for_each(svb.reads_to_free.begin(), svb.reads_to_free.end(),
         boost::bind(&ReadRegionData::erase_read, &_rdata, _1));
-
-    free_nodes.insert(snodes.begin(), snodes.end());
 }
 
 void BreakDancer::dump_fastq(breakdancer::pair_orientation_flag const& flag, std::vector<ReadType> const& support_reads) {

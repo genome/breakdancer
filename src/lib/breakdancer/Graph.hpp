@@ -8,8 +8,13 @@ public:
     typedef std::map<VertexType, WeightType> EdgeMap;
     typedef std::map<VertexType, EdgeMap> VertexMap;
 
+    typedef typename VertexMap::size_type size_type;
     typedef typename VertexMap::iterator iterator;
     typedef typename VertexMap::const_iterator const_iterator;
+
+    size_type size() const {
+        return _graph.size();
+    }
 
     EdgeMap& operator[](VertexType const& v) {
         return _graph[v];
