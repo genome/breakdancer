@@ -104,6 +104,8 @@ private:
     ReadCountsByLib nread_FR;
 
     ReadsToRegionsMap _read_regions;
+
+    Graph _persistent_graph;
 };
 
 inline

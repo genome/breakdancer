@@ -60,20 +60,8 @@ ReadRegionData::Graph ReadRegionData::region_graph() const {
         if (!region_exists(r1) || !region_exists(r2))
             continue;
 
-        //track the number of links between two nodes
-        //
-        // This doesn't make a lot of sense to me. When r1 == r2 and r1 is not
-        // in the map, both are set to one. If r1 is in the map, then we increment
-        // twice. We should either double count or not. Doing a mixture of both is
-        // silly. -ta
-        if(graph.find(r1) != graph.end() && graph[r1].find(r2) != graph[r1].end()){
-            ++graph[r1][r2];
-            ++graph[r2][r1];
-        }
-        else{
-            graph[r1][r2] = 1;
-            graph[r2][r1] = 1;
-        }
+        graph.increment_edge_weight(r1, r2);
+
     }
 
     return graph;

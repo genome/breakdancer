@@ -329,7 +329,7 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
 
                     vector<int> snodes;
                     if(tail != s1) {
-                        graph[s1].erase(tail);
+                        graph.erase_edge(s1, tail);
                         snodes.push_back(std::min(s1, tail));
                         snodes.push_back(std::max(s1, tail));
                     }

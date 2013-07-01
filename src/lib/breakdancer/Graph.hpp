@@ -16,10 +16,6 @@ public:
         return _graph.size();
     }
 
-    EdgeMap& operator[](VertexType const& v) {
-        return _graph[v];
-    }
-
     iterator begin() { return _graph.begin(); }
     iterator end() { return _graph.end(); }
 
@@ -34,6 +30,35 @@ public:
 
     void erase(VertexType const& v) {
         _graph.erase(v);
+    }
+
+    void erase_edge(VertexType const& src, VertexType const& dst) {
+        iterator iter = find(src);
+        if (iter != end())
+            iter->second.erase(dst);
+    }
+
+    void increment_edge_weight(VertexType const& v1, VertexType const& v2) {
+        //track the number of links between two nodes
+        //
+        // This doesn't make a lot of sense to me. When v1 == v2 and v1 is not
+        // in the map, both are set to one. If v1 is in the map, then we increment
+        // twice. We should either double count or not. Doing a mixture of both is
+        // silly. -ta
+        //
+        // We'll carry this forward until we get the green light to fix the bug.
+        // -ta
+
+        iterator v1_iter = find(v1);
+        typename EdgeMap::iterator v2_iter;
+        if (v1_iter != end() && (v2_iter = v1_iter->second.find(v2)) != v1_iter->second.end()) {
+            ++v2_iter->second;
+            ++_graph[v2][v1];
+        }
+        else {
+            _graph[v1][v2] = 1;
+            _graph[v2][v1] = 1;
+        }
     }
 
 private:
