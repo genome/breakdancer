@@ -285,7 +285,8 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     // find paired regions that are supported by paired reads
 
     typedef ReadRegionData::Graph Graph;
-    Graph graph(_rdata.region_graph());
+    //Graph graph(_rdata.region_graph());
+    Graph& graph = _rdata.persistent_graph();
 
     vector<int> active_nodes(graph.size());
     Graph::size_type i = 0;
@@ -357,6 +358,8 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
         if (_rdata.is_region_final(*i))
             _rdata.clear_region(*i);
     }
+
+    graph.clear();
 }
 
 void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const* bam_header) {

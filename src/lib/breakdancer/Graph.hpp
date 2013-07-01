@@ -61,6 +61,10 @@ public:
         }
     }
 
+    void clear() {
+        _graph.clear();
+    }
+
 private:
     VertexMap _graph;
 };

@@ -38,7 +38,7 @@ public:
 
     void summary(std::ostream& s) const;
 
-    Graph region_graph() const;
+//    Graph region_graph() const;
 
     void accumulate_reads_between_regions(ReadCountsByLib& acc, size_t begin, size_t end) const;
     uint32_t region_lib_read_count(size_t region_idx, std::string const& lib) const;
@@ -74,6 +74,10 @@ public:
     bool read_exists(ReadType const& read) const;
 
     read_iter_range region_reads_range(size_t region_idx) const;
+
+    Graph& persistent_graph() {
+        return _persistent_graph;
+    }
 
 private:
     void _add_current_read_counts_to_region(size_t region_idx);
