@@ -27,6 +27,10 @@ public:
         , start(start)
         , end(end)
         , normal_read_pairs(normal_read_pairs)
+        , fwd_read_count(0)
+        , rev_read_count(0)
+        , times_accessed(0)
+        , times_collapsed(0)
     {
     }
 
@@ -35,6 +39,10 @@ public:
     int start;
     int end;
     int normal_read_pairs;
+    int fwd_read_count;
+    int rev_read_count;
+    int times_accessed;
+    int times_collapsed;
 
     void swap_reads(ReadVector& reads) {
         _reads.swap(reads);

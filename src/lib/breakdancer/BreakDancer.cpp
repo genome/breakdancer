@@ -368,6 +368,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
     ReadRange read_ranges[2];
     for (size_t i = 0; i < snodes.size(); ++i) {
         int const& region_idx = snodes[i];
+        _rdata.incr_region_access_counter(region_idx);
         regions[i] = &_rdata.region(region_idx);
         read_ranges[i] = _rdata.region_reads_range(region_idx);
     }
@@ -528,7 +529,7 @@ void BreakDancer::dump_fastq(breakdancer::pair_orientation_flag const& flag, std
 }
 
 void BreakDancer::process_final_region(bam_header_t const* bam_header) {
-   if (reads_in_current_region.size() != 0) {
+    if (reads_in_current_region.size() != 0) {
         process_breakpoint(bam_header);
     }
     build_connection(bam_header);

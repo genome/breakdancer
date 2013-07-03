@@ -9,6 +9,7 @@
 #include <boost/function.hpp>
 #include <boost/range/algorithm/remove_copy_if.hpp>
 #include <boost/unordered_map.hpp>
+#include <boost/unordered_set.hpp>
 
 #include <cassert>
 #include <iterator>
@@ -77,6 +78,12 @@ public:
 
     Graph& persistent_graph() {
         return _persistent_graph;
+    }
+
+    void incr_region_access_counter(size_t region_idx) {
+        if (!region_exists(region_idx))
+            return;
+        ++_regions[region_idx]->times_accessed;
     }
 
 private:

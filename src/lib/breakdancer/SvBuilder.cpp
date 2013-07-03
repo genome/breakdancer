@@ -34,6 +34,9 @@ SvBuilder::SvBuilder(Options const& opts, int n, BasicRegion const* regions[2],
     for (int i = 0; i < n; ++i) {
         boost::range::for_each(read_ranges[i],
             boost::bind(&SvBuilder::_observe_read, this, _1, i));
+
+        fwd_read_count[i] = regions[i]->fwd_read_count;
+        rev_read_count[i] = regions[i]->rev_read_count;
     }
 
     flag = choose_sv_flag();
@@ -96,11 +99,6 @@ bd::pair_orientation_flag SvBuilder::choose_sv_flag() {
 }
 
 void SvBuilder::_observe_read(Read const& read, int region_idx) {
-    if (read.ori() == FWD)
-        ++fwd_read_count[region_idx];
-    else
-        ++rev_read_count[region_idx];
-
     typedef ObservedReads::iterator IterType;
     pair<IterType, bool> inserted = observed_reads.insert(make_pair(read.query_name(), read));
     if(inserted.second) {
