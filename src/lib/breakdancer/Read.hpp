@@ -163,6 +163,7 @@ void Read::set_lib_index(std::size_t const& index) {
 
 inline
 std::size_t const& Read::lib_index() const {
+    assert(_lib_index != ~0ull);
     return _lib_index;
 }
 

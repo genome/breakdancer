@@ -81,7 +81,7 @@ Read::Read(bam1_t const* record, bool seq_data)
     , _query_name(bam1_qname(record))
     , _seq_converted(false)
     , _quality_converted(false)
-    , _lib_index(-1) //FIXME size_t is unsigned this shouldn't be what we do
+    , _lib_index(~0)
 {
     // FIXME: if *bam1_qual(record) = 0xff, there is no quality string?
     // we should test for that

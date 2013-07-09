@@ -50,6 +50,8 @@ public:
     }
 
     LibraryConfig const& library_config_by_index(size_t idx) const {
+        if (idx >= _library_config.size())
+            throw std::out_of_range("library index out of range");
         return _library_config[idx];
     }
 

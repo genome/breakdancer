@@ -52,34 +52,40 @@ public:
 };
 
 // FIXME: let's not be tightly coupled to bam files existing on disk!
-#if 0 // Disabling this as BamConfig is tightly coupled to bam reading at the moment
 TEST_F(TestConfig, legacyParse) {
     BamConfig cfg(_cfg_stream, _opts);
 
     // test "fmaps", mapping input files -> first library they contain?
-    ASSERT_EQ(2u, cfg.fmaps.size());
-    ASSERT_EQ(1u, cfg.fmaps.count("x.bam"));
-    ASSERT_EQ(1u, cfg.fmaps.count("y.bam"));
-    ASSERT_EQ("lib1", cfg.fmaps.find("x.bam")->second);
-    ASSERT_EQ("lib2", cfg.fmaps.find("y.bam")->second);
+    ASSERT_EQ(2u, cfg.bam_files().size());
+    EXPECT_EQ("x.bam", cfg.bam_files()[0]);
+    EXPECT_EQ("y.bam", cfg.bam_files()[1]);
+
+    for (size_t i = 1; i <= 7; ++i) {
+        stringstream rg1;
+        stringstream rg2;
+        rg1 << "rg" << i;
+        rg2 << "rg" << i + 7;
+        EXPECT_EQ("lib1", cfg.readgroup_library(rg1.str()));
+        EXPECT_EQ("lib2", cfg.readgroup_library(rg2.str()));
+    }
 
     // test "exes", the executables perl would use to view the input file?
-    ASSERT_EQ(2, cfg.exes.size());
-    ASSERT_EQ(1, cfg.exes.count("x.bam"));
-    ASSERT_EQ(1, cfg.exes.count("y.bam"));
-    ASSERT_EQ("samtools view", cfg.exes.find("x.bam")->second);
-    ASSERT_EQ("samtools view", cfg.exes.find("y.bam")->second);
+    ASSERT_EQ(2u, cfg.exes.size());
+    EXPECT_EQ(1u, cfg.exes.count("x.bam"));
+    EXPECT_EQ(1u, cfg.exes.count("y.bam"));
+    EXPECT_EQ("samtools view", cfg.exes.find("x.bam")->second);
+    EXPECT_EQ("samtools view", cfg.exes.find("y.bam")->second);
 
     // test libmaps, mapping library names -> input files?
-    ASSERT_EQ(2, cfg.library_info.size());
-    ASSERT_EQ(1, cfg.library_info.count("lib1"));
-    ASSERT_EQ(1, cfg.library_info.count("lib2"));
-    ASSERT_EQ("x.bam", cfg.library_info.find("lib1")->second.bam_file);
-    ASSERT_EQ("y.bam", cfg.library_info.find("lib2")->second.bam_file);
+    ASSERT_EQ(2u, cfg.num_libs());
+    EXPECT_EQ(0u, cfg.library_config_by_name("lib1").index);
+    EXPECT_EQ(1u, cfg.library_config_by_name("lib2").index);
+    EXPECT_THROW(cfg.library_config_by_name("lib3"), out_of_range);
 
-    // ...
+    EXPECT_EQ("lib1", cfg.library_config_by_index(0).name);
+    EXPECT_EQ("lib2", cfg.library_config_by_index(1).name);
+    EXPECT_THROW(cfg.library_config_by_index(2), out_of_range);
 }
-#endif //DEATHSTAR
 
 TEST_F(TestConfig, bdConfigRawParse) {
     TestableBDConfig cfg(_cfg_stream);
