@@ -76,8 +76,6 @@ int main(int argc, char *argv[]) {
         LibraryInfo lib_info(cfg, summaries);
 
 
-        // WTH, max_readlen just gets reset to zero before ever being used??? -ta
-        int max_readlen = cfg.max_readlen;
         int max_read_window_size = cfg.max_read_window_size; // this gets updated, so we copy it
 
         // need to read the total base
@@ -182,8 +180,6 @@ int main(int argc, char *argv[]) {
         }
 
         cout << "\n";
-
-        max_readlen = 0;
 
         bdancer.run();
 
