@@ -25,7 +25,7 @@ set(SAMTOOLS_ADDITIONAL_HEADERS sam.h)
 find_package(Samtools 0.1.6 REQUIRED)
 include_directories(${Samtools_INCLUDE_DIRS})
 
-find_package(Boost 1.48 REQUIRED filesystem program_options system chrono)
+find_package(Boost 1.48 REQUIRED filesystem program_options system chrono regex)
 link_libraries(rt)
 include_directories(${Boost_INCLUDE_DIRS})
 

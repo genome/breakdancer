@@ -4,6 +4,10 @@
 #include "Options.hpp"
 #include "Read.hpp"
 
+#include <boost/regex.hpp>
+#include <boost/container/flat_map.hpp>
+#include <boost/assign/list_of.hpp>
+
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -11,7 +15,48 @@
 #include <cstdlib>
 #include <memory>
 
+using boost::assign::map_list_of;
+using boost::container::flat_map;
 using namespace std;
+
+
+std::string translate_legacy_config_token(std::string const& tok) {
+    // The point of all the original legacy parsing code was to do something
+    // close to the original regular expressions in the perl version of
+    // breakdancer. For now, we'll just map hits on those original regexes
+    // to standard field names that we define. Ultimately, we want to
+    // replace this config file format anyway, so there isn't much use
+    // in doing something extremely fancy.
+    //
+    // Defining a config file format is not really the place to allow this level
+    // of flexibility. This code should not be carried forward to any new config
+    // format that gets developed.
+    using boost::regex;
+    static flat_map<regex, string> TOK_MAP = map_list_of
+        (regex("map$", regex::icase), "bam_file")
+        (regex("mean\\w*$", regex::icase), "insert_size_mean")
+        (regex("std\\w*$", regex::icase), "insert_size_stddev")
+        (regex("readlen\\w*$", regex::icase), "read_length")
+        (regex("upp\\w*$", regex::icase), "insert_size_upper_cutoff")
+        (regex("low\\w*$", regex::icase), "insert_size_lower_cutoff")
+        (regex("map\\w*qual\\w*$", regex::icase), "min_map_qual")
+        (regex("lib\\w*$", regex::icase), "library_name")
+        (regex("samp\\w*$", regex::icase), "sample_name")
+        ;
+
+    typedef flat_map<regex, string>::const_iterator TIter;
+    for (TIter iter = TOK_MAP.begin(); iter != TOK_MAP.end(); ++iter) {
+        regex const& re = iter->first;
+        boost::smatch match;
+        // Note: the original perl version didn't force tokens to begin at
+        // any particular point, i.e., they could be prefixed. We will
+        // retain that behavior for now
+        if (boost::regex_search(tok, match, re))
+            return iter->second;
+    }
+
+    return string();
+}
 
 namespace {
     // augmenting function for reading config file: apply specifically to flag = 0, but the string appeared before, so search the following ones

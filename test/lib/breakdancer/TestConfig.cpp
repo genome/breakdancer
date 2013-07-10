@@ -2,12 +2,15 @@
 #include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamConfig.hpp"
 
+#include <boost/algorithm/string.hpp>
+#include <boost/assign/list_of.hpp>
+#include <gtest/gtest.h>
+
 #include <sstream>
 #include <string>
 #include <set>
 
-#include <gtest/gtest.h>
-
+using boost::assign::map_list_of;
 using namespace std;
 
 namespace {
@@ -50,6 +53,63 @@ public:
 
     using BDConfig::_entries;
 };
+
+TEST_F(TestConfig, translate_legacy_config_token) {
+    map<string, string> expected_translations = map_list_of
+        ("map", "bam_file")
+
+        ("mean", "insert_size_mean")
+        ("mean_insert", "insert_size_mean")
+        ("mean_insert_size", "insert_size_mean")
+
+        ("std", "insert_size_stddev")
+        ("stddev", "insert_size_stddev")
+        ("insert_stddev", "insert_size_stddev")
+        ("insert_size_stddev", "insert_size_stddev")
+        ("stddev_insert", "insert_size_stddev")
+        ("stddev_insert_size", "insert_size_stddev")
+
+        ("readlen", "read_length")
+        ("rEaDlEnGtH", "read_length")
+        ("average_readlen", "read_length")
+        ("average_readlength", "read_length")
+
+        ("upp", "insert_size_upper_cutoff")
+        ("upper", "insert_size_upper_cutoff")
+        ("uppEr_cutOff", "insert_size_upper_cutoff")
+        ("inseRt_size_uPper_cutoff", "insert_size_upper_cutoff")
+
+        ("low", "insert_size_lower_cutoff")
+        ("lower", "insert_size_lower_cutoff")
+        ("lower_cuToff", "insert_size_lower_cutoff")
+        ("insert_size_lower_cutoff", "insert_size_lower_cutoff")
+
+        ("mapqual", "min_map_qual")
+        ("mapPing_quAlity", "min_map_qual")
+
+        ("lib", "library_name")
+        ("libname", "library_name")
+        ("library_name", "library_name")
+
+        ("samp", "sample_name")
+        ("sample", "sample_name")
+        ("samplename", "sample_name")
+        ("sample_name", "sample_name")
+        ;
+
+    EXPECT_EQ("", translate_legacy_config_token("ZIOJFksfjlaiaowinfd"));
+
+    typedef map<string, string>::const_iterator TIter;
+    for (TIter i = expected_translations.begin(); i != expected_translations.end(); ++i) {
+        string src = i->first;
+        string const& expected = i->second;
+        EXPECT_EQ(expected, translate_legacy_config_token(src));
+        boost::to_upper(src);
+        EXPECT_EQ(i->second, translate_legacy_config_token(src));
+        boost::to_lower(src);
+        EXPECT_EQ(i->second, translate_legacy_config_token(src));
+    }
+}
 
 // FIXME: let's not be tightly coupled to bam files existing on disk!
 TEST_F(TestConfig, legacyParse) {

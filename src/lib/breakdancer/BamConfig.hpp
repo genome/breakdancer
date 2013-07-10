@@ -13,6 +13,8 @@ class Options;
 class BamSummary;
 class IBamReader;
 
+std::string translate_legacy_config_token(std::string const& tok);
+
 class BamConfig {
 public:
     BamConfig();
