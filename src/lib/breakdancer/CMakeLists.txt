@@ -2,8 +2,6 @@ project(breakdancer)
 
 set(SOURCES
     AlignmentFilter.hpp
-    BDConfig.cpp
-    BDConfig.hpp
     BamConfig.cpp
     BamConfig.hpp
     BamIO.hpp

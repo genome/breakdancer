@@ -1,5 +1,4 @@
 #include "breakdancer/Options.hpp"
-#include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamConfig.hpp"
 
 #include <boost/algorithm/string.hpp>
@@ -14,22 +13,11 @@ using boost::assign::map_list_of;
 using namespace std;
 
 namespace {
-    // FIXME: figure out how to generate these or something...
-    string _cfg_str =
+    const string _cfg_str =
         "readgroup:rg1	platform:illumina	map:x.bam	readlen:90.00	lib:lib1	num:10001	lower:277.03	upper:525.50	mean:467.59	std:31.91	SWnormality:minus infinity	exe:samtools view\n"
         "readgroup:rg2	platform:illumina	map:x.bam	readlen:90.00	lib:lib1	num:10001	lower:277.03	upper:525.50	mean:467.59	std:31.91	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg3	platform:illumina	map:x.bam	readlen:90.00	lib:lib1	num:10001	lower:277.03	upper:525.50	mean:467.59	std:31.91	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg4	platform:illumina	map:x.bam	readlen:90.00	lib:lib1	num:10001	lower:277.03	upper:525.50	mean:467.59	std:31.91	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg5	platform:illumina	map:x.bam	readlen:90.00	lib:lib1	num:10001	lower:277.03	upper:525.50	mean:467.59	std:31.91	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg6	platform:illumina	map:x.bam	readlen:90.00	lib:lib1	num:10001	lower:277.03	upper:525.50	mean:467.59	std:31.91	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg7	platform:illumina	map:x.bam	readlen:90.00	lib:lib1	num:10001	lower:277.03	upper:525.50	mean:467.59	std:31.91	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg8	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg9	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg10	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg11	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg12	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg13	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
-        "readgroup:rg14	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
+        "readgroup:rg3	mapqual:10	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
+        "readgroup:rg4	mapqual:10	platform:illumina	map:y.bam	readlen:90.00	lib:lib2	num:10001	lower:311.36	upper:532.53	mean:475.76	std:28.67	SWnormality:minus infinity	exe:samtools view\n"
     ;
 }
 
@@ -44,74 +32,73 @@ protected:
     Options _opts;
 };
 
-class TestableBDConfig : public BDConfig {
-public:
-    TestableBDConfig(istream& in)
-        : BDConfig(in)
-    {
-    }
+TEST(ConfigEntry, translate_token) {
+    map<string, ConfigField> expected_translations = map_list_of
+        ("map", BAM_FILE)
 
-    using BDConfig::_entries;
-};
+        ("lib", LIBRARY_NAME)
+        ("libname", LIBRARY_NAME)
+        ("library_name", LIBRARY_NAME)
 
-TEST_F(TestConfig, translate_legacy_config_token) {
-    map<string, string> expected_translations = map_list_of
-        ("map", "bam_file")
+        ("groUp", READ_GROUP)
+        ("ReadgroUp", READ_GROUP)
+        ("Read_groUp", READ_GROUP)
 
-        ("mean", "insert_size_mean")
-        ("mean_insert", "insert_size_mean")
-        ("mean_insert_size", "insert_size_mean")
+        ("plATForm", PLATFORM)
 
-        ("std", "insert_size_stddev")
-        ("stddev", "insert_size_stddev")
-        ("insert_stddev", "insert_size_stddev")
-        ("insert_size_stddev", "insert_size_stddev")
-        ("stddev_insert", "insert_size_stddev")
-        ("stddev_insert_size", "insert_size_stddev")
+        ("eXe", EXECUTABLE)
 
-        ("readlen", "read_length")
-        ("rEaDlEnGtH", "read_length")
-        ("average_readlen", "read_length")
-        ("average_readlength", "read_length")
+        ("mean", INSERT_SIZE_MEAN)
+        ("mean_insert", INSERT_SIZE_MEAN)
+        ("mean_insert_size", INSERT_SIZE_MEAN)
 
-        ("upp", "insert_size_upper_cutoff")
-        ("upper", "insert_size_upper_cutoff")
-        ("uppEr_cutOff", "insert_size_upper_cutoff")
-        ("inseRt_size_uPper_cutoff", "insert_size_upper_cutoff")
+        ("std", INSERT_SIZE_STDDEV)
+        ("stddev", INSERT_SIZE_STDDEV)
+        ("insert_stddev", INSERT_SIZE_STDDEV)
+        ("insert_size_stddev", INSERT_SIZE_STDDEV)
+        ("stddev_insert", INSERT_SIZE_STDDEV)
+        ("stddev_insert_size", INSERT_SIZE_STDDEV)
 
-        ("low", "insert_size_lower_cutoff")
-        ("lower", "insert_size_lower_cutoff")
-        ("lower_cuToff", "insert_size_lower_cutoff")
-        ("insert_size_lower_cutoff", "insert_size_lower_cutoff")
+        ("readlen", READ_LENGTH)
+        ("rEaDlEnGtH", READ_LENGTH)
+        ("average_readlen", READ_LENGTH)
+        ("average_readlength", READ_LENGTH)
 
-        ("mapqual", "min_map_qual")
-        ("mapPing_quAlity", "min_map_qual")
+        ("upp", INSERT_SIZE_UPPER_CUTOFF)
+        ("upper", INSERT_SIZE_UPPER_CUTOFF)
+        ("uppEr_cutOff", INSERT_SIZE_UPPER_CUTOFF)
+        ("inseRt_size_uPper_cutoff", INSERT_SIZE_UPPER_CUTOFF)
 
-        ("lib", "library_name")
-        ("libname", "library_name")
-        ("library_name", "library_name")
+        ("low", INSERT_SIZE_LOWER_CUTOFF)
+        ("lower", INSERT_SIZE_LOWER_CUTOFF)
+        ("lower_cuToff", INSERT_SIZE_LOWER_CUTOFF)
+        ("insert_size_lower_cutoff", INSERT_SIZE_LOWER_CUTOFF)
 
-        ("samp", "sample_name")
-        ("sample", "sample_name")
-        ("samplename", "sample_name")
-        ("sample_name", "sample_name")
+        ("mapqual", MIN_MAP_QUAL)
+        ("mapPing_quAlity", MIN_MAP_QUAL)
+
+        ("samp", SAMPLE_NAME)
+        ("sample", SAMPLE_NAME)
+        ("samplename", SAMPLE_NAME)
+        ("sample_name", SAMPLE_NAME)
         ;
 
-    EXPECT_EQ("", translate_legacy_config_token("ZIOJFksfjlaiaowinfd"));
+    EXPECT_EQ(UNKNOWN, ConfigEntry::translate_token("ZIOJFksfjlaiaowinfd"));
 
-    typedef map<string, string>::const_iterator TIter;
+    typedef map<string, ConfigField>::const_iterator TIter;
     for (TIter i = expected_translations.begin(); i != expected_translations.end(); ++i) {
         string src = i->first;
-        string const& expected = i->second;
-        EXPECT_EQ(expected, translate_legacy_config_token(src));
+        EXPECT_EQ(i->second, ConfigEntry::translate_token(src))
+            << "Translating " << src;
         boost::to_upper(src);
-        EXPECT_EQ(i->second, translate_legacy_config_token(src));
+        EXPECT_EQ(i->second, ConfigEntry::translate_token(src))
+            << "Translating " << src;
         boost::to_lower(src);
-        EXPECT_EQ(i->second, translate_legacy_config_token(src));
+        EXPECT_EQ(i->second, ConfigEntry::translate_token(src))
+            << "Translating " << src;
     }
 }
 
-// FIXME: let's not be tightly coupled to bam files existing on disk!
 TEST_F(TestConfig, legacyParse) {
     BamConfig cfg(_cfg_stream, _opts);
 
@@ -120,14 +107,10 @@ TEST_F(TestConfig, legacyParse) {
     EXPECT_EQ("x.bam", cfg.bam_files()[0]);
     EXPECT_EQ("y.bam", cfg.bam_files()[1]);
 
-    for (size_t i = 1; i <= 7; ++i) {
-        stringstream rg1;
-        stringstream rg2;
-        rg1 << "rg" << i;
-        rg2 << "rg" << i + 7;
-        EXPECT_EQ("lib1", cfg.readgroup_library(rg1.str()));
-        EXPECT_EQ("lib2", cfg.readgroup_library(rg2.str()));
-    }
+    EXPECT_EQ("lib1", cfg.readgroup_library("rg1"));
+    EXPECT_EQ("lib1", cfg.readgroup_library("rg2"));
+    EXPECT_EQ("lib2", cfg.readgroup_library("rg3"));
+    EXPECT_EQ("lib2", cfg.readgroup_library("rg4"));
 
     // test "exes", the executables perl would use to view the input file?
     ASSERT_EQ(2u, cfg.exes.size());
@@ -142,23 +125,27 @@ TEST_F(TestConfig, legacyParse) {
     EXPECT_EQ(1u, cfg.library_config_by_name("lib2").index);
     EXPECT_THROW(cfg.library_config_by_name("lib3"), out_of_range);
 
-    EXPECT_EQ("lib1", cfg.library_config_by_index(0).name);
-    EXPECT_EQ("lib2", cfg.library_config_by_index(1).name);
+    LibraryConfig const& lc1 = cfg.library_config_by_index(0);
+    EXPECT_EQ(0u, lc1.index);
+    EXPECT_EQ("lib1", lc1.name);
+    EXPECT_EQ("x.bam", lc1.bam_file);
+    EXPECT_FLOAT_EQ(90.00, lc1.readlens);
+    EXPECT_FLOAT_EQ(277.03, lc1.lowercutoff);
+    EXPECT_FLOAT_EQ(525.50, lc1.uppercutoff);
+    EXPECT_FLOAT_EQ(467.59, lc1.mean_insertsize);
+    EXPECT_FLOAT_EQ(31.91, lc1.std_insertsize);
+    EXPECT_EQ(-1, lc1.min_mapping_quality);
+
+    LibraryConfig const& lc2 = cfg.library_config_by_index(1);
+    EXPECT_EQ(1u, lc2.index);
+    EXPECT_EQ("lib2", lc2.name);
+    EXPECT_EQ("y.bam", lc2.bam_file);
+    EXPECT_FLOAT_EQ(90.00, lc2.readlens);
+    EXPECT_FLOAT_EQ(311.36, lc2.lowercutoff);
+    EXPECT_FLOAT_EQ(532.53, lc2.uppercutoff);
+    EXPECT_FLOAT_EQ(475.76, lc2.mean_insertsize);
+    EXPECT_FLOAT_EQ(28.67, lc2.std_insertsize);
+    EXPECT_EQ(10, lc2.min_mapping_quality);
+
     EXPECT_THROW(cfg.library_config_by_index(2), out_of_range);
-}
-
-TEST_F(TestConfig, bdConfigRawParse) {
-    TestableBDConfig cfg(_cfg_stream);
-    ASSERT_EQ(14u, cfg._entries.size());
-
-    set<string> expected_readgroups;
-    for (size_t i = 0; i < 14; ++i) {
-        stringstream rgname;
-        rgname << "rg" << i+1;
-        expected_readgroups.insert(rgname.str());
-        ASSERT_EQ(rgname.str(), cfg._entries[i].readgroup);
-    }
-
-    ASSERT_TRUE(expected_readgroups == cfg.readgroups())
-        << "Parsed read groups are not as expected";
 }

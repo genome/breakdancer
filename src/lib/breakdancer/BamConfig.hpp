@@ -4,8 +4,12 @@
 #include "LibraryConfig.hpp"
 #include "utility.hpp"
 
+#include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <istream>
 #include <map>
+#include <sstream>
 #include <stdint.h> // cstdint requires c++11
 #include <vector>
 
@@ -13,7 +17,50 @@ class Options;
 class BamSummary;
 class IBamReader;
 
-std::string translate_legacy_config_token(std::string const& tok);
+enum ConfigField {
+    BAM_FILE,
+    LIBRARY_NAME,
+    READ_GROUP,
+    PLATFORM,
+    EXECUTABLE,
+    INSERT_SIZE_MEAN,
+    INSERT_SIZE_STDDEV,
+    READ_LENGTH,
+    INSERT_SIZE_UPPER_CUTOFF,
+    INSERT_SIZE_LOWER_CUTOFF,
+    MIN_MAP_QUAL,
+    SAMPLE_NAME,
+    UNKNOWN
+};
+
+class ConfigEntry {
+public:
+    static ConfigField translate_token(std::string const& tok);
+
+    explicit ConfigEntry(std::string const& line);
+
+    template<typename T>
+    bool set_value(ConfigField const& f, T& value) const {
+        std::map<ConfigField, std::string>::const_iterator found = _directives.find(f);
+        if (found != _directives.end()) {
+            value = boost::lexical_cast<T>(found->second);
+            return true;
+        }
+
+        return false;
+    }
+
+    template<typename T>
+    void set_required_value(ConfigField const& f, T& value) {
+        if (!set_value(f, value))
+            // FIXME: print which field, or the regex
+            throw std::runtime_error("Required field not found in config!");
+    }
+
+private: // data
+    std::map<ConfigField, std::string> _directives;
+};
+
 
 class BamConfig {
 public:

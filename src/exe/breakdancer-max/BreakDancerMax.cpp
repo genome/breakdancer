@@ -1,4 +1,3 @@
-#include "breakdancer/BDConfig.hpp"
 #include "breakdancer/BamConfig.hpp"
 #include "breakdancer/BamIO.hpp"
 #include "breakdancer/BamMerger.hpp"
