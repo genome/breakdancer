@@ -43,36 +43,6 @@ void ReadRegionData::summary(std::ostream& out) const {
     out << "Deleted regions: " << n_deleted << "\n";
 }
 
-/*
- *ReadRegionData::Graph ReadRegionData::region_graph() const {
- *    Graph graph;
- *    typedef ReadsToRegionsMap::const_iterator IterType;
- *
- *    using namespace boost::chrono;
- *    using std::cerr;
- *    using boost::format;
- *
- *    for(IterType i = read_regions().begin(); i != read_regions().end(); i++) {
- *        // test
- *        std::vector<int> const& p = i->second;
- *        assert(p.size() < 3);
- *        if(p.size() != 2) // skip singleton read (non read pairs)
- *            continue;
- *
- *        int const& r1 = p[0];
- *        int const& r2 = p[1];
- *
- *        if (!region_exists(r1) || !region_exists(r2))
- *            continue;
- *
- *        graph.increment_edge_weight(r1, r2);
- *
- *    }
- *
- *    return graph;
- *}
- */
-
 void ReadRegionData::accumulate_reads_between_regions(ReadCountsByLib& acc, size_t begin, size_t end) const {
     for(size_t i = begin; i < std::min(end, _read_count_ROI_map.size()); i++){
         acc += _read_count_ROI_map[i];
