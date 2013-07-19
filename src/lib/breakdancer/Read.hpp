@@ -18,8 +18,6 @@ class LibraryInfo;
 
 BEGIN_NAMESPACE(breakdancer)
 
-pair_orientation_flag determine_bdflag(bam1_t const* record, std::string const& platform);
-
 class Read {
 public:
     Read(bam1_t const* record, bool seq_data = true);

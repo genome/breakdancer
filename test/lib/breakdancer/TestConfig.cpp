@@ -44,10 +44,6 @@ TEST(ConfigEntry, translate_token) {
         ("ReadgroUp", READ_GROUP)
         ("Read_groUp", READ_GROUP)
 
-        ("plATForm", PLATFORM)
-
-        ("eXe", EXECUTABLE)
-
         ("mean", INSERT_SIZE_MEAN)
         ("mean_insert", INSERT_SIZE_MEAN)
         ("mean_insert_size", INSERT_SIZE_MEAN)
@@ -112,13 +108,6 @@ TEST_F(TestConfig, legacyParse) {
     EXPECT_EQ("lib2", cfg.readgroup_library("rg3"));
     EXPECT_EQ("lib2", cfg.readgroup_library("rg4"));
 
-    // test "exes", the executables perl would use to view the input file?
-    ASSERT_EQ(2u, cfg.exes.size());
-    EXPECT_EQ(1u, cfg.exes.count("x.bam"));
-    EXPECT_EQ(1u, cfg.exes.count("y.bam"));
-    EXPECT_EQ("samtools view", cfg.exes.find("x.bam")->second);
-    EXPECT_EQ("samtools view", cfg.exes.find("y.bam")->second);
-
     // test libmaps, mapping library names -> input files?
     ASSERT_EQ(2u, cfg.num_libs());
     EXPECT_EQ(0u, cfg.library_config_by_name("lib1").index);
@@ -148,4 +137,35 @@ TEST_F(TestConfig, legacyParse) {
     EXPECT_EQ(10, lc2.min_mapping_quality);
 
     EXPECT_THROW(cfg.library_config_by_index(2), out_of_range);
+}
+
+TEST_F(TestConfig, noPlatformOrExe) {
+    stringstream cfgss(
+        "readgroup:rg1"
+        "	map:x.bam"
+        "	readlen:90.00"
+        "	lib:lib1"
+        "	num:10001"
+        "	lower:277.03"
+        "	upper:525.50"
+        "	mean:467.59"
+        "	std:31.91\n"
+        );
+
+    ASSERT_NO_THROW(BamConfig(cfgss, _opts));
+}
+
+TEST_F(TestConfig, missingBam) {
+    stringstream cfgss(
+        "readgroup:rg1"
+        "	readlen:90.00"
+        "	lib:lib1"
+        "	num:10001"
+        "	lower:277.03"
+        "	upper:525.50"
+        "	mean:467.59"
+        "	std:31.91\n"
+        );
+
+    ASSERT_THROW(BamConfig(cfgss, _opts), runtime_error);
 }

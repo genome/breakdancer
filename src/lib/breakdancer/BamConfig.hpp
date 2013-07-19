@@ -21,8 +21,6 @@ enum ConfigField {
     BAM_FILE,
     LIBRARY_NAME,
     READ_GROUP,
-    PLATFORM,
-    EXECUTABLE,
     INSERT_SIZE_MEAN,
     INSERT_SIZE_STDDEV,
     READ_LENGTH,
@@ -36,6 +34,7 @@ enum ConfigField {
 class ConfigEntry {
 public:
     static ConfigField translate_token(std::string const& tok);
+    static std::string const& token_string(ConfigField tok);
 
     explicit ConfigEntry(std::string const& line);
 
@@ -51,10 +50,14 @@ public:
     }
 
     template<typename T>
-    void set_required_value(ConfigField const& f, T& value) {
+    void set_required_value(ConfigField const& f, T& value, size_t line_num) {
+        using boost::format;
+
         if (!set_value(f, value))
             // FIXME: print which field, or the regex
-            throw std::runtime_error("Required field not found in config!");
+            throw std::runtime_error(str(format(
+                "Required field '%1%' not found in config at line %2%!"
+                ) % token_string(f) % line_num));
     }
 
 private: // data
@@ -67,8 +70,6 @@ public:
     BamConfig();
     BamConfig(std::istream& in, Options const& opts);
 
-    ConfigMap<std::string, std::string>::type exes;
-    ConfigMap<std::string, std::string>::type readgroup_platform;
     ConfigMap<std::string, std::string>::type ReadsOut;
 
     int max_read_window_size;
@@ -84,18 +85,6 @@ public:
 
     std::vector<std::string> const& bam_files() const {
         return _bam_files;
-    }
-
-    std::string const& platform_for_readgroup(std::string const& readgroup) const {
-        using std::string;
-        static string illumina("illumina");
-        ConfigMap<string, string>::type::const_iterator it = readgroup_platform.find(readgroup);
-        if(it != readgroup_platform.end()) {
-            return it->second;
-        }
-        else {
-            return illumina;
-        }
     }
 
     LibraryConfig const& library_config_by_index(size_t idx) const {

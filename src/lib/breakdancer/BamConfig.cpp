@@ -5,8 +5,8 @@
 #include "Read.hpp"
 
 #include <boost/algorithm/string.hpp>
-#include <boost/assign/list_of.hpp>
 #include <boost/container/flat_map.hpp>
+#include <boost/assign/list_of.hpp>
 #include <boost/regex.hpp>
 
 #include <algorithm>
@@ -20,6 +20,23 @@ using boost::assign::map_list_of;
 using boost::container::flat_map;
 using boost::format;
 using namespace std;
+
+std::string const& ConfigEntry::token_string(ConfigField tok) {
+    static flat_map<ConfigField, std::string> tok_map = map_list_of
+        (BAM_FILE, "map")
+        (LIBRARY_NAME, "lib")
+        (READ_GROUP, "group")
+        (INSERT_SIZE_MEAN, "mean")
+        (INSERT_SIZE_STDDEV, "std")
+        (READ_LENGTH, "readlen")
+        (INSERT_SIZE_UPPER_CUTOFF, "upper")
+        (INSERT_SIZE_LOWER_CUTOFF, "low")
+        (MIN_MAP_QUAL, "map")
+        (SAMPLE_NAME, "sample")
+        ;
+
+    return tok_map[tok];
+}
 
 ConfigField ConfigEntry::translate_token(std::string const& tok) {
     // The point of all the original legacy parsing code was to do something
@@ -37,8 +54,6 @@ ConfigField ConfigEntry::translate_token(std::string const& tok) {
         (regex("map$", regex::icase), BAM_FILE)
         (regex("lib\\w*$", regex::icase), LIBRARY_NAME)
         (regex("group$", regex::icase), READ_GROUP)
-        (regex("platform$", regex::icase), PLATFORM)
-        (regex("exe$", regex::icase), EXECUTABLE)
         (regex("mean\\w*$", regex::icase), INSERT_SIZE_MEAN)
         (regex("std\\w*$", regex::icase), INSERT_SIZE_STDDEV)
         (regex("readlen\\w*$", regex::icase), READ_LENGTH)
@@ -95,7 +110,9 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
 {
     map<string, LibraryConfig> temp_lib_config;
     string line;
+    size_t line_num = 0;
     while(getline(in, line)) {
+        ++line_num;
         if(line.empty())
             break;
 
@@ -104,7 +121,6 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         string fmap;
         string lib;
         string readgroup;
-        string exe = "cat"; // we need to get rid of this field right meow. we only support bams.
         float mean = 0.0f;
         float stddev = 0.0f;
         float readlen = 0.0f;
@@ -115,8 +131,7 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         if (!entry.set_value(LIBRARY_NAME, lib))
             entry.set_value(SAMPLE_NAME, lib);
 
-        entry.set_required_value(BAM_FILE, fmap);
-        entry.set_required_value(PLATFORM, readgroup_platform[readgroup]);
+        entry.set_required_value(BAM_FILE, fmap, line_num);
         if (!entry.set_value(READ_GROUP, readgroup))
             readgroup = lib;
 
@@ -125,7 +140,6 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
 
         entry.set_value(READ_LENGTH, readlen);
         entry.set_value(MIN_MAP_QUAL, mqual);
-        entry.set_value(EXECUTABLE, exe);
 
         // Insert size statistics
         bool have_mean = entry.set_value(INSERT_SIZE_MEAN, mean);
@@ -171,14 +185,6 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         // This is silly, library info can be repeated in the config file
         // hopefully whatever we are clobbering is equivalent!
         temp_lib_config[lib] = lib_config;
-
-        if(exes.find(fmap) == exes.end())
-            exes[fmap] = exe.compare("NA")?exe:"cat";
-        else if(exes[fmap].compare(exe) != 0){
-            throw runtime_error(
-                "Please use identical exe commands to open the same input file.\n"
-                );
-        }
 
         int tmp = mean - readlen*2;    // this determines the mean of the max of the SV flanking region
         max_read_window_size = std::min(max_read_window_size, tmp);
