@@ -3,6 +3,7 @@
 #include "breakdancer/BamMerger.hpp"
 #include "breakdancer/BamSummary.hpp"
 #include "breakdancer/BreakDancer.hpp"
+#include "breakdancer/ConfigMap.hpp"
 #include "breakdancer/LibraryConfig.hpp"
 #include "breakdancer/LibraryInfo.hpp"
 #include "breakdancer/Options.hpp"
@@ -12,6 +13,8 @@
 
 #include "version.h"
 
+#include <boost/archive/xml_oarchive.hpp>
+#include <boost/archive/xml_iarchive.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <algorithm>
@@ -54,6 +57,7 @@ using boost::shared_ptr;
 
 using namespace std;
 namespace bd = breakdancer;
+namespace ba = boost::archive;
 
 typedef SCORE_FLOAT_TYPE real_type;
 real_type _max_kahan_err = 0.0;
@@ -61,19 +65,15 @@ real_type _max_kahan_err = 0.0;
 // main function
 int main(int argc, char *argv[]) {
     try {
-        Options opts(argc, argv);
+        Options const opts(argc, argv);
 
         // configure file
         ifstream config_stream(argv[optind]);
-        string line;
         BamConfig cfg(config_stream, opts);
-
         config_stream.close();
 
-        BamSummary summaries(opts, cfg);
-        summaries.analyze_bams();
-        LibraryInfo lib_info(cfg, summaries);
-
+        BamSummary const summaries(opts, cfg);
+        LibraryInfo const lib_info(cfg, summaries);
 
         int max_read_window_size = cfg.max_read_window_size; // this gets updated, so we copy it
 
@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
             cout << "Error: no bams files in config file!\n";
             return 1;
         }
+
         typedef vector<shared_ptr<IBamReader> > ReaderVecType;
         ReaderVecType sp_readers(openBams(cfg.bam_files(), opts));
         vector<IBamReader*> readers;

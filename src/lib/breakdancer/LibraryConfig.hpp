@@ -1,7 +1,10 @@
 #pragma once
 
-#include <stdint.h>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/string.hpp>
+
 #include <map>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -26,4 +29,19 @@ struct LibraryConfig {
     float lowercutoff;
     float readlens;
     int min_mapping_quality;
+
+    template<typename Archive>
+    void serialize(Archive& arch, const unsigned int version) {
+        arch
+            & BOOST_SERIALIZATION_NVP(index)
+            & BOOST_SERIALIZATION_NVP(name)
+            & BOOST_SERIALIZATION_NVP(bam_file)
+            & BOOST_SERIALIZATION_NVP(mean_insertsize)
+            & BOOST_SERIALIZATION_NVP(std_insertsize)
+            & BOOST_SERIALIZATION_NVP(uppercutoff)
+            & BOOST_SERIALIZATION_NVP(lowercutoff)
+            & BOOST_SERIALIZATION_NVP(readlens)
+            & BOOST_SERIALIZATION_NVP(min_mapping_quality)
+            ;
+    }
 };

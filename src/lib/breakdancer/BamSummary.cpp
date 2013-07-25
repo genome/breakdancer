@@ -4,7 +4,8 @@
 #include "BamIO.hpp"
 
 using namespace std;
-void BamSummary::_analyze_bam(IBamReader& reader) {
+
+void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, IBamReader& reader) {
     int last_pos = 0;
     int last_tid = -1;
 
@@ -21,11 +22,11 @@ void BamSummary::_analyze_bam(IBamReader& reader) {
         // updated version as the "final" flag value.
         breakdancer::Read aln(b, false);
 
-        string const& lib = _bam_config.readgroup_library(aln.readgroup());
+        string const& lib = bam_config.readgroup_library(aln.readgroup());
         if (lib.empty())
             continue;
 
-        LibraryConfig const& lib_config = _bam_config.library_config_by_name(lib);
+        LibraryConfig const& lib_config = bam_config.library_config_by_name(lib);
         LibraryFlagDistribution& lib_flag_dist = _library_flag_distribution[lib_config.index];   //FIXME This is bad encapsulation
 
         if (last_tid >= 0 && last_tid == aln.tid())
@@ -41,7 +42,7 @@ void BamSummary::_analyze_bam(IBamReader& reader) {
         // like there is no reason for making the FR/RF distinction in the
         // guess. This check really just wants to know if tid == mtid and if
         // flag & BAM_FPROPERPAIR != 0.
-        if(aln.bdqual() > _opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
+        if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
             ++lib_flag_dist.read_count; // FIXME: this is a bad side effect modifying another object. Switch to use a setter or something.
             ++read_count;
         }
@@ -52,7 +53,7 @@ void BamSummary::_analyze_bam(IBamReader& reader) {
         //-dlarson
 
         int min_mapq = lib_config.min_mapping_quality < 0 ?
-                _opts.min_map_qual : lib_config.min_mapping_quality;
+                opts.min_map_qual : lib_config.min_mapping_quality;
 
         if (aln.bdqual() <= min_mapq)
             continue;
@@ -81,7 +82,7 @@ void BamSummary::_analyze_bam(IBamReader& reader) {
         // seems silly...), so we can't immediately filter them in the bam
         // readers. However, being unmapped or having an unmapped mate could
         // be a separate method call that doesn't involve "bdflag".
-        if((_opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
+        if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
             continue;
 
         // FLAGMESS:
@@ -95,7 +96,7 @@ void BamSummary::_analyze_bam(IBamReader& reader) {
 
         //It would be nice if this was pulled into the Read class as well
         //for now, let's just set the bdflag directly here since it is public
-        if(_opts.Illumina_long_insert) {
+        if(opts.Illumina_long_insert) {
             if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
                 aln.set_bdflag(breakdancer::ARP_RF);
             }
@@ -139,10 +140,10 @@ void BamSummary::_analyze_bam(IBamReader& reader) {
         _covered_ref_len = ref_len;
 }
 
-void BamSummary::analyze_bams() {
-    std::vector<std::string> bam_files = _bam_config.bam_files();
+void BamSummary::_analyze_bams(Options const& opts, BamConfig const& bam_config) {
+    std::vector<std::string> bam_files = bam_config.bam_files();
     for(std::vector<std::string>::const_iterator iter = bam_files.begin(); iter != bam_files.end(); ++iter) {
-        auto_ptr<IBamReader> reader(openBam(*iter, _opts));
-        _analyze_bam(*reader);
+        auto_ptr<IBamReader> reader(openBam(*iter, opts));
+        _analyze_bam(opts, bam_config, *reader);
     }
 }

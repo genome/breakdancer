@@ -7,6 +7,7 @@ add_unit_tests(TestBdLib
     TestBamReader.cpp
     TestBreakDancer.cpp
     TestConfig.cpp
+    TestConfigMap.cpp
     TestPoisson.cpp
     TestRead.cpp
     TestReadCountsByLib.cpp

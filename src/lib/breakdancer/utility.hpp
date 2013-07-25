@@ -1,13 +1,6 @@
 #pragma once
 
-#include <boost/container/flat_map.hpp>
-
 #include <utility>
-
-template<typename K, typename V>
-struct ConfigMap {
-    typedef boost::container::flat_map<K, V> type;
-};
 
 // This function is similar to a.insert(b.begin(), b.end()), but it
 // resolves conflicts by applying the supplied Combiner operation.

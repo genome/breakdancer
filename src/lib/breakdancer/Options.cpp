@@ -2,6 +2,7 @@
 
 #include "version.h"
 
+#include <cstdio>
 #include <getopt.h>
 
 using namespace std;
@@ -15,8 +16,6 @@ Options::Options(int argc, char** argv)
         , min_read_pair(2)
         , seq_coverage_lim(1000)
         , buffer_size(100)
-        , learn_par(false)
-        , prior_prob(0.001)
         , transchr_rearrange(false)
         , fisher(false)
         , Illumina_long_insert(false)
@@ -26,7 +25,7 @@ Options::Options(int argc, char** argv)
 
 {
     int c;
-    while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:ep:tfd:g:lahy:")) >= 0) {
+    while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:tfd:g:lahy:")) >= 0) {
         switch(c) {
             case 'o': chr = optarg; break;
             case 's': min_len = atoi(optarg); break;
@@ -36,8 +35,6 @@ Options::Options(int argc, char** argv)
             case 'r': min_read_pair = atoi(optarg); break;
             case 'x': seq_coverage_lim = atoi(optarg); break;
             case 'b': buffer_size = atoi(optarg); break;
-            case 'e': learn_par = true; break;
-            case 'p': prior_prob = atof(optarg); break;
             case 't': transchr_rearrange = true; break;
             case 'f': fisher = true; break;
             case 'd': prefix_fastq = optarg; break;
@@ -66,8 +63,6 @@ Options::Options(int argc, char** argv)
         fprintf(stderr, "       -r INT          minimum number of read pairs required to establish a connection [%d]\n", min_read_pair);
         fprintf(stderr, "       -x INT          maximum threshold of haploid sequence coverage for regions to be ignored [%d]\n", seq_coverage_lim);
         fprintf(stderr, "       -b INT          buffer size for building connection [%d]\n", buffer_size);
-        //fprintf(stderr, "    -e INT    learn parameters from data before applying to SV detection [%d]\n", learn_par);
-        //fprintf(stderr, "    -p FLOAT    prior probability of SV [%f]\n", prior_prob);
         fprintf(stderr, "       -t              only detect transchromosomal rearrangement, by default off\n");
         //fprintf(stderr, "    -f INT    use Fisher's method to combine P values from multiple library [%d]\n", fisher);
         fprintf(stderr, "       -d STRING       prefix of fastq files that SV supporting reads will be saved by library\n");

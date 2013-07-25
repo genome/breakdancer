@@ -1,10 +1,9 @@
 #include "breakdancer/utility.hpp"
 
-#include <map>
-#include <memory>
-#include <functional>
-
 #include <gtest/gtest.h>
+
+#include <map>
+#include <functional>
 
 using namespace std;
 

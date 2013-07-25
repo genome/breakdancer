@@ -1,11 +1,14 @@
 #pragma once
 
-#include "ReadFlags.hpp"
+#include "ConfigMap.hpp"
 #include "LibraryConfig.hpp"
-#include "utility.hpp"
+#include "ReadFlags.hpp"
 
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/string.hpp>
+#include <boost/serialization/vector.hpp>
 
 #include <istream>
 #include <map>
@@ -14,7 +17,6 @@
 #include <vector>
 
 class Options;
-class BamSummary;
 class IBamReader;
 
 enum ConfigField {
@@ -105,13 +107,23 @@ public:
             return _bam_library.begin()->second;
     }
 
+    template<typename Archive>
+    void serialize(Archive& arch, const unsigned int version) {
+        arch
+            & BOOST_SERIALIZATION_NVP(_bam_library)
+            & BOOST_SERIALIZATION_NVP(_bam_files)
+            & BOOST_SERIALIZATION_NVP(_lib_names_to_indices)
+            & BOOST_SERIALIZATION_NVP(_library_config)
+            & BOOST_SERIALIZATION_NVP(_readgroup_library)
+            ;
+    }
+
 private:
     ConfigMap<std::string, std::string>::type _bam_library;
 
     // FIXME: we don't need separate vectors for filenames and file summaries
     // we can do with one if the summary can report the name.
     std::vector<std::string> _bam_files;
-    std::vector<BamSummary*> _bam_summaries;
     ConfigMap<std::string, size_t>::type _lib_names_to_indices;
     std::vector<LibraryConfig> _library_config;
     ConfigMap<std::string, std::string>::type _readgroup_library;
