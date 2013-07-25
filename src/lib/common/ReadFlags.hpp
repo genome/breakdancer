@@ -33,27 +33,18 @@ struct PerFlagArray {
 };
 
 struct FlagValues {
-    FlagValues() {
-        _values[NA] = 0; //NA means not applicable.
-        _values[ARP_FF] = 1;
-        _values[ARP_FR_big_insert] = 2;
-        _values[ARP_FR_small_insert] = 3;
-        _values[ARP_RF] = 4;
-        _values[ARP_RR] = 8;
-        _values[NORMAL_FR] = 18;
-        _values[NORMAL_RF] = 20;
-        _values[ARP_CTX] = 32;
-        _values[MATE_UNMAPPED] = 64;
-        _values[UNMAPPED] = 192;
-    }
+    FlagValues();
 
-    int operator[](pair_orientation_flag const& idx) const {
-        return _values[int(idx)];
-    }
+    int operator[](pair_orientation_flag const& idx) const;
 
 private:
     PerFlagArray<int>::type _values;
 };
+
+inline
+int FlagValues::operator[](pair_orientation_flag const& idx) const {
+    return _values[int(idx)];
+}
 
 extern const FlagValues FLAG_VALUES;
 

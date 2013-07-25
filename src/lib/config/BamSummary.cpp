@@ -6,6 +6,31 @@
 
 using namespace std;
 
+BamSummary::BamSummary()
+    : _covered_ref_len(0)
+{
+}
+
+// Construct flag distribution from bam files listed in in BamConfig.
+BamSummary::BamSummary(Options const& opts, BamConfig const& bam_config)
+    : _covered_ref_len(0)
+{
+    _library_flag_distribution.resize(bam_config.num_libs());
+    _analyze_bams(opts, bam_config);
+}
+
+uint32_t BamSummary::covered_reference_length() const {
+    return _covered_ref_len;
+}
+
+uint32_t BamSummary::read_count_in_bam(std::string const& key) const {
+    return _read_count_per_bam.at(key);
+}
+
+LibraryFlagDistribution const& BamSummary::library_flag_distribution_for_index(size_t const& index) const {
+    return _library_flag_distribution[index];
+}
+
 void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, IBamReader& reader) {
     int last_pos = 0;
     int last_tid = -1;
@@ -148,3 +173,16 @@ void BamSummary::_analyze_bams(Options const& opts, BamConfig const& bam_config)
         _analyze_bam(opts, bam_config, *reader);
     }
 }
+
+bool BamSummary::operator==(BamSummary const& rhs) const {
+    return _covered_ref_len == rhs._covered_ref_len
+        && _read_count_per_bam == rhs._read_count_per_bam
+        && _library_flag_distribution == _library_flag_distribution
+        ;
+}
+
+bool BamSummary::operator!=(BamSummary const& rhs) const {
+    return !(*this == rhs);
+}
+
+

@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
         BamSummary const summaries(opts, cfg);
         LibraryInfo const lib_info(cfg, summaries);
 
-        int max_read_window_size = cfg.max_read_window_size; // this gets updated, so we copy it
+        int max_read_window_size = cfg.max_read_window_size(); // this gets updated, so we copy it
 
         // need to read the total base
 

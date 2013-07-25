@@ -7,6 +7,24 @@
 
 using namespace std;
 
+Options::Options()
+    : chr("0")
+    , min_len(7)
+    , cut_sd(3)
+    , max_sd(1000000000)
+    , min_map_qual(35)
+    , min_read_pair(2)
+    , seq_coverage_lim(1000)
+    , buffer_size(100)
+    , transchr_rearrange(false)
+    , fisher(false)
+    , Illumina_long_insert(false)
+    , CN_lib(false)
+    , print_AF(false)
+    , score_threshold(30)
+{
+}
+
 Options::Options(int argc, char** argv)
         : chr("0")
         , min_len(7)
@@ -92,4 +110,30 @@ Options::Options(int argc, char** argv)
         SVtype[breakdancer::ARP_RR] = "INV";
         SVtype[breakdancer::ARP_CTX] = "CTX";
     }
+}
+
+bool Options::operator==(Options const& rhs) const {
+    return chr == rhs.chr
+        && min_len == rhs.min_len
+        && cut_sd == rhs.cut_sd
+        && max_sd == rhs.max_sd
+        && min_map_qual == rhs.min_map_qual
+        && min_read_pair == rhs.min_read_pair
+        && seq_coverage_lim == rhs.seq_coverage_lim
+        && buffer_size == rhs.buffer_size
+        && transchr_rearrange == rhs.transchr_rearrange
+        && fisher == rhs.fisher
+        && Illumina_long_insert == rhs.Illumina_long_insert
+        && CN_lib == rhs.CN_lib
+        && print_AF == rhs.print_AF
+        && score_threshold == rhs.score_threshold
+        && bam_file == rhs.bam_file
+        && prefix_fastq == rhs.prefix_fastq
+        && dump_BED == rhs.dump_BED
+        && SVtype == rhs.SVtype
+    ;
+}
+
+bool Options::operator!=(Options const& rhs) const {
+    return !(*this == rhs);
 }

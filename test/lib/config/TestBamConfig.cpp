@@ -33,69 +33,6 @@ protected:
     Options _opts;
 };
 
-TEST(ConfigEntry, translate_token) {
-    map<string, ConfigField> expected_translations = map_list_of
-        ("map", BAM_FILE)
-
-        ("lib", LIBRARY_NAME)
-        ("libname", LIBRARY_NAME)
-        ("library_name", LIBRARY_NAME)
-
-        ("groUp", READ_GROUP)
-        ("ReadgroUp", READ_GROUP)
-        ("Read_groUp", READ_GROUP)
-
-        ("mean", INSERT_SIZE_MEAN)
-        ("mean_insert", INSERT_SIZE_MEAN)
-        ("mean_insert_size", INSERT_SIZE_MEAN)
-
-        ("std", INSERT_SIZE_STDDEV)
-        ("stddev", INSERT_SIZE_STDDEV)
-        ("insert_stddev", INSERT_SIZE_STDDEV)
-        ("insert_size_stddev", INSERT_SIZE_STDDEV)
-        ("stddev_insert", INSERT_SIZE_STDDEV)
-        ("stddev_insert_size", INSERT_SIZE_STDDEV)
-
-        ("readlen", READ_LENGTH)
-        ("rEaDlEnGtH", READ_LENGTH)
-        ("average_readlen", READ_LENGTH)
-        ("average_readlength", READ_LENGTH)
-
-        ("upp", INSERT_SIZE_UPPER_CUTOFF)
-        ("upper", INSERT_SIZE_UPPER_CUTOFF)
-        ("uppEr_cutOff", INSERT_SIZE_UPPER_CUTOFF)
-        ("inseRt_size_uPper_cutoff", INSERT_SIZE_UPPER_CUTOFF)
-
-        ("low", INSERT_SIZE_LOWER_CUTOFF)
-        ("lower", INSERT_SIZE_LOWER_CUTOFF)
-        ("lower_cuToff", INSERT_SIZE_LOWER_CUTOFF)
-        ("insert_size_lower_cutoff", INSERT_SIZE_LOWER_CUTOFF)
-
-        ("mapqual", MIN_MAP_QUAL)
-        ("mapPing_quAlity", MIN_MAP_QUAL)
-
-        ("samp", SAMPLE_NAME)
-        ("sample", SAMPLE_NAME)
-        ("samplename", SAMPLE_NAME)
-        ("sample_name", SAMPLE_NAME)
-        ;
-
-    EXPECT_EQ(UNKNOWN, ConfigEntry::translate_token("ZIOJFksfjlaiaowinfd"));
-
-    typedef map<string, ConfigField>::const_iterator TIter;
-    for (TIter i = expected_translations.begin(); i != expected_translations.end(); ++i) {
-        string src = i->first;
-        EXPECT_EQ(i->second, ConfigEntry::translate_token(src))
-            << "Translating " << src;
-        boost::to_upper(src);
-        EXPECT_EQ(i->second, ConfigEntry::translate_token(src))
-            << "Translating " << src;
-        boost::to_lower(src);
-        EXPECT_EQ(i->second, ConfigEntry::translate_token(src))
-            << "Translating " << src;
-    }
-}
-
 TEST_F(TestConfig, legacyParse) {
     BamConfig cfg(_cfg_stream, _opts);
 

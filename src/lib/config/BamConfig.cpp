@@ -1,13 +1,9 @@
 #include "BamConfig.hpp"
+#include "BamConfigEntry.hpp"
 
 #include "common/Options.hpp"
 #include "io/BamIo.hpp"
 #include "io/Read.hpp"
-
-#include <boost/algorithm/string.hpp>
-#include <boost/container/flat_map.hpp>
-#include <boost/assign/list_of.hpp>
-#include <boost/regex.hpp>
 
 #include <algorithm>
 #include <fstream>
@@ -16,97 +12,18 @@
 #include <cstdlib>
 #include <memory>
 
-using boost::assign::map_list_of;
-using boost::container::flat_map;
 using boost::format;
 using namespace std;
 
-std::string const& ConfigEntry::token_string(ConfigField tok) {
-    static flat_map<ConfigField, std::string> tok_map = map_list_of
-        (BAM_FILE, "map")
-        (LIBRARY_NAME, "lib")
-        (READ_GROUP, "group")
-        (INSERT_SIZE_MEAN, "mean")
-        (INSERT_SIZE_STDDEV, "std")
-        (READ_LENGTH, "readlen")
-        (INSERT_SIZE_UPPER_CUTOFF, "upper")
-        (INSERT_SIZE_LOWER_CUTOFF, "low")
-        (MIN_MAP_QUAL, "map")
-        (SAMPLE_NAME, "sample")
-        ;
-
-    return tok_map[tok];
-}
-
-ConfigField ConfigEntry::translate_token(std::string const& tok) {
-    // The point of all the original legacy parsing code was to do something
-    // close to the original regular expressions in the perl version of
-    // breakdancer. For now, we'll just map hits on those original regexes
-    // to standard field names that we define. Ultimately, we want to
-    // replace this config file format anyway, so there isn't much use
-    // in doing something extremely fancy.
-    //
-    // Defining a config file format is not really the place to allow this level
-    // of flexibility. This code should not be carried forward to any new config
-    // format that gets developed.
-    using boost::regex;
-    static flat_map<regex, ConfigField> tok_map = map_list_of
-        (regex("map$", regex::icase), BAM_FILE)
-        (regex("lib\\w*$", regex::icase), LIBRARY_NAME)
-        (regex("group$", regex::icase), READ_GROUP)
-        (regex("mean\\w*$", regex::icase), INSERT_SIZE_MEAN)
-        (regex("std\\w*$", regex::icase), INSERT_SIZE_STDDEV)
-        (regex("readlen\\w*$", regex::icase), READ_LENGTH)
-        (regex("upp\\w*$", regex::icase), INSERT_SIZE_UPPER_CUTOFF)
-        (regex("low\\w*$", regex::icase), INSERT_SIZE_LOWER_CUTOFF)
-        (regex("map\\w*qual\\w*$", regex::icase), MIN_MAP_QUAL)
-        (regex("samp\\w*$", regex::icase), SAMPLE_NAME)
-        ;
-
-    typedef flat_map<regex, ConfigField>::const_iterator TIter;
-    for (TIter iter = tok_map.begin(); iter != tok_map.end(); ++iter) {
-        regex const& re = iter->first;
-        boost::smatch match;
-        // Note: the original perl version didn't force tokens to begin at
-        // any particular point, i.e., they could be prefixed. We will
-        // retain that behavior for now
-        if (boost::regex_search(tok, match, re))
-            return iter->second;
-    }
-
-    return UNKNOWN;
-}
-
-ConfigEntry::ConfigEntry(std::string const& line) {
-    vector<string> fields;
-
-    boost::split(fields, line, boost::is_any_of("\t"));
-    typedef vector<string>::const_iterator VIterType;
-    for (VIterType iter = fields.begin(); iter != fields.end(); ++iter) {
-        string::size_type colon = iter->find_first_of(":");
-        if (colon == string::npos)
-            continue;
-
-        string key = iter->substr(0, colon);
-        ConfigField fname = translate_token(key);
-        if (fname != UNKNOWN) {
-            _directives[fname] = iter->substr(colon+1);
-        }
-    }
-}
-
-
-
+const int BamConfig::DEFAULT_MAX_READ_WINDOW_SIZE(1e8);
 
 BamConfig::BamConfig()
-    : max_read_window_size(1e8)
-    , max_readlen(0)
+    : _max_read_window_size(DEFAULT_MAX_READ_WINDOW_SIZE)
 {
 }
 
 BamConfig::BamConfig(std::istream& in, Options const& opts)
-    : max_read_window_size(1e8)
-    , max_readlen(0)
+    : _max_read_window_size(DEFAULT_MAX_READ_WINDOW_SIZE)
 {
     map<string, LibraryConfig> temp_lib_config;
     string line;
@@ -116,7 +33,8 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         if(line.empty())
             break;
 
-        ConfigEntry entry(line);
+        typedef BamConfigEntry Entry;
+        Entry entry(line);
         // analyze the line
         string fmap;
         string lib;
@@ -128,24 +46,24 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         float lower = 0.0f;
         int mqual = -1;
 
-        if (!entry.set_value(LIBRARY_NAME, lib))
-            entry.set_value(SAMPLE_NAME, lib);
+        if (!entry.set_value(Entry::LIBRARY_NAME, lib))
+            entry.set_value(Entry::SAMPLE_NAME, lib);
 
-        entry.set_required_value(BAM_FILE, fmap, line_num);
-        if (!entry.set_value(READ_GROUP, readgroup))
+        entry.set_required_value(Entry::BAM_FILE, fmap, line_num);
+        if (!entry.set_value(Entry::READ_GROUP, readgroup))
             readgroup = lib;
 
         _readgroup_library[readgroup] = lib;
         _bam_library[fmap] = lib;
 
-        entry.set_value(READ_LENGTH, readlen);
-        entry.set_value(MIN_MAP_QUAL, mqual);
+        entry.set_value(Entry::READ_LENGTH, readlen);
+        entry.set_value(Entry::MIN_MAP_QUAL, mqual);
 
         // Insert size statistics
-        bool have_mean = entry.set_value(INSERT_SIZE_MEAN, mean);
-        bool have_stddev =  entry.set_value(INSERT_SIZE_STDDEV, stddev);
-        bool have_lower = entry.set_value(INSERT_SIZE_LOWER_CUTOFF, lower);
-        bool have_upper = entry.set_value(INSERT_SIZE_UPPER_CUTOFF, upper);
+        bool have_mean = entry.set_value(Entry::INSERT_SIZE_MEAN, mean);
+        bool have_stddev =  entry.set_value(Entry::INSERT_SIZE_STDDEV, stddev);
+        bool have_lower = entry.set_value(Entry::INSERT_SIZE_LOWER_CUTOFF, lower);
+        bool have_upper = entry.set_value(Entry::INSERT_SIZE_UPPER_CUTOFF, upper);
 
         if (have_mean && have_stddev && (!have_upper || !have_lower)) {
             upper = mean + stddev * float(opts.cut_sd);
@@ -174,7 +92,6 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         }
 
         // FIXME: why are we reading this as float from th: config and storing as int?
-        max_readlen = std::max(int(readlen), max_readlen);
 
         lib_config.mean_insertsize = mean;
         lib_config.std_insertsize = stddev;
@@ -187,7 +104,7 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         temp_lib_config[lib] = lib_config;
 
         int tmp = mean - readlen*2;    // this determines the mean of the max of the SV flanking region
-        max_read_window_size = std::min(max_read_window_size, tmp);
+        _max_read_window_size = std::min(_max_read_window_size, tmp);
     }
 
 
@@ -203,6 +120,21 @@ BamConfig::BamConfig(std::istream& in, Options const& opts)
         _bam_files.push_back(iter->first);
     }
 
-    max_read_window_size = std::max(max_read_window_size, 50);
+    _max_read_window_size = std::max(_max_read_window_size, 50);
 }
 
+int BamConfig::max_read_window_size() const {
+    return _max_read_window_size;
+}
+
+size_t BamConfig::num_libs() const {
+    return _library_config.size();
+}
+
+size_t BamConfig::num_bams() const {
+    return _bam_files.size();
+}
+
+std::vector<std::string> const& BamConfig::bam_files() const {
+    return _bam_files;
+}

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common/namespace.hpp"
+
 #include <boost/container/flat_map.hpp>
 #include <boost/serialization/split_free.hpp>
 #include <boost/serialization/map.hpp>
@@ -11,8 +13,8 @@ struct ConfigMap {
     typedef boost::container::flat_map<K, V> type;
 };
 
-namespace boost {
-namespace serialization {
+BEGIN_NAMESPACE(boost)
+BEGIN_NAMESPACE(serialization)
 
 template<class Archive, class Key, class Value, class Compare, class Allocator>
 inline void save(
@@ -52,5 +54,6 @@ inline void serialize(
     boost::serialization::split_free(ar, m, version);
 }
 
-}
-}
+END_NAMESPACE(serialization)
+END_NAMESPACE(boost)
+

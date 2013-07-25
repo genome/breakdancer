@@ -4,5 +4,6 @@ set(TEST_LIBS config ${Boost_LIBRARIES})
 include_directories(${GTEST_INCLUDE_DIRS})
 
 add_unit_tests(TestConfigLib
-    TestConfig.cpp
+    TestBamConfig.cpp
+    TestBamConfigEntry.cpp
 )

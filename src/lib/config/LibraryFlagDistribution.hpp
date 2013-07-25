@@ -10,26 +10,27 @@
 #include <string>
 #include <vector>
 
-struct LibraryFlagDistribution {
+class LibraryFlagDistribution {
+public:
+    friend class boost::serialization::access;
+
+public:
     size_t read_count;
     std::vector<uint32_t> read_counts_by_flag;
 
-    bool operator==(LibraryFlagDistribution const& rhs) const {
-        return read_count == rhs.read_count
-            && read_counts_by_flag == rhs.read_counts_by_flag;
-    }
+    LibraryFlagDistribution();
+    bool operator==(LibraryFlagDistribution const& rhs) const;
 
-    LibraryFlagDistribution()
-        : read_count(0)
-        , read_counts_by_flag(breakdancer::NUM_ORIENTATION_FLAGS, 0u)
-    {
-    }
-
+private:
     template<typename Archive>
-    void serialize(Archive& arch, const unsigned int version) {
-        arch
-            & BOOST_SERIALIZATION_NVP(read_count)
-            & BOOST_SERIALIZATION_NVP(read_counts_by_flag)
-            ;
-    }
+    void serialize(Archive& arch, const unsigned int version);
 };
+
+template<typename Archive>
+void LibraryFlagDistribution::serialize(Archive& arch, const unsigned int version) {
+    namespace bs = boost::serialization;
+    arch
+        & bs::make_nvp("readCount", read_count)
+        & bs::make_nvp("readCountsByFlag", read_counts_by_flag)
+        ;
+}

@@ -9,16 +9,7 @@
 #include <vector>
 
 struct LibraryConfig {
-    LibraryConfig()
-        : index(0)
-        , mean_insertsize(0)
-        , std_insertsize(0)
-        , uppercutoff(0)
-        , lowercutoff(0)
-        , readlens(0)
-        , min_mapping_quality(-1)
-    {
-    }
+    LibraryConfig();
 
     size_t index;
     std::string name;
@@ -45,3 +36,15 @@ struct LibraryConfig {
             ;
     }
 };
+
+inline
+LibraryConfig::LibraryConfig()
+    : index(0)
+    , mean_insertsize(0)
+    , std_insertsize(0)
+    , uppercutoff(0)
+    , lowercutoff(0)
+    , readlens(0)
+    , min_mapping_quality(-1)
+{
+}

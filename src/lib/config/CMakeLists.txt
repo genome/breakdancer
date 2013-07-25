@@ -3,9 +3,12 @@ project(breakdancer)
 set(SOURCES
     BamConfig.cpp
     BamConfig.hpp
+    BamConfigEntry.cpp
+    BamConfigEntry.hpp
     BamSummary.cpp
     BamSummary.hpp
     LibraryConfig.hpp
+    LibraryFlagDistribution.cpp
     LibraryFlagDistribution.hpp
     LibraryInfo.hpp
 )
