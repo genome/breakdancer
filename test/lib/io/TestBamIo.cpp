@@ -53,7 +53,7 @@ TEST(TestBamMerger, read_count) {
     BamMerger reader(readers);
 
     int last_tid = -1;
-    size_t last_pos = 0;
+    long last_pos = 0;
 
     bam1_t* b = bam_init1();
     size_t n_reads = 0;
