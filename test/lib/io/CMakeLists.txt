@@ -5,5 +5,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 
 add_unit_tests(TestIoLib
     TestBamIo.cpp
+    TestBamMerger.cpp
+    TestBamReader.cpp
     TestRead.cpp
 )
