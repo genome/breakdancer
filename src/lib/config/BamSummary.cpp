@@ -1,5 +1,5 @@
 #include "BamSummary.hpp"
-#include "io/BamIO.hpp"
+#include "io/BamIo.hpp"
 #include "io/Read.hpp"
 
 #include <iostream>

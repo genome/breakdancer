@@ -1,10 +1,29 @@
 #include "BamMerger.hpp"
 
+#include <boost/noncopyable.hpp>
+
 #include <cassert>
 #include <sstream>
 #include <stdexcept>
 
 using namespace std;
+
+struct BamMerger::Stream : public boost::noncopyable {
+    // Functions
+    Stream();
+    explicit Stream(IBamReader* bam);
+    ~Stream();
+
+    bool valid() const;
+    bool advance();
+
+    bool operator>(Stream const& rhs) const;
+
+    // Data
+    IBamReader* bam;
+    bam1_t* entry;
+    int status;
+};
 
 BamMerger::Stream::Stream()
     : bam(0)
@@ -113,3 +132,9 @@ int BamMerger::next(bam1_t* entry) {
 
     return rv;
 }
+
+std::string const& BamMerger::path() const {
+    return _path;
+}
+
+

@@ -4,8 +4,6 @@
 
 #include <bam.h>
 
-#include <functional>
-
 BEGIN_NAMESPACE(breakdancer)
 BEGIN_NAMESPACE(alnfilter)
 

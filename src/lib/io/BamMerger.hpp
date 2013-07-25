@@ -1,39 +1,13 @@
 #pragma once
 
 #include "IBamReader.hpp"
+#include "common/utility.hpp"
 
-#include <vector>
+#include <functional>
 #include <queue>
-
-// FIXME: figure out if something like this already exists.
-// if not, move it someplace more general
-template<typename T>
-struct deref_greater {
-    bool operator()(T const* a, T const* b) const {
-        return *a > *b;
-    }
-};
+#include <vector>
 
 class BamMerger : public IBamReader {
-public:
-    struct Stream {
-        // Functions
-        Stream();
-        explicit Stream(IBamReader* bam);
-        ~Stream();
-
-        bool valid() const;
-        bool advance();
-
-        bool operator>(Stream const& rhs) const;
-
-        // Data
-        IBamReader* bam;
-        bam1_t* entry;
-        int status;
-    };
-
-
 public:
     explicit BamMerger(std::vector<IBamReader*> const& streams);
     ~BamMerger();
@@ -41,16 +15,16 @@ public:
     bam_header_t* header() const;
     int next(bam1_t* entry);
 
-    std::string const& path() const {
-        return _path;
-    }
+    std::string const& path() const;
 
+private:
+    struct Stream;
 
-protected:
+private:
     std::string _path;
     bam_header_t* _header;
     std::priority_queue<
         Stream*,
         std::vector<Stream*>,
-        deref_greater<Stream> > _streams;
+        deref_compare<Stream, std::greater> > _streams;
 };

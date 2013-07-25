@@ -1,7 +1,7 @@
 #include "BamConfig.hpp"
 
 #include "common/Options.hpp"
-#include "io/BamIO.hpp"
+#include "io/BamIo.hpp"
 #include "io/Read.hpp"
 
 #include <boost/algorithm/string.hpp>

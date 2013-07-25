@@ -2,10 +2,10 @@ project(breakdancer)
 
 set(SOURCES
     AlignmentFilter.hpp
-    BamIO.hpp
+    BamIo.cpp
+    BamIo.hpp
     BamMerger.cpp
     BamMerger.hpp
-    BamReader.cpp
     BamReader.hpp
     FastqWriter.cpp
     FastqWriter.hpp

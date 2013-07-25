@@ -49,3 +49,16 @@ TEST(utility, merge_maps_self) {
     ASSERT_EQ(4, a["y"]);
     ASSERT_EQ(6, a["z"]);
 }
+
+TEST(utility, deref_compare) {
+    int a = 7;
+    int b = 9;
+
+    deref_compare< int, std::less> lt;
+    EXPECT_TRUE(lt(&a, &b));
+    EXPECT_FALSE(lt(&b, &a));
+
+    deref_compare< int, std::greater> gt;
+    EXPECT_TRUE(gt(&b, &a));
+    EXPECT_FALSE(gt(&a, &b));
+}

@@ -7,7 +7,7 @@
 #include "config/BamSummary.hpp"
 #include "config/LibraryConfig.hpp"
 #include "config/LibraryInfo.hpp"
-#include "io/BamIO.hpp"
+#include "io/BamIo.hpp"
 #include "io/BamMerger.hpp"
 #include "io/Read.hpp"
 

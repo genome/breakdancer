@@ -16,3 +16,18 @@ void merge_maps(MapType& a, MapType const& b, Combiner const& combiner) {
             inserted.first->second = combiner(inserted.first->second, b_iter->second);
     }
 }
+
+// Adapter for comparing values through pointers, (see unit tests for examples)
+template<typename T, template <typename> class Compare>
+struct deref_compare {
+    deref_compare(Compare<T> cmp = Compare<T>())
+        : cmp(cmp)
+    {
+    }
+
+    bool operator()(T const* a, T const* b) const {
+        return cmp(*a, *b);
+    }
+
+    Compare<T> cmp;
+};

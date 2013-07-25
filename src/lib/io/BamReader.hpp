@@ -9,40 +9,29 @@
 #include <stdexcept>
 #include <string>
 
-template<typename Filter>
+template<typename AcceptFilter>
 class BamReader : public IBamReader {
 public:
-    BamReader(std::string const& path);
-    ~BamReader() {
-        samclose(_in);
-        _in = 0;
-    }
+    explicit BamReader(std::string const& path, AcceptFilter aflt = AcceptFilter());
+    ~BamReader();
 
-    int next(bam1_t* entry) {
-        while (int rv = samread(_in, entry) > 0) {
-            if (Filter()(entry))
-                return rv;
-        }
-        return 0;
-    }
+    int next(bam1_t* entry);
 
-    bam_header_t* header() const {
-        return _in->header;
-    }
-
-    std::string const& path() const { return _path; }
-
+    bam_header_t* header() const;
+    std::string const& path() const;
 
 protected:
     std::string _path;
     samfile_t* _in;
+    AcceptFilter _accept_filter;
 };
 
-template<typename Filter>
+template<typename AcceptFilter>
 inline
-BamReader<Filter>::BamReader(std::string const& path)
+BamReader<AcceptFilter>::BamReader(std::string const& path, AcceptFilter aflt)
     : _path(path)
     , _in(samopen(path.c_str(), "rb", 0))
+    , _accept_filter(aflt)
 {
     using boost::format;
     if (!_in || !_in->header) {
@@ -52,4 +41,33 @@ BamReader<Filter>::BamReader(std::string const& path)
     if (!_in->x.bam) {
         throw std::runtime_error(str(format("%1% is not a valid bam file") % path));
     }
+}
+
+template<typename AcceptFilter>
+inline
+BamReader<AcceptFilter>::~BamReader() {
+    samclose(_in);
+    _in = 0;
+}
+
+template<typename AcceptFilter>
+inline
+int BamReader<AcceptFilter>::next(bam1_t* entry) {
+    while (int rv = samread(_in, entry) > 0) {
+        if (_accept_filter(entry))
+            return rv;
+    }
+    return 0;
+}
+
+template<typename AcceptFilter>
+inline
+bam_header_t* BamReader<AcceptFilter>::header() const {
+    return _in->header;
+}
+
+template<typename AcceptFilter>
+inline
+std::string const& BamReader<AcceptFilter>::path() const {
+    return _path;
 }
