@@ -40,9 +40,19 @@ endif ()
 # make sure to pick up headers from library dirs
 include_directories("src/lib")
 
-# libgtest requires threads, so link thread libraries everywhere
-find_package(Threads)
-link_libraries(${CMAKE_THREAD_LIBS_INIT})
+###########################################################################
+## Main project
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
+add_projects(src/lib)
+add_projects(src/exe)
+add_subdirectory(perl)
+
+###########################################################################
+## Testing
+set(TEST_DATA_DIRECTORY ${CMAKE_SOURCE_DIR}/test-data)
+
+configure_file(test-data/TestData.hpp.in test-data/TestData.hpp @ONLY)
+include_directories(${PROJECT_BINARY_DIR}/test-data)
 
 enable_testing(true)
 add_projects(test/lib)
@@ -51,11 +61,6 @@ add_projects(test/lib)
 add_subdirectory(integration-test)
 
 
-# main project
-
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
-add_projects(src/lib)
-add_projects(src/exe)
-add_subdirectory(perl)
-
+###########################################################################
+## Packaging
 include(PackageInfo.cmake)

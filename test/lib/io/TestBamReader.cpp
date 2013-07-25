@@ -1,6 +1,8 @@
 #include "io/BamReader.hpp"
 #include "io/AlignmentFilter.hpp"
 
+#include "TestData.hpp"
+
 #include <boost/filesystem.hpp>
 #include <unistd.h>
 #include <cstdlib>
@@ -10,48 +12,28 @@ using namespace std;
 namespace bfs = boost::filesystem;
 namespace bdaf = breakdancer::alnfilter;
 
-class TestRegionLimitedBamReader : public ::testing::Test {
-    protected:
-        void SetUp() {
-            _bam_path = getenv("BD_TEST_BAM_FILE");
-            _temp_dir = "/tmp/BD_TestBamReader.XXXXXX";
-            char* tmp = mkdtemp(&_temp_dir[0]);
-            if (!tmp) {
-                throw runtime_error("Failed to create temp directory");
-            }
-        }
+class TestBamReader : public ::testing::TestWithParam<BamInfo> {
+protected:
+    void SetUp() {
+        _bam_path = TEST_DATA_DIRECTORY;
+        _bam_path /= GetParam().path;
+    }
 
-
-        void TearDown() {
-            bfs::remove_all(_temp_dir);
-        }
-
-        char const* _bam_path;
-        string _temp_dir;
+    bfs::path _bam_path;
 };
 
-TEST_F(TestRegionLimitedBamReader, readChromosome) {
-    if (!_bam_path) {
-        return;
-    }
-
-    //RegionLimitedBamReader reader(_bam_path, "21");
-    BamReader<bdaf::True> reader(_bam_path);
-
-    bfs::path output(_temp_dir);
-    output /= "result.sam";
-    samfile_t* sam_out = samopen(output.string().c_str(), "w", reader.header());
-    ASSERT_TRUE(sam_out);
+TEST_P(TestBamReader, read_count) {
+    BamReader<bdaf::True> reader(_bam_path.string());
+    EXPECT_EQ(reader.path(), _bam_path.string());
 
     bam1_t* b = bam_init1();
-    size_t n = 0;
+    size_t n_reads = 0;
     while (reader.next(b) > 0) {
-        ++n;
-        samwrite(sam_out, b);
+        ++n_reads;
     }
-
-    cerr << "Read " << n << " records\n";
-
-    samclose(sam_out);
     bam_destroy1(b);
+
+    ASSERT_EQ(GetParam().n_reads, n_reads);
 }
+
+INSTANTIATE_TEST_CASE_P(RC, TestBamReader, ::testing::ValuesIn(TEST_BAMS));

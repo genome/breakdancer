@@ -5,6 +5,7 @@ of NA19238 and NA19240 and the integrationtest.py from
 TGI's build-common submodule."""
 
 from integrationtest import IntegrationTest, main
+from testdata import TEST_DATA_DIRECTORY
 import unittest
 import subprocess
 import os
@@ -13,6 +14,7 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
 
     def setUp(self):
         IntegrationTest.setUp(self)
+        self.data_dir = TEST_DATA_DIRECTORY
         self.orig_path = os.path.realpath(os.getcwd())
         self.exe_path = os.path.realpath(self.exe_path)
         os.chdir(self.data_dir)

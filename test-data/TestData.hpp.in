@@ -1,0 +1,25 @@
+#pragma once
+
+#include <boost/assign/list_of.hpp>
+
+#include <string>
+#include <vector>
+
+namespace {
+    struct BamInfo {
+        BamInfo(std::string const& path, size_t n_reads)
+            : path(path)
+            , n_reads(n_reads)
+        {
+        }
+
+        std::string path;
+        size_t n_reads;
+    };
+
+    static const std::string TEST_DATA_DIRECTORY = "@TEST_DATA_DIRECTORY@";
+    static const std::vector<BamInfo> TEST_BAMS = boost::assign::list_of
+        (BamInfo("NA19238_chr21_del_inv.bam", 3069))
+        (BamInfo("NA19240_chr21_del_inv.bam", 2848))
+        ;
+}
