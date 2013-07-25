@@ -8,7 +8,7 @@
 namespace {
     struct BamInfo {
         BamInfo(std::string const& path, size_t n_reads)
-            : path(path)
+            : path("@TEST_DATA_DIRECTORY@/" + path)
             , n_reads(n_reads)
         {
         }

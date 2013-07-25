@@ -30,11 +30,12 @@ link_libraries(rt)
 include_directories(${Boost_INCLUDE_DIRS})
 
 if (CMAKE_COMPILER_IS_GNUCC)
-    set(CMAKE_C_FLAGS "-std=c99 -Wall -ansi -pedantic")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -ansi -pedantic")
 endif ()
 
 if (CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS "-Wno-long-long -Wall -ansi -pedantic -Wno-variadic-macros")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-long-long -Wall -ansi")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-variadic-macros")
 endif ()
 
 # make sure to pick up headers from library dirs

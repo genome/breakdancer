@@ -4,6 +4,8 @@ test on BreakDancer. It uses some small BAMs from sequencing
 of NA19238 and NA19240 and the integrationtest.py from
 TGI's build-common submodule."""
 
+import os
+print "I AM IN", os.getcwd()
 from integrationtest import IntegrationTest, main
 from testdata import TEST_DATA_DIRECTORY
 import unittest

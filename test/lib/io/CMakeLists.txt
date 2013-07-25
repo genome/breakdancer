@@ -4,6 +4,6 @@ set(TEST_LIBS io ${Boost_LIBRARIES})
 include_directories(${GTEST_INCLUDE_DIRS})
 
 add_unit_tests(TestIoLib
-    TestBamReader.cpp
+    TestBamIo.cpp
     TestRead.cpp
 )
