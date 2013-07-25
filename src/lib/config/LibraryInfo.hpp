@@ -1,7 +1,7 @@
 #pragma once
 
-#include "BamConfig.hpp"
-#include "BamSummary.hpp"
+#include "config/BamConfig.hpp"
+#include "config/BamSummary.hpp"
 
 #include <map>
 #include <stdint.h>

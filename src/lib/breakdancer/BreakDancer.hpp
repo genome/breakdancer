@@ -1,11 +1,11 @@
 #pragma once
 
 #include "BasicRegion.hpp"
-#include "BedWriter.hpp"
-#include "FastqWriter.hpp"
+#include "BedWriter.hpp" // FIXME: try to move this to io lib
 #include "ReadCountsByLib.hpp"
 #include "ReadRegionData.hpp"
-#include "Timer.hpp"
+#include "common/Timer.hpp"
+#include "io/FastqWriter.hpp"
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/unordered_map.hpp>

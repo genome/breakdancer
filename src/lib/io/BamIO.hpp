@@ -1,8 +1,8 @@
 #include "AlignmentFilter.hpp"
 #include "BamReader.hpp"
 #include "IBamReader.hpp"
-#include "Options.hpp"
 #include "RegionLimitedBamReader.hpp"
+#include "common/Options.hpp"
 
 #include <boost/shared_ptr.hpp>
 #include <vector>

@@ -1,5 +1,5 @@
 #include "SvBuilder.hpp"
-#include "LibraryInfo.hpp"
+#include "config/LibraryInfo.hpp"
 
 #include <boost/bind.hpp>
 #include <boost/range/algorithm/for_each.hpp>

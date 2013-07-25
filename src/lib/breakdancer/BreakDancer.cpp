@@ -1,10 +1,11 @@
 #include "BreakDancer.hpp"
 
-#include "BamConfig.hpp"
-#include "IBamReader.hpp"
-#include "Options.hpp"
 #include "SvBuilder.hpp"
-#include "Timer.hpp"
+#include "common/Options.hpp"
+#include "common/Timer.hpp"
+#include "config/BamConfig.hpp"
+#include "config/LibraryInfo.hpp"
+#include "io/IBamReader.hpp"
 
 #include <boost/array.hpp>
 #include <boost/bind.hpp>

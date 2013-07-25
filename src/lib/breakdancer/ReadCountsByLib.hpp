@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utility.hpp"
+#include "common/utility.hpp"
 
 #include <stdint.h>
 

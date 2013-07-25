@@ -1,13 +1,12 @@
 #pragma once
 
-#include "ReadFlags.hpp"
-#include "namespace.hpp"
+#include "common/ReadFlags.hpp"
+#include "common/namespace.hpp"
 
 #include <cassert>
 #include <ostream>
 #include <string>
 #include <vector>
-#include "FlagCodec.hpp"
 
 extern "C" {
     #include <sam.h>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ReadFlags.hpp"
+#include "common/ReadFlags.hpp"
 
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>

@@ -1,47 +1,18 @@
 project(breakdancer)
 
 set(SOURCES
-    AlignmentFilter.hpp
-    BamConfig.cpp
-    BamConfig.hpp
-    BamIO.hpp
-    BamMerger.cpp
-    BamMerger.hpp
-    BamReader.cpp
-    BamReader.hpp
-    BamSummary.cpp
-    BamSummary.hpp
     BasicRegion.hpp
     BedWriter.cpp
     BedWriter.hpp
     BreakDancer.cpp
     BreakDancer.hpp
-    FastqWriter.cpp
-    FastqWriter.hpp
-    FlagCodec.hpp
     Graph.hpp
-    IBamReader.hpp
-    IlluminaLIFlagCodec.hpp
-    IlluminaStandardFlagCodec.hpp
-    LibraryConfig.hpp
-    LibraryFlagDistribution.hpp
-    LibraryInfo.hpp
-    Options.cpp
-    Options.hpp
-    Read.cpp
-    Read.hpp
     ReadCountsByLib.hpp
-    ReadFlags.cpp
-    ReadFlags.hpp
     ReadRegionData.cpp
     ReadRegionData.hpp
-    RegionLimitedBamReader.hpp
     SvBuilder.cpp
     SvBuilder.hpp
-    Timer.hpp
-    namespace.hpp
-    utility.hpp
 )
 
 add_library(breakdancer ${SOURCES})
-target_link_libraries(breakdancer ${Samtools_LIBRARIES} z m)
+target_link_libraries(breakdancer common io config ${Samtools_LIBRARIES} z m)

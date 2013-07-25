@@ -2,9 +2,9 @@
 
 #include "BasicRegion.hpp"
 #include "Graph.hpp"
-#include "Options.hpp"
-#include "Read.hpp"
 #include "ReadCountsByLib.hpp"
+#include "common/Options.hpp"
+#include "io/Read.hpp"
 
 #include <boost/function.hpp>
 #include <boost/range/algorithm/remove_copy_if.hpp>

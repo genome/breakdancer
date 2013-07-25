@@ -1,11 +1,10 @@
-#include "breakdancer/BamReader.hpp"
-#include "breakdancer/AlignmentFilter.hpp"
+#include "io/BamReader.hpp"
+#include "io/AlignmentFilter.hpp"
 
 #include <boost/filesystem.hpp>
 #include <unistd.h>
 #include <cstdlib>
 #include <gtest/gtest.h>
-
 
 using namespace std;
 namespace bfs = boost::filesystem;

@@ -1,9 +1,9 @@
 #include "BedWriter.hpp"
 
-#include "LibraryInfo.hpp"
-#include "Options.hpp"
 #include "SvBuilder.hpp"
-#include "Read.hpp"
+#include "common/Options.hpp"
+#include "config/LibraryInfo.hpp"
+#include "io/Read.hpp"
 
 #include <sstream>
 

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "BasicRegion.hpp"
-#include "Options.hpp"
 #include "ReadCountsByLib.hpp"
-#include "Read.hpp"
+#include "common/Options.hpp"
+#include "io/Read.hpp"
 
 #include <boost/array.hpp>
 

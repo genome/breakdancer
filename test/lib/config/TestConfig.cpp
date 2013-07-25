@@ -1,5 +1,6 @@
-#include "breakdancer/Options.hpp"
-#include "breakdancer/BamConfig.hpp"
+#include "config/BamConfig.hpp"
+
+#include "common/Options.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/assign/list_of.hpp>

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "ConfigMap.hpp"
-#include "LibraryFlagDistribution.hpp"
-#include "BamConfig.hpp"
-#include "Options.hpp"
-#include "IBamReader.hpp"
+#include "common/ConfigMap.hpp"
+#include "common/Options.hpp"
+#include "config/BamConfig.hpp"
+#include "config/LibraryFlagDistribution.hpp"
+#include "io/IBamReader.hpp"
 
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>

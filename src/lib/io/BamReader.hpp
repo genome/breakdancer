@@ -2,7 +2,7 @@
 
 #include "IBamReader.hpp"
 
-#include "Options.hpp"
+#include "common/Options.hpp"
 
 #include <boost/format.hpp>
 #include <functional>

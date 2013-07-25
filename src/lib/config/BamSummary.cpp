@@ -1,7 +1,8 @@
 #include "BamSummary.hpp"
-#include "Read.hpp"
+#include "io/BamIO.hpp"
+#include "io/Read.hpp"
+
 #include <iostream>
-#include "BamIO.hpp"
 
 using namespace std;
 

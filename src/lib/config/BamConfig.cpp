@@ -1,8 +1,8 @@
 #include "BamConfig.hpp"
 
-#include "BamIO.hpp"
-#include "Options.hpp"
-#include "Read.hpp"
+#include "common/Options.hpp"
+#include "io/BamIO.hpp"
+#include "io/Read.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/container/flat_map.hpp>

@@ -1,4 +1,4 @@
-#include "breakdancer/utility.hpp"
+#include "common/utility.hpp"
 
 #include <gtest/gtest.h>
 

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ConfigMap.hpp"
 #include "LibraryConfig.hpp"
-#include "ReadFlags.hpp"
+#include "common/ReadFlags.hpp"
+#include "common/ConfigMap.hpp"
 
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>

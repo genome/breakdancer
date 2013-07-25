@@ -1,6 +1,6 @@
 #pragma once
 
-#include "namespace.hpp"
+#include "common/namespace.hpp"
 
 #include <bam.h>
 

@@ -1,5 +1,7 @@
 #pragma once
 
+// FIXME try to move this to io lib (decouple from SvBuilder first)
+
 #include <bam.h>
 
 #include <ostream>
