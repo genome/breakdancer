@@ -30,26 +30,35 @@ public:
     explicit BamConfigEntry(std::string const& line);
 
     template<typename T>
-    bool set_value(Field const& f, T& value) const {
-        std::map<Field, std::string>::const_iterator found = _directives.find(f);
-        if (found != _directives.end()) {
-            value = boost::lexical_cast<T>(found->second);
-            return true;
-        }
+    bool set_value(Field const& f, T& value) const;
 
-        return false;
-    }
-
+    // throws std::runtime error on failure
     template<typename T>
-    void set_required_value(Field const& f, T& value, size_t line_num) {
-        using boost::format;
-
-        if (!set_value(f, value))
-            throw std::runtime_error(str(format(
-                "Required field '%1%' not found in config at line %2%!"
-                ) % token_string(f) % line_num));
-    }
+    void set_required_value(Field const& f, T& value, size_t line_num);
 
 private: // data
     std::map<Field, std::string> _directives;
 };
+
+template<typename T>
+inline
+bool BamConfigEntry::set_value(Field const& f, T& value) const {
+    std::map<Field, std::string>::const_iterator found = _directives.find(f);
+    if (found != _directives.end()) {
+        value = boost::lexical_cast<T>(found->second);
+        return true;
+    }
+
+    return false;
+}
+
+template<typename T>
+inline
+void BamConfigEntry::set_required_value(Field const& f, T& value, size_t line_num) {
+    using boost::format;
+
+    if (!set_value(f, value))
+        throw std::runtime_error(str(format(
+            "Required field '%1%' not found in config at line %2%!"
+            ) % token_string(f) % line_num));
+}

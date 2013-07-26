@@ -9,8 +9,7 @@
 #include <vector>
 
 
-class LibraryInfo {
-public:
+struct LibraryInfo {
     //leaving the underscore until such a time as we add encapsulation
     BamConfig const& _cfg;
     BamSummary const& _summary;
@@ -19,9 +18,5 @@ public:
         : _cfg(cfg)
         , _summary(summary)
     {
-    }
-
-    size_t const& index_for_readgroup(std::string const& rg) const {
-        return _cfg.library_config(_cfg.readgroup_library(rg)).index;
     }
 };
