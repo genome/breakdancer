@@ -1,15 +1,15 @@
 #pragma once
 
-#include "IBamReader.hpp"
+#include "BamReaderBase.hpp"
 #include "common/utility.hpp"
 
 #include <functional>
 #include <queue>
 #include <vector>
 
-class BamMerger : public IBamReader {
+class BamMerger : public BamReaderBase {
 public:
-    explicit BamMerger(std::vector<IBamReader*> const& streams);
+    explicit BamMerger(std::vector<BamReaderBase*> const& streams);
     ~BamMerger();
 
     bam_header_t* header() const;

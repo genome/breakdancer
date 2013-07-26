@@ -11,7 +11,7 @@ using namespace std;
 struct BamMerger::Stream : public boost::noncopyable {
     // Functions
     Stream();
-    explicit Stream(IBamReader* bam);
+    explicit Stream(BamReaderBase* bam);
     ~Stream();
 
     bool valid() const;
@@ -20,7 +20,7 @@ struct BamMerger::Stream : public boost::noncopyable {
     bool operator>(Stream const& rhs) const;
 
     // Data
-    IBamReader* bam;
+    BamReaderBase* bam;
     bam1_t* entry;
     int status;
 };
@@ -32,7 +32,7 @@ BamMerger::Stream::Stream()
 {
 }
 
-BamMerger::Stream::Stream(IBamReader* bam)
+BamMerger::Stream::Stream(BamReaderBase* bam)
     : bam(bam)
     , entry(bam_init1())
 {
@@ -78,7 +78,7 @@ bool BamMerger::Stream::advance() {
     return status > 0;
 }
 
-BamMerger::BamMerger(std::vector<IBamReader*> const& streams) {
+BamMerger::BamMerger(std::vector<BamReaderBase*> const& streams) {
     if (streams.empty())
         throw runtime_error("BamMerger created with no input streams!");
 
@@ -86,7 +86,7 @@ BamMerger::BamMerger(std::vector<IBamReader*> const& streams) {
     _header = streams[0]->header();
 
     stringstream names;
-    typedef std::vector<IBamReader*>::const_iterator IterType;
+    typedef std::vector<BamReaderBase*>::const_iterator IterType;
     for (IterType i = streams.begin(); i != streams.end(); ++i) {
         Stream* s = new Stream(*i);
         if (s->valid()) {

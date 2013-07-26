@@ -5,7 +5,7 @@
 #include "common/Timer.hpp"
 #include "config/BamConfig.hpp"
 #include "config/LibraryInfo.hpp"
-#include "io/IBamReader.hpp"
+#include "io/BamReaderBase.hpp"
 
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
@@ -60,7 +60,7 @@ namespace {
             uint32_t read_count_for_flag = lib_flags.read_counts_by_flag[type];
             lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(lib_info._summary.covered_reference_length()));
             lambda = max(real_type(1.0e-10), lambda);
-            poisson_distribution<real_type> poisson(lambda);
+            boost::math::poisson_distribution<real_type> poisson(lambda);
             real_type tmp_a = log(cdf(complement(poisson, readcount))) - err;
             real_type tmp_b = logpvalue + tmp_a;
             err = (tmp_b - logpvalue) - tmp_a;
@@ -89,7 +89,7 @@ BreakDancer::BreakDancer(
         BamConfig const& cfg,
         LibraryInfo const& lib_info,
         ReadRegionData& read_regions,
-        IBamReader& merged_reader,
+        BamReaderBase& merged_reader,
         int max_read_window_size
         )
     : _opts(opts)

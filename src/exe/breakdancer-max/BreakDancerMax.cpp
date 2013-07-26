@@ -84,9 +84,9 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
-        typedef vector<shared_ptr<IBamReader> > ReaderVecType;
+        typedef vector<boost::shared_ptr<BamReaderBase> > ReaderVecType;
         ReaderVecType sp_readers(openBams(cfg.bam_files(), opts));
-        vector<IBamReader*> readers;
+        vector<BamReaderBase*> readers;
         for(size_t i = 0; i != sp_readers.size(); ++i)
             readers.push_back(sp_readers[i].get());
 

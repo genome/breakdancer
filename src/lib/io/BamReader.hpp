@@ -1,6 +1,6 @@
 #pragma once
 
-#include "IBamReader.hpp"
+#include "BamReaderBase.hpp"
 
 #include "common/Options.hpp"
 
@@ -10,7 +10,7 @@
 #include <string>
 
 template<typename AcceptFilter>
-class BamReader : public IBamReader {
+class BamReader : public BamReaderBase {
 public:
     explicit BamReader(std::string const& path, AcceptFilter aflt = AcceptFilter());
     ~BamReader();

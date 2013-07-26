@@ -1,6 +1,8 @@
+#include "io/BamReader.hpp"
+
 #include "common/Options.hpp"
 #include "io/AlignmentFilter.hpp"
-#include "io/BamReader.hpp"
+#include "io/RawBamEntry.hpp"
 
 #include "TestData.hpp"
 
@@ -8,25 +10,23 @@
 
 namespace bdaf = breakdancer::alnfilter;
 
-namespace {
-    Options const default_options;
-}
-
 class TestBamReader : public ::testing::TestWithParam<BamInfo> {
 };
 
 TEST_P(TestBamReader, read_count) {
-    BamReader<bdaf::True> reader(GetParam().path);
-    EXPECT_EQ(reader.path(), GetParam().path);
+    std::string const& path = GetParam().path;
+    size_t expected_count = GetParam().n_reads;
 
-    bam1_t* b = bam_init1();
+    BamReader<bdaf::True> reader(path);
+    EXPECT_EQ(path, reader.path());
+
+    RawBamEntry b;
     size_t n_reads = 0;
     while (reader.next(b) > 0) {
         ++n_reads;
     }
-    bam_destroy1(b);
 
-    ASSERT_EQ(GetParam().n_reads, n_reads);
+    ASSERT_EQ(expected_count, n_reads);
 }
 
 INSTANTIATE_TEST_CASE_P(RC, TestBamReader, ::testing::ValuesIn(TEST_BAMS));

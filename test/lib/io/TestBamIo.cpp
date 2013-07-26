@@ -1,6 +1,6 @@
 #include "common/Options.hpp"
 #include "io/AlignmentFilter.hpp"
-#include "io/IBamReader.hpp"
+#include "io/BamReaderBase.hpp"
 #include "io/BamIo.hpp"
 
 #include "TestData.hpp"
@@ -13,7 +13,6 @@
 #include <string>
 
 namespace bdaf = breakdancer::alnfilter;
-using boost::shared_ptr;
 using namespace std;
 
 class TestBamIo : public ::testing::Test {
@@ -30,13 +29,13 @@ protected:
 
 TEST_F(TestBamIo, openBam) {
     for (size_t i = 0; i < _bam_paths.size(); ++i) {
-        shared_ptr<IBamReader> reader(openBam(_bam_paths[i], default_options));
+        boost::shared_ptr<BamReaderBase> reader(openBam(_bam_paths[i], default_options));
         EXPECT_EQ(_bam_paths[i], reader->path());
     }
 }
 
 TEST_F(TestBamIo, openBams) {
-    vector<shared_ptr<IBamReader> > readers = openBams(_bam_paths, default_options);
+    vector<boost::shared_ptr<BamReaderBase> > readers = openBams(_bam_paths, default_options);
     EXPECT_EQ(_bam_paths.size(), readers.size());
     for (size_t i = 0; i < TEST_BAMS.size(); ++i) {
         EXPECT_EQ(_bam_paths[i], readers[i]->path());

@@ -1,4 +1,4 @@
-#include "IBamReader.hpp"
+#include "BamReaderBase.hpp"
 #include "BamReader.hpp"
 
 #include <boost/format.hpp>

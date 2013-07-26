@@ -16,7 +16,7 @@
 #include <vector>
 
 class Options;
-class IBamReader;
+class BamReaderBase;
 
 
 class BamConfig {

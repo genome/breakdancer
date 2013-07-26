@@ -4,7 +4,7 @@
 #include "common/Options.hpp"
 #include "config/BamConfig.hpp"
 #include "config/LibraryFlagDistribution.hpp"
-#include "io/IBamReader.hpp"
+#include "io/BamReaderBase.hpp"
 
 #include <boost/serialization/nvp.hpp>
 #include <boost/serialization/vector.hpp>
@@ -28,7 +28,7 @@ public:
     bool operator!=(BamSummary const& rhs) const;
 
 private:
-    void _analyze_bam(Options const& opts, BamConfig const& bam_confg, IBamReader& reads);
+    void _analyze_bam(Options const& opts, BamConfig const& bam_confg, BamReaderBase& reads);
     void _analyze_bams(Options const& opts, BamConfig const& bam_config);
 
 private:

@@ -56,17 +56,17 @@ namespace {
         string region;
     };
 
-    vector<shared_ptr<IBamReader> > openBams(vector<string> files, string const& region) {
-        vector<shared_ptr<IBamReader> > rv;
+    vector<shared_ptr<BamReaderBase> > openBams(vector<string> files, string const& region) {
+        vector<shared_ptr<BamReaderBase> > rv;
         typedef vector<string>::const_iterator IterType;
         if (!region.empty()) {
             for (IterType i = files.begin(); i != files.end(); ++i) {
-                shared_ptr<IBamReader> reader(new RegionLimitedBamReader(*i, region.c_str()));
+                shared_ptr<BamReaderBase> reader(new RegionLimitedBamReader(*i, region.c_str()));
                 rv.push_back(reader);
             }
         } else {
             for (IterType i = files.begin(); i != files.end(); ++i) {
-                shared_ptr<IBamReader> reader(new BamReader(*i));
+                shared_ptr<BamReaderBase> reader(new BamReader(*i));
                 rv.push_back(reader);
             }
         }
@@ -85,9 +85,9 @@ int main(int argc, char** argv) {
     }
 
 
-    vector<shared_ptr<IBamReader> > bams = openBams(opts->filenames, opts->region);
-    vector<IBamReader*> bptrs;
-    typedef vector<shared_ptr<IBamReader> >::const_iterator IterType;
+    vector<shared_ptr<BamReaderBase> > bams = openBams(opts->filenames, opts->region);
+    vector<BamReaderBase*> bptrs;
+    typedef vector<shared_ptr<BamReaderBase> >::const_iterator IterType;
     for (IterType i = bams.begin(); i != bams.end(); ++i) {
         bptrs.push_back(i->get());
     }

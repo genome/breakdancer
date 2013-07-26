@@ -8,4 +8,5 @@ add_unit_tests(TestIoLib
     TestBamMerger.cpp
     TestBamReader.cpp
     TestRead.cpp
+    TestRegionLimitedBamReader.cpp
 )

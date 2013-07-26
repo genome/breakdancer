@@ -9,7 +9,7 @@ set(SOURCES
     BamReader.hpp
     FastqWriter.cpp
     FastqWriter.hpp
-    IBamReader.hpp
+    BamReaderBase.hpp
     Read.cpp
     Read.hpp
     RegionLimitedBamReader.hpp

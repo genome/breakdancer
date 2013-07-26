@@ -31,7 +31,7 @@ LibraryFlagDistribution const& BamSummary::library_flag_distribution_for_index(s
     return _library_flag_distribution[index];
 }
 
-void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, IBamReader& reader) {
+void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, BamReaderBase& reader) {
     int last_pos = 0;
     int last_tid = -1;
 
@@ -169,7 +169,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
 void BamSummary::_analyze_bams(Options const& opts, BamConfig const& bam_config) {
     std::vector<std::string> bam_files = bam_config.bam_files();
     for(std::vector<std::string>::const_iterator iter = bam_files.begin(); iter != bam_files.end(); ++iter) {
-        auto_ptr<IBamReader> reader(openBam(*iter, opts));
+        auto_ptr<BamReaderBase> reader(openBam(*iter, opts));
         _analyze_bam(opts, bam_config, *reader);
     }
 }

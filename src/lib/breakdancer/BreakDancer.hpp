@@ -25,7 +25,7 @@
 class Options;
 class BamConfig; //FIXME we probably won't need to store this once done stubbing in LibraryInfo
 class LibraryInfo;
-class IBamReader;
+class BamReaderBase;
 class Logger;
 
 class BreakDancer {
@@ -41,7 +41,7 @@ public:
         BamConfig const& cfg,
         LibraryInfo const& lib_info,
         ReadRegionData& read_regions,
-        IBamReader& merged_reader,
+        BamReaderBase& merged_reader,
         int max_read_window_size
         );
 
@@ -74,7 +74,7 @@ private:
     BamConfig const& _cfg;
     LibraryInfo const& _lib_info;
     ReadRegionData& _rdata;
-    IBamReader& _merged_reader;
+    BamReaderBase& _merged_reader;
     int _max_read_window_size;
 
     bool _collecting_normal_reads;
