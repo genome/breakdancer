@@ -1,5 +1,7 @@
 #include "BamSummary.hpp"
+
 #include "io/BamIo.hpp"
+#include "io/RawBamEntry.hpp"
 #include "io/Read.hpp"
 
 #include <iostream>
@@ -38,7 +40,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
     size_t ref_len = 0;
     uint32_t read_count = 0;
 
-    bam1_t* b = bam_init1();
+    RawBamEntry b;
     while (reader.next(b) > 0) {
         // FLAGMESS:
         // Constructing the read here sets an initial bdflag that is going to be
@@ -151,7 +153,6 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
 
         ++lib_flag_dist.read_counts_by_flag[aln.bdflag()];  //FIXME this needs an accessor as well
     }
-    bam_destroy1(b);
 
     if(ref_len == 0) {
         cerr << "Input file " << reader.path() <<

@@ -6,6 +6,7 @@
 #include "config/BamConfig.hpp"
 #include "config/LibraryInfo.hpp"
 #include "io/BamReaderBase.hpp"
+#include "io/RawBamEntry.hpp"
 
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
@@ -118,7 +119,7 @@ BreakDancer::BreakDancer(
 }
 
 void BreakDancer::run() {
-    bam1_t* b = bam_init1();
+    RawBamEntry b;
     while (_merged_reader.next(b) >= 0) {
         bd::Read aln(b, _opts.need_sequence_data());
 
@@ -129,7 +130,6 @@ void BreakDancer::run() {
         }
     }
     process_final_region(_merged_reader.header());
-    bam_destroy1(b);
 }
 
 
