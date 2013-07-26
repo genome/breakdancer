@@ -21,6 +21,9 @@ struct LibraryConfig {
     float readlens;
     int min_mapping_quality;
 
+    bool operator==(LibraryConfig const& rhs) const;
+    bool operator!=(LibraryConfig const& rhs) const;
+
     template<typename Archive>
     void serialize(Archive& arch, const unsigned int version) {
         arch
@@ -47,4 +50,23 @@ LibraryConfig::LibraryConfig()
     , readlens(0)
     , min_mapping_quality(-1)
 {
+}
+
+inline
+bool LibraryConfig::operator==(LibraryConfig const& rhs) const {
+    return index == rhs.index
+        && name == rhs.name
+        && bam_file == rhs.bam_file
+        && mean_insertsize == rhs.mean_insertsize
+        && std_insertsize == rhs.std_insertsize
+        && uppercutoff == rhs.uppercutoff
+        && lowercutoff == rhs.lowercutoff
+        && readlens == rhs.readlens
+        && min_mapping_quality == rhs.min_mapping_quality
+        ;
+}
+
+inline
+bool LibraryConfig::operator!=(LibraryConfig const& rhs) const {
+    return !(*this == rhs);
 }

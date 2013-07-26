@@ -1,7 +1,5 @@
 #include "config/BamConfig.hpp"
 
-#include "common/Options.hpp"
-
 #include <boost/algorithm/string.hpp>
 #include <boost/assign/list_of.hpp>
 #include <gtest/gtest.h>
@@ -26,15 +24,16 @@ class TestConfig : public ::testing::Test {
 public:
     void SetUp() {
         _cfg_stream << _cfg_str;
+        _cut_sd = 3;
     }
 
 protected:
     std::stringstream _cfg_stream;
-    Options _opts;
+    int _cut_sd;
 };
 
 TEST_F(TestConfig, legacyParse) {
-    BamConfig cfg(_cfg_stream, _opts);
+    BamConfig cfg(_cfg_stream, _cut_sd);
 
     // test "fmaps", mapping input files -> first library they contain?
     ASSERT_EQ(2u, cfg.bam_files().size());
@@ -48,11 +47,11 @@ TEST_F(TestConfig, legacyParse) {
 
     // test libmaps, mapping library names -> input files?
     ASSERT_EQ(2u, cfg.num_libs());
-    EXPECT_EQ(0u, cfg.library_config_by_name("lib1").index);
-    EXPECT_EQ(1u, cfg.library_config_by_name("lib2").index);
-    EXPECT_THROW(cfg.library_config_by_name("lib3"), out_of_range);
+    EXPECT_EQ(0u, cfg.library_config("lib1").index);
+    EXPECT_EQ(1u, cfg.library_config("lib2").index);
+    EXPECT_THROW(cfg.library_config("lib3"), out_of_range);
 
-    LibraryConfig const& lc1 = cfg.library_config_by_index(0);
+    LibraryConfig const& lc1 = cfg.library_config(0);
     EXPECT_EQ(0u, lc1.index);
     EXPECT_EQ("lib1", lc1.name);
     EXPECT_EQ("x.bam", lc1.bam_file);
@@ -63,7 +62,7 @@ TEST_F(TestConfig, legacyParse) {
     EXPECT_FLOAT_EQ(31.91, lc1.std_insertsize);
     EXPECT_EQ(-1, lc1.min_mapping_quality);
 
-    LibraryConfig const& lc2 = cfg.library_config_by_index(1);
+    LibraryConfig const& lc2 = cfg.library_config(1);
     EXPECT_EQ(1u, lc2.index);
     EXPECT_EQ("lib2", lc2.name);
     EXPECT_EQ("y.bam", lc2.bam_file);
@@ -74,7 +73,7 @@ TEST_F(TestConfig, legacyParse) {
     EXPECT_FLOAT_EQ(28.67, lc2.std_insertsize);
     EXPECT_EQ(10, lc2.min_mapping_quality);
 
-    EXPECT_THROW(cfg.library_config_by_index(2), out_of_range);
+    EXPECT_THROW(cfg.library_config(2), out_of_range);
 }
 
 TEST_F(TestConfig, noPlatformOrExe) {
@@ -90,7 +89,7 @@ TEST_F(TestConfig, noPlatformOrExe) {
         "	std:31.91\n"
         );
 
-    ASSERT_NO_THROW(BamConfig(cfgss, _opts));
+    ASSERT_NO_THROW(BamConfig(cfgss, _cut_sd));
 }
 
 TEST_F(TestConfig, missingBam) {
@@ -105,5 +104,5 @@ TEST_F(TestConfig, missingBam) {
         "	std:31.91\n"
         );
 
-    ASSERT_THROW(BamConfig(cfgss, _opts), runtime_error);
+    ASSERT_THROW(BamConfig(cfgss, _cut_sd), runtime_error);
 }

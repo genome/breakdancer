@@ -54,7 +54,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
         if (lib.empty())
             continue;
 
-        LibraryConfig const& lib_config = bam_config.library_config_by_name(lib);
+        LibraryConfig const& lib_config = bam_config.library_config(lib);
         LibraryFlagDistribution& lib_flag_dist = _library_flag_distribution[lib_config.index];   //FIXME This is bad encapsulation
 
         if (last_tid >= 0 && last_tid == aln.tid())

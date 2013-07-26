@@ -45,7 +45,7 @@ void BedWriter::write(SvBuilder const& sv) {
         if (strncmp("chr", seq_name, 3) != 0)
             _stream << "chr";
 
-        std::string const& lib_name = _lib_info._cfg.library_config_by_index(y.lib_index()).name;
+        std::string const& lib_name = _lib_info._cfg.library_config(y.lib_index()).name;
         _stream << seq_name
             << "\t" << y.pos()
             << "\t" << aln_end

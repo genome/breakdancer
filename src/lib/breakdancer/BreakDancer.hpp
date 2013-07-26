@@ -89,7 +89,7 @@ private:
     int _region_end_pos; // global
 
     ReadVector reads_in_current_region;
-    FastqWriter _fastq_writer;
+    boost::scoped_ptr<FastqWriter> _fastq_writer;
     boost::scoped_ptr<std::ofstream> _bed_stream;
     boost::scoped_ptr<BedWriter> _bed_writer;
 

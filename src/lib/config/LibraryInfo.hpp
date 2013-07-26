@@ -22,6 +22,6 @@ public:
     }
 
     size_t const& index_for_readgroup(std::string const& rg) const {
-        return _cfg.library_config_by_name(_cfg.readgroup_library(rg)).index;
+        return _cfg.library_config(_cfg.readgroup_library(rg)).index;
     }
 };

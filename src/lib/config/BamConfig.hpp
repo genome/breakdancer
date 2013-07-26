@@ -10,14 +10,7 @@
 
 #include <cassert>
 #include <istream>
-#include <map>
-#include <sstream>
-#include <stdint.h> // cstdint requires c++11
 #include <vector>
-
-class Options;
-class BamReaderBase;
-
 
 class BamConfig {
 public:
@@ -28,9 +21,7 @@ public:
 
 public:
     BamConfig();
-    BamConfig(std::istream& in, Options const& opts);
-
-    ConfigMap<std::string, std::string>::type ReadsOut;
+    BamConfig(std::istream& in, int cutoff_sd);
 
     int max_read_window_size() const;
 
@@ -38,8 +29,8 @@ public:
     size_t num_bams() const;
     std::vector<std::string> const& bam_files() const;
 
-    LibraryConfig const& library_config_by_index(size_t idx) const;
-    LibraryConfig const& library_config_by_name(std::string const& lib) const;
+    LibraryConfig const& library_config(size_t idx) const;
+    LibraryConfig const& library_config(std::string const& lib) const;
     std::string const& readgroup_library(std::string const& rg) const;
 
 private:
@@ -47,11 +38,8 @@ private:
     void serialize(Archive& arch, const unsigned int version);
 
 private:
-    ConfigMap<std::string, std::string>::type _bam_library;
-
-    // FIXME: we don't need separate vectors for filenames and file summaries
-    // we can do with one if the summary can report the name.
     std::vector<std::string> _bam_files;
+    ConfigMap<std::string, std::string>::type _bam_library;
     ConfigMap<std::string, size_t>::type _lib_names_to_indices;
     std::vector<LibraryConfig> _library_config;
     ConfigMap<std::string, std::string>::type _readgroup_library;
@@ -60,14 +48,14 @@ private:
 };
 
 inline
-LibraryConfig const& BamConfig::library_config_by_index(size_t idx) const {
+LibraryConfig const& BamConfig::library_config(size_t idx) const {
     if (idx >= _library_config.size())
         throw std::out_of_range("library index out of range");
     return _library_config[idx];
 }
 
 inline
-LibraryConfig const& BamConfig::library_config_by_name(std::string const& lib) const {
+LibraryConfig const& BamConfig::library_config(std::string const& lib) const {
     return _library_config[_lib_names_to_indices.at(lib)];
 }
 

@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
         // configure file
         ifstream config_stream(argv[optind]);
-        BamConfig cfg(config_stream, opts);
+        BamConfig cfg(config_stream, opts.cut_sd);
         config_stream.close();
 
         BamSummary const summaries(opts, cfg);
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
         for(size_t i = 0; i < num_libs; ++i) {
 
             uint32_t covered_ref_len = lib_info._summary.covered_reference_length();
-            LibraryConfig const& lib_config = lib_info._cfg.library_config_by_index(i);
+            LibraryConfig const& lib_config = lib_info._cfg.library_config(i);
             string const& lib = lib_config.name;
 
             uint32_t lib_read_count = lib_info._summary.library_flag_distribution_for_index(i).read_count;

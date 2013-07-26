@@ -55,7 +55,7 @@ namespace {
         for(map<size_t,int>::const_iterator ii_rlibrary_readcount = rlibrary_readcount.begin(); ii_rlibrary_readcount != rlibrary_readcount.end(); ii_rlibrary_readcount ++){
             size_t const& libindex = ii_rlibrary_readcount->first;
             int const& readcount = ii_rlibrary_readcount->second;
-            LibraryConfig const& lib_config = lib_info._cfg.library_config_by_index(libindex);
+            LibraryConfig const& lib_config = lib_info._cfg.library_config(libindex);
             LibraryFlagDistribution const& lib_flags = lib_info._summary.library_flag_distribution_for_index(lib_config.index);
 
             uint32_t read_count_for_flag = lib_flags.read_counts_by_flag[type];
@@ -112,6 +112,17 @@ BreakDancer::BreakDancer(
     , _region_end_pos(-1)
 
 {
+    if (!_opts.prefix_fastq.empty()) {
+        _fastq_writer.reset(new FastqWriter(opts.prefix_fastq));
+        for (size_t i = 0; i < cfg.num_libs(); ++i) {
+            LibraryConfig const& lib = cfg.library_config(i);
+            // This will throw if the files cannot be created
+            _fastq_writer->open(lib.name, true); // is_read1 = true
+            _fastq_writer->open(lib.name, false); // is_read2 = false
+        }
+
+    }
+
     if (!_opts.dump_BED.empty()) {
         _bed_stream.reset(new ofstream(_opts.dump_BED.c_str()));
         _bed_writer.reset(new BedWriter(*_bed_stream, _opts, _lib_info, _merged_reader.header()));
@@ -125,7 +136,7 @@ void BreakDancer::run() {
 
         string const& lib = _cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
-            aln.set_lib_index(_lib_info._cfg.library_config_by_name(lib).index);
+            aln.set_lib_index(_lib_info._cfg.library_config(lib).index);
             push_read(aln, _merged_reader.header());
         }
     }
@@ -135,7 +146,7 @@ void BreakDancer::run() {
 
 
 void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
-    LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(aln.lib_index());
+    LibraryConfig const& lib_config = _lib_info._cfg.library_config(aln.lib_index());
 
     //main analysis code
     if(aln.bdflag() == bd::NA)
@@ -411,7 +422,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
         for(map<size_t,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
             size_t const& index = ii_type_lib_rc->first;
             int const& read_count = ii_type_lib_rc->second;
-            LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(index);
+            LibraryConfig const& lib_config = _lib_info._cfg.library_config(index);
             // intialize to be zero, in case of no library, or DEL, or ITX.
 
             string copy_number_str = "NA";
@@ -439,7 +450,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
         for(map<size_t, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
             size_t const& index = ii_type_lib_rc->first;
             int const& read_count = ii_type_lib_rc->second;
-            LibraryConfig const& lib_config = _lib_info._cfg.library_config_by_index(index);
+            LibraryConfig const& lib_config = _lib_info._cfg.library_config(index);
             type_bam_readcount[lib_config.bam_file] += read_count;
             diff += float(svb.type_library_meanspan[svb.flag][index]) - float(svb.type_library_readcount[svb.flag][index])*lib_config.mean_insertsize;
         }
@@ -503,7 +514,8 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
             _bed_writer->write(svb);
         }
 
-        if(!_opts.prefix_fastq.empty()){ // print out supporting read pairs
+        if(_fastq_writer) {
+            // print out supporting read pairs
             dump_fastq(svb.flag, svb.support_reads);
         }
 
@@ -513,18 +525,24 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
         boost::bind(&ReadRegionData::erase_read, &_rdata, _1));
 }
 
-void BreakDancer::dump_fastq(breakdancer::pair_orientation_flag const& flag, std::vector<ReadType> const& support_reads) {
+void BreakDancer::dump_fastq(
+        bd::pair_orientation_flag const& flag,
+        std::vector<ReadType> const& support_reads
+        )
+{
     map<string,int> pairing;
-    for( vector<bd::Read>::const_iterator ii_support_reads = support_reads.begin(); ii_support_reads != support_reads.end(); ii_support_reads ++){
-        bd::Read const& y = *ii_support_reads;
+    for (vector<bd::Read>::const_iterator i = support_reads.begin(); i != support_reads.end(); ++i) {
+        bd::Read const& y = *i;
 
         if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
             continue;
 
         //Paradoxically, the first read seen is put in file 2 and the second in file 1
-        string suffix = pairing.count(y.query_name()) ? "1" : "2";
-        string fh_tmp_str = _cfg.ReadsOut.at(_lib_info._cfg.library_config_by_index(y.lib_index()).name + suffix);
-        _fastq_writer.write(fh_tmp_str, y);
+        bool is_read1 = pairing.count(y.query_name()) != 0;
+        std::string const& libname = _lib_info._cfg.library_config(y.lib_index()).name;
+
+        _fastq_writer->write(libname, is_read1, y);
+
         pairing[y.query_name()] = 1;
     }
 }
