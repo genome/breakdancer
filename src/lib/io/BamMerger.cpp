@@ -1,4 +1,5 @@
 #include "BamMerger.hpp"
+#include "RawBamEntry.hpp"
 
 #include <boost/noncopyable.hpp>
 
@@ -12,7 +13,6 @@ struct BamMerger::Stream : public boost::noncopyable {
     // Functions
     Stream();
     explicit Stream(BamReaderBase* bam);
-    ~Stream();
 
     bool valid() const;
     bool advance();
@@ -21,28 +21,20 @@ struct BamMerger::Stream : public boost::noncopyable {
 
     // Data
     BamReaderBase* bam;
-    bam1_t* entry;
+    RawBamEntry entry;
     int status;
 };
 
 BamMerger::Stream::Stream()
     : bam(0)
-    , entry(0)
     , status(-1)
 {
 }
 
 BamMerger::Stream::Stream(BamReaderBase* bam)
     : bam(bam)
-    , entry(bam_init1())
 {
     advance();
-}
-
-BamMerger::Stream::~Stream() {
-    if (entry)
-        bam_destroy1(entry);
-    entry = 0;
 }
 
 bool BamMerger::Stream::operator>(Stream const& rhs) const {

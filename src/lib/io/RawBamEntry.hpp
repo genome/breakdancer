@@ -15,6 +15,7 @@ public:
 
     // cast conversion operator allows passing RawBamEntry where bam1_t* is
     // expected.
+    operator bam1_t const*() const;
     operator bam1_t*();
 
     // const and non-const pointer operators allow transparent usage like
@@ -40,6 +41,11 @@ inline
 RawBamEntry::~RawBamEntry() {
     bam_destroy1(entry);
     entry = 0;
+}
+
+inline
+RawBamEntry::operator bam1_t const*() const {
+    return entry;
 }
 
 inline
