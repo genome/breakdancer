@@ -7,6 +7,8 @@ set(SOURCES
     BamConfigEntry.hpp
     BamSummary.cpp
     BamSummary.hpp
+    ConfigLoader.cpp
+    ConfigLoader.hpp
     LibraryConfig.hpp
     LibraryFlagDistribution.cpp
     LibraryFlagDistribution.hpp
