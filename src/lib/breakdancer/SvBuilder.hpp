@@ -1,7 +1,6 @@
 #pragma once
 
 #include "BasicRegion.hpp"
-#include "ReadCountsByLib.hpp"
 #include "common/Options.hpp"
 #include "io/Read.hpp"
 
@@ -12,6 +11,7 @@
 #include <vector>
 
 class Options;
+class ReadCountsByLib;
 
 class SvBuilder {
 public:

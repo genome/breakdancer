@@ -1,4 +1,5 @@
 #include "SvBuilder.hpp"
+#include "ReadCountsByLib.hpp"
 #include "config/LibraryInfo.hpp"
 
 #include <boost/bind.hpp>
