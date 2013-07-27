@@ -19,6 +19,8 @@ struct Options {
 
     // data
     std::string chr;
+    std::string cache_file;
+    std::string restore_file;
     int min_len;
     int cut_sd;
     int max_sd;

@@ -41,8 +41,17 @@ Options::Options(int argc, char** argv)
 
 {
     int c;
-    while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:tfd:g:lahy:")) >= 0) {
+    while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:tfd:g:lahy:C:R:")) >= 0) {
         switch(c) {
+            case 'C': cache_file = optarg; break;
+            case 'R': {
+                if (argc != 3) {
+                    throw runtime_error("When using -R, no other options are allowed");
+                }
+                restore_file = optarg;
+                return;
+                break;
+            }
             case 'o': chr = optarg; break;
             case 's': min_len = atoi(optarg); break;
             case 'c': cut_sd = atoi(optarg); break;
