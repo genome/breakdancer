@@ -12,6 +12,8 @@ namespace bdaf = breakdancer::alnfilter;
 class TestBamReader : public ::testing::TestWithParam<BamInfo> {
 };
 
+INSTANTIATE_TEST_CASE_P(RC, TestBamReader, ::testing::ValuesIn(TEST_BAMS));
+
 TEST_P(TestBamReader, read_count) {
     std::string const& path = GetParam().path;
     size_t expected_count = GetParam().n_reads;
@@ -27,7 +29,3 @@ TEST_P(TestBamReader, read_count) {
 
     ASSERT_EQ(expected_count, n_reads);
 }
-
-INSTANTIATE_TEST_CASE_P(RC, TestBamReader, ::testing::ValuesIn(TEST_BAMS));
-
-
