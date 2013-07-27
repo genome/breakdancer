@@ -45,6 +45,7 @@ struct LibraryConfig {
 inline
 LibraryConfig::LibraryConfig()
     : index(0)
+    , bam_file_index(0)
     , mean_insertsize(0)
     , std_insertsize(0)
     , uppercutoff(0)
