@@ -9,8 +9,8 @@
 class Options;
 class BamReaderBase;
 
-BamReaderBase* openBam(std::string const& path, Options const& opts);
+BamReaderBase* openBam(std::string const& path, std::string const& region = "");
 
 std::vector<boost::shared_ptr<BamReaderBase> > openBams(
         std::vector<std::string> const& paths,
-        Options const& opts);
+        std::string const& region = "");

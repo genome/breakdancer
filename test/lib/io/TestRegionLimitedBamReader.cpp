@@ -1,6 +1,5 @@
 #include "io/RegionLimitedBamReader.hpp"
 
-#include "common/Options.hpp"
 #include "io/AlignmentFilter.hpp"
 #include "io/BamReader.hpp"
 #include "io/RawBamEntry.hpp"

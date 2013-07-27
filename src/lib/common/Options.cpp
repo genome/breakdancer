@@ -8,8 +8,7 @@
 using namespace std;
 
 Options::Options()
-    : chr("0")
-    , min_len(7)
+    : min_len(7)
     , cut_sd(3)
     , max_sd(1000000000)
     , min_map_qual(35)
@@ -26,8 +25,7 @@ Options::Options()
 }
 
 Options::Options(int argc, char** argv)
-        : chr("0")
-        , min_len(7)
+        : min_len(7)
         , cut_sd(3)
         , max_sd(1000000000)
         , min_map_qual(35)

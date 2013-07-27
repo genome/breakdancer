@@ -2,8 +2,6 @@
 
 #include "BamReaderBase.hpp"
 
-#include "common/Options.hpp"
-
 #include <boost/format.hpp>
 #include <functional>
 #include <stdexcept>
