@@ -3,6 +3,7 @@
 #include "breakdancer/ReadRegionData.hpp"
 #include "common/ConfigMap.hpp"
 #include "common/Options.hpp"
+#include "config/ConfigLoader.hpp"
 #include "config/BamConfig.hpp"
 #include "config/BamSummary.hpp"
 #include "config/LibraryConfig.hpp"
@@ -13,8 +14,6 @@
 
 #include "version.h"
 
-#include <boost/archive/xml_oarchive.hpp>
-#include <boost/archive/xml_iarchive.hpp>
 #include <boost/shared_ptr.hpp>
 
 #include <algorithm>
@@ -32,32 +31,10 @@
 # define SCORE_FLOAT_TYPE double
 #endif
 
-/*
-# Data structure menagerie
-## Preliminary counting
-+ nread -> number of reads for each library
-## Analysis
-+ reg_name -> vector; contains coordinates of the region and the number of normal reads within it.
-+ reads_in_current_region -> array of read information underlying a region
-+ read -> hash of readnames with array of region ids. Stores which two regions are associated with a readpair
-+ regs -> hash storing each region's associated reads
-## buildConnection
-+ link -> hash of node ids linking two nodes and their weights
-+ clink -> a copy of link
-+ free_nodes -> list of nodes to remove?
-+ nodepair -> additional copy of links between two nodes
-+ read_pair -> hash on read name containing read information
-+ nonsupportives -> array of reads. The first time a read is found, it is pushed onto here. They are deleted as mates are found in the pair. Thus, after processing a graph, all that's left is reads not supporting that node pair.
-+ snodes -> array of node ids from nodepair can contain the same node twice
-
-
-*/
-
 using boost::shared_ptr;
 
 using namespace std;
 namespace bd = breakdancer;
-namespace ba = boost::archive;
 
 typedef SCORE_FLOAT_TYPE real_type;
 real_type _max_kahan_err = 0.0;
@@ -65,14 +42,15 @@ real_type _max_kahan_err = 0.0;
 // main function
 int main(int argc, char *argv[]) {
     try {
-        Options const opts(argc, argv);
 
-        // configure file
-        ifstream config_stream(argv[optind]);
-        BamConfig cfg(config_stream, opts.cut_sd);
-        config_stream.close();
+        Options const initial_options(argc, argv);
+        ConfigLoader const context(initial_options);
 
-        BamSummary const summaries(opts, cfg);
+
+        Options const& opts = context.options();
+        BamConfig const& cfg = context.bam_config();
+        BamSummary const& summaries = context.bam_summary();
+
         LibraryInfo const lib_info(cfg, summaries);
 
         int max_read_window_size = cfg.max_read_window_size(); // this gets updated, so we copy it
