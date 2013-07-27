@@ -2,6 +2,7 @@ project(breakdancer)
 
 set(SOURCES
     ConfigMap.hpp
+    Graph.hpp
     Options.cpp
     Options.hpp
     ReadFlags.cpp

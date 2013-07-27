@@ -6,7 +6,6 @@ set(SOURCES
     BedWriter.hpp
     BreakDancer.cpp
     BreakDancer.hpp
-    Graph.hpp
     ReadCountsByLib.hpp
     ReadRegionData.cpp
     ReadRegionData.hpp

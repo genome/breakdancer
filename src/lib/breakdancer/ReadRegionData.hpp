@@ -1,8 +1,8 @@
 #pragma once
 
 #include "BasicRegion.hpp"
-#include "Graph.hpp"
 #include "ReadCountsByLib.hpp"
+#include "common/Graph.hpp"
 #include "common/Options.hpp"
 #include "io/Read.hpp"
 
