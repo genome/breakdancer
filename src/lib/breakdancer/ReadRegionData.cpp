@@ -18,25 +18,49 @@ ReadRegionData::~ReadRegionData() {
 
 void ReadRegionData::summary(std::ostream& out) const {
     out << "Number of tracked reads: " << _read_regions.size() << "\n";
-    out << "Region summary:\n";
+    out << "Active region summary:\n";
     size_t n_total(0);
     size_t n_active(0);
     size_t n_deleted(0);
-    out << "region_id\tstatus\tnreads\tn_unpaired_reads\ttimes_processed\ttimes_collapsed\n";
-    for (size_t i = 0; i < _regions.size(); ++i) {
-        bool active = _regions[i] != 0;
-        ++n_total;
-        if (active)
-            ++n_active;
-        else
-            ++n_deleted;
+    out <<
+        "region_id"
+        "\tregion_tid"
+        "\tregion_start"
+        "\tregion_end"
+        "\tnreads"
+        "\tn_unpaired_reads"
+        "\ttimes_processed"
+        "\ttimes_collapsed\n"
+        ;
 
-        out << i << "\t" << (active ? "ACTIVE" : "DELETED")
-            << "\t" << (active ? _regions[i]->reads().size() : 0)
-            << "\t" << __DEBUG_unpaired_reads(i)
-            << "\t" << (active ? _regions[i]->times_accessed : 0)
-            << "\t" << (active ? _regions[i]->times_collapsed : 0)
-            << "\n";
+    for (size_t i = 0; i < _regions.size(); ++i) {
+        ++n_total;
+        if (_regions[i]) {
+            ++n_active;
+
+            BasicRegion const& r = *_regions[i];
+            out << i
+                << "\t" << r.chr
+                << "\t" << r.start
+                << "\t" << r.end
+                << "\t" << r.reads().size()
+                << "\t" << DEBUG_unpaired_reads(i)
+                << "\t" << r.times_accessed
+                << "\t" << r.times_collapsed
+                << "\n"
+                ;
+
+            size_t num_reads = std::min(size_t(10ull), r.reads().size());
+            if (num_reads) {
+                out << "\tfirst " << num_reads << " read names:\n";
+                for (size_t j = 0; j < num_reads; ++j) {
+                    out << "\t\t" << r.reads()[j].query_name() << "\n";
+                }
+            }
+        }
+        else {
+            ++n_deleted;
+        }
     }
     out << "Total regions: " << n_total << "\n";
     out << "Active regions: " << n_active << "\n";

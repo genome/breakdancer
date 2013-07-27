@@ -91,7 +91,7 @@ private:
     void _add_per_lib_read_counts_to_last_region(ReadCountsByLib const& counts);
     ReadVector const& _reads_in_region(size_t region_idx) const;
 
-    size_t __DEBUG_unpaired_reads(size_t region_idx) const {
+    size_t DEBUG_unpaired_reads(size_t region_idx) const {
         if (!region_exists(region_idx))
             return 0u;
 

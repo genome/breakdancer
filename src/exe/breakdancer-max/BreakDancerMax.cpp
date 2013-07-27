@@ -42,10 +42,8 @@ real_type _max_kahan_err = 0.0;
 // main function
 int main(int argc, char *argv[]) {
     try {
-
         Options const initial_options(argc, argv);
         ConfigLoader const context(initial_options);
-
 
         Options const& opts = context.options();
         BamConfig const& cfg = context.bam_config();
