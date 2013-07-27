@@ -81,5 +81,8 @@ void BamConfig::serialize(Archive& arch, const unsigned int version) {
         & bs::make_nvp("libsToIndices", _lib_names_to_indices)
         & bs::make_nvp("libraryConfig", _library_config)
         & bs::make_nvp("readgroupToLibrary", _readgroup_library)
+        & bs::make_nvp("maxReadWindowSize", _max_read_window_size)
         ;
+
+
 }
