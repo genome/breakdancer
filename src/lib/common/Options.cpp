@@ -117,6 +117,8 @@ Options::Options(int argc, char** argv)
         SVtype[breakdancer::ARP_RR] = "INV";
         SVtype[breakdancer::ARP_CTX] = "CTX";
     }
+
+    bam_config_path = argv[optind];
 }
 
 bool Options::operator==(Options const& rhs) const {

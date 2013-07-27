@@ -21,6 +21,7 @@ struct Options {
     std::string chr;
     std::string cache_file;
     std::string restore_file;
+    std::string bam_config_path;
     int min_len;
     int cut_sd;
     int max_sd;
@@ -43,6 +44,8 @@ struct Options {
     void serialize(Archive& arch, const unsigned int version) {
         arch
             & BOOST_SERIALIZATION_NVP(chr)
+            // NOTE: cache and restore file are intentionally omitted
+            & BOOST_SERIALIZATION_NVP(bam_config_path)
             & BOOST_SERIALIZATION_NVP(min_len)
             & BOOST_SERIALIZATION_NVP(cut_sd)
             & BOOST_SERIALIZATION_NVP(max_sd)
