@@ -47,7 +47,9 @@ TEST_F(TestConfig, legacyParse) {
 
     // test libmaps, mapping library names -> input files?
     ASSERT_EQ(2u, cfg.num_libs());
+    EXPECT_EQ(0u, cfg.library_config("lib1").bam_file_index);
     EXPECT_EQ(0u, cfg.library_config("lib1").index);
+    EXPECT_EQ(1u, cfg.library_config("lib2").bam_file_index);
     EXPECT_EQ(1u, cfg.library_config("lib2").index);
     EXPECT_THROW(cfg.library_config("lib3"), out_of_range);
 

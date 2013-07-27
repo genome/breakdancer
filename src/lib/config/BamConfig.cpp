@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <iterator>
 #include <map>
 
 using boost::format;
@@ -102,6 +103,19 @@ BamConfig::BamConfig(std::istream& in, int cutoff_sd)
     typedef ConfigMap<string, string>::type::const_iterator IterType;
     for (IterType iter = _bam_library.begin(); iter != _bam_library.end(); ++iter) {
         _bam_files.push_back(iter->first);
+    }
+
+    for (size_t i = 0; i < _library_config.size(); ++i) {
+        LibraryConfig& lib = _library_config[i];
+        vector<string>::const_iterator bam_iter = find(
+            bam_files().begin(), bam_files().end(), lib.bam_file);
+
+        if (bam_iter == bam_files().end())
+            throw runtime_error(str(format(
+                "Bam file '%1%' referenced by library '%2%' but not found in "
+                "bam list!") % lib.bam_file % lib.name));
+
+        lib.bam_file_index = std::distance(bam_files().begin(), bam_iter);
     }
 
     _max_read_window_size = std::max(_max_read_window_size, 50);

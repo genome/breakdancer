@@ -13,6 +13,7 @@ struct LibraryConfig {
 
     size_t index;
     std::string name;
+    size_t bam_file_index;
     std::string bam_file;
     float mean_insertsize;
     float std_insertsize;
@@ -29,6 +30,7 @@ struct LibraryConfig {
         arch
             & BOOST_SERIALIZATION_NVP(index)
             & BOOST_SERIALIZATION_NVP(name)
+            & BOOST_SERIALIZATION_NVP(bam_file_index)
             & BOOST_SERIALIZATION_NVP(bam_file)
             & BOOST_SERIALIZATION_NVP(mean_insertsize)
             & BOOST_SERIALIZATION_NVP(std_insertsize)
@@ -56,6 +58,7 @@ inline
 bool LibraryConfig::operator==(LibraryConfig const& rhs) const {
     return index == rhs.index
         && name == rhs.name
+        && bam_file_index == rhs.bam_file_index
         && bam_file == rhs.bam_file
         && mean_insertsize == rhs.mean_insertsize
         && std_insertsize == rhs.std_insertsize
