@@ -1,6 +1,7 @@
 BreakDancer uses CMake which is a cross-platform build tool. Basically it will
-generate a Makefile so you can use `make`. The requirements are samtools 0.1.6,
-gcc, gmake, cmake 2.8+.
+generate a Makefile so you can use `make`. The requirements are samtools,
+gcc, gmake, cmake 2.8+. Beginning with version 1.4.0, BreakDancer requires 
+samtools 0.1.19 or higher. Older versions require samtools 0.1.6.
 
 Here's the steps to build:
 
@@ -14,9 +15,9 @@ Here's the steps to build:
     $ mkdir build
     $ cd build
 
-    $ wget "http://downloads.sourceforge.net/project/samtools/samtools/0.1.6/samtools-0.1.6.tar.bz2"
-    $ tar -jxvf samtools-0.1.6.tar.bz2
-    $ cd samtools-0.1.6
+    $ wget "http://downloads.sourceforge.net/project/samtools/samtools/0.1.19/samtools-0.1.19.tar.bz2"
+    $ tar -jxvf samtools-0.1.19.tar.bz2
+    $ cd samtools-0.1.19
     $ make
     $ export SAMTOOLS_ROOT=$(pwd)
     $ cd ..
