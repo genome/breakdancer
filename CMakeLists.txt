@@ -11,7 +11,12 @@ add_definitions("-DSCORE_FLOAT_TYPE=${BD_SCORE_FLOAT_TYPE}")
 if(NOT CMAKE_INSTALL_PREFIX)
     set(CMAKE_INSTALL_PREFIX "/usr")
 endif()
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/build-common/cmake")
+
+set(CMAKE_MODULE_PATH
+    ${CMAKE_SOURCE_DIR}/cmake
+    ${CMAKE_SOURCE_DIR}/build-common/cmake
+)
+
 include(TestHelper)
 include(VersionHelper)
 include(ProjectHelper)
@@ -21,12 +26,12 @@ set(EXE_VERSION_SUFFIX ${FULL_VERSION})
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(${PROJECT_BINARY_DIR}/version)
 
-set(SAMTOOLS_ADDITIONAL_HEADERS sam.h)
-find_package(Samtools 0.1.19 REQUIRED)
+# Build dependencies (samtools and boost)
+include(BuildSamtools)
 include_directories(${Samtools_INCLUDE_DIRS})
 
-find_package(Boost 1.48 REQUIRED filesystem program_options serialization system chrono regex)
-link_libraries(rt)
+set(REQUIRED_BOOST_LIBS filesystem program_options serialization system chrono regex)
+include(BuildBoost)
 include_directories(${Boost_INCLUDE_DIRS})
 
 if (CMAKE_COMPILER_IS_GNUCC)
