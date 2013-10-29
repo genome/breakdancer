@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 2.8)
 
 include(ExternalProject)
 
-#set(DEFAULT_BOOST_URL http://sourceforge.net/projects/boost/files/boost/1.54.0/boost_1_54_0.tar.gz)
 set(DEFAULT_BOOST_URL ${CMAKE_SOURCE_DIR}/vendor/boost-1.54-breakdancer.tar.gz)
 if(NOT DEFINED BOOST_URL)
     set(BOOST_URL ${DEFAULT_BOOST_URL})
@@ -22,7 +21,7 @@ foreach(libname ${REQUIRED_BOOST_LIBS})
         )
 endforeach(libname ${REQUIRED_BOOST_LIBS})
 
-message("Downloading boost from ${BOOST_URL}")
+message("Extracting boost from ${BOOST_URL}")
 message("Boost build log can be found at ${BOOST_LOG}")
 
 ExternalProject_Add(
