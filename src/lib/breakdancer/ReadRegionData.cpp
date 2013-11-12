@@ -114,7 +114,7 @@ size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int
 
     // we're essentially destroying reads_in_current_region here by swapping it with whatever
     //reads this region had (probably none) this is ok because it is just about to be cleared anyway.
-    int valid_reads = _opts.chr == "0" ? reads.size() : non_ctx_reads;
+    int valid_reads = _opts.chr.empty() ? reads.size() : non_ctx_reads;
     if (valid_reads >= _opts.min_read_pair) {
         swap_reads_in_region(region_idx, reads);
     }
@@ -128,7 +128,7 @@ bool ReadRegionData::is_region_final(size_t region_idx) const {
 
     ReadVector const& v = _reads_in_region(region_idx);
     for (ReadVector::const_iterator i = v.begin(); i != v.end(); ++i) {
-        if (_opts.chr != "0" && i->bdflag() == breakdancer::ARP_CTX)
+        if (!_opts.chr.empty() && i->bdflag() == breakdancer::ARP_CTX)
             continue;
 
         ReadsToRegionsMap::const_iterator found = _read_regions.find(i->query_name());
