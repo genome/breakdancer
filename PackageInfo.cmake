@@ -8,14 +8,14 @@ endif ()
 
 # The format of the description field is a short summary line followed by a
 # longer paragraph indented by a single space on each line
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-"Breakdancer
- Breakdancer")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "SV detection from paired end read mapping in Illumina Data
+ BreakDancer performs genome-wide detection of structural variants from next generation paired-end sequencing reads. breakdancer-max predicts five types of structural variants: insertions, deletions, inversions, inter- and intra-chromosomal translocations from Illumina next-generation short paired-end sequencing reads by using read pairs that are mapped with unexpected separation distances or orientation. Please read our paper for detailed algorithmic description. http://www.nature.com/nmeth/journal/v6/n9/abs/nmeth.1363.html
+ ")
 
 set(CPACK_PACKAGE_NAME "breakdancer${EXE_VERSION_SUFFIX}")
-set(CPACK_PACKAGE_VENDOR "wugc")
+set(CPACK_PACKAGE_VENDOR "The Genome Institute")
 set(CPACK_PACKAGE_VERSION ${FULL_VERSION})
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Ken Chen <kchenken@gmail.com>")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "David Larson <dlarson@genome.wustl.edu> and Travis Abbott <tabbott@genome.wustl.edu>")
 set(CPACK_SYSTEM_NAME "Linux-${ARCH}")
 set(CPACK_TOPLEVEL_TAG "Linux-${ARCH}")
 set(CPACK_DEBIAN_PACKAGE_SECTION science)
