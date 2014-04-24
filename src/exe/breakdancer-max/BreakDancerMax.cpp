@@ -159,7 +159,6 @@ int main(int argc, char *argv[]) {
 
         bdancer.run();
 
-        cerr << "Max Kahan error: " << _max_kahan_err << "\n";
     } catch (exception const& e) {
         cerr << "ERROR: " << e.what() << "\n";
         return 1;
