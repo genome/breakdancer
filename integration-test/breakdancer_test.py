@@ -113,7 +113,7 @@ class TestBreakDancer(IntegrationTest, unittest.TestCase):
         expected_file = "expected.bed"
         config_file = "inv_del_bam_config"
         output_file = self.tempFile("output")
-        output_bed = self.tempFile("output")
+        output_bed = self.tempFile("output.bed")
         cmdline = " ".join([self.exe_path, '-g', output_bed, config_file, '>', output_file])
         print "Executing", cmdline
         print "CWD", os.getcwd()
