@@ -145,6 +145,9 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
             if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
                 aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
+            if(aln.bdflag() == breakdancer::NORMAL_RF) {
+                aln.set_bdflag(breakdancer::ARP_RF);
+            }
         }
 
         if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
