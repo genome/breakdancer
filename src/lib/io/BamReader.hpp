@@ -7,6 +7,17 @@
 #include <stdexcept>
 #include <string>
 
+namespace {
+    char const* bamOpenMode(std::string const& path) {
+        size_t len = path.size();
+        bool sam = false;
+        if (len >= 4) {
+            sam = path.compare(len - 4, 4, ".sam") == 0;
+        }
+        return sam ? "rs" : "rb";
+    }
+}
+
 template<typename AcceptFilter>
 class BamReader : public BamReaderBase {
 public:
@@ -28,7 +39,7 @@ template<typename AcceptFilter>
 inline
 BamReader<AcceptFilter>::BamReader(std::string const& path, AcceptFilter aflt)
     : _path(path)
-    , _in(samopen(path.c_str(), "rb", 0))
+    , _in(samopen(path.c_str(), bamOpenMode(path), 0))
     , _accept_filter(aflt)
 {
     using boost::format;
