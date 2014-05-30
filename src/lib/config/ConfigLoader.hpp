@@ -5,6 +5,7 @@ class BamConfig;
 class BamSummary;
 
 #include <memory>
+#include <iostream>
 
 class ConfigLoader {
 public:
@@ -13,6 +14,9 @@ public:
     Options const& options() const;
     BamConfig const& bam_config() const;
     BamSummary const& bam_summary() const;
+
+    void save_config(std::ostream& stream);
+    void load_config(std::istream& stream);
 
 private:
     std::auto_ptr<Options> _options;

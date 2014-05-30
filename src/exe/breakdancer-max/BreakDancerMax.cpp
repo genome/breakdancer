@@ -79,8 +79,8 @@ int main(int argc, char *argv[]) {
         cout << "#Software: " << __g_prog_version << " (commit "
             << __g_commit_hash << ")" << endl;
         cout << "#Command: ";
-        for(int i=0;i<argc;i++) {
-            cout << argv[i] << " ";
+        for(size_t i = 0; i < opts.orig_argv.size(); ++i) {
+            cout << opts.orig_argv[i] << " ";
         }
         cout << endl;
         cout << "#Library Statistics:" << endl;

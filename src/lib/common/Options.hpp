@@ -4,6 +4,7 @@
 
 #include <boost/serialization/array.hpp>
 #include <boost/serialization/string.hpp>
+#include <boost/serialization/vector.hpp>
 #include <boost/serialization/nvp.hpp>
 
 #include <string>
@@ -39,6 +40,7 @@ struct Options {
     std::string prefix_fastq;
     std::string dump_BED;
     breakdancer::PerFlagArray<std::string>::type SVtype;
+    std::vector<std::string> orig_argv;
 
     template<typename Archive>
     void serialize(Archive& arch, const unsigned int version) {
@@ -63,6 +65,7 @@ struct Options {
             & BOOST_SERIALIZATION_NVP(prefix_fastq)
             & BOOST_SERIALIZATION_NVP(dump_BED)
             & BOOST_SERIALIZATION_NVP(SVtype)
+            & BOOST_SERIALIZATION_NVP(orig_argv)
             ;
     }
 };

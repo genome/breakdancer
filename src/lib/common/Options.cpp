@@ -8,19 +8,19 @@
 using namespace std;
 
 Options::Options()
-    : min_len(7)
-    , cut_sd(3)
-    , max_sd(1000000000)
-    , min_map_qual(35)
-    , min_read_pair(2)
-    , seq_coverage_lim(1000)
-    , buffer_size(100)
-    , transchr_rearrange(false)
-    , fisher(false)
-    , Illumina_long_insert(false)
-    , CN_lib(false)
-    , print_AF(false)
-    , score_threshold(30)
+        : min_len(7)
+        , cut_sd(3)
+        , max_sd(1000000000)
+        , min_map_qual(35)
+        , min_read_pair(2)
+        , seq_coverage_lim(1000)
+        , buffer_size(100)
+        , transchr_rearrange(false)
+        , fisher(false)
+        , Illumina_long_insert(false)
+        , CN_lib(false)
+        , print_AF(false)
+        , score_threshold(30)
 {
 }
 
@@ -38,7 +38,7 @@ Options::Options(int argc, char** argv)
         , CN_lib(false)
         , print_AF(false)
         , score_threshold(30)
-
+        , orig_argv(argv, argv + argc)
 {
     int c;
     while((c = getopt(argc, argv, "o:s:c:m:q:r:x:b:tfd:g:lahy:C:R:")) >= 0) {
@@ -140,6 +140,7 @@ bool Options::operator==(Options const& rhs) const {
         && prefix_fastq == rhs.prefix_fastq
         && dump_BED == rhs.dump_BED
         && SVtype == rhs.SVtype
+        && orig_argv == rhs.orig_argv
     ;
 }
 
