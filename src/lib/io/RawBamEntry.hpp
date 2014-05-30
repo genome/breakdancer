@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bam.h>
+#include <boost/noncopyable.hpp>
 
 // This struct exists to enable RAII for bam1_t* objects.
 // It should be interchangeable for most purposes.
@@ -8,7 +9,7 @@
 // std::unique_ptr, but we're not using C++11 yet.
 // We definitely don't want to use shared_ptr as that imposes additional
 // overhead.
-class RawBamEntry {
+class RawBamEntry : public boost::noncopyable {
 public:
     RawBamEntry();
     ~RawBamEntry();
