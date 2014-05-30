@@ -98,16 +98,16 @@ int main(int argc, char *argv[]) {
             // compute read_density
             if(opts.CN_lib == 1){
                 if(lib_read_count != 0) {
-                    bdancer.read_density[lib] = float(lib_read_count)/covered_ref_len;
+                    bdancer.set_read_density(lib, float(lib_read_count)/covered_ref_len);
                 }
                 else{
-                    bdancer.read_density[lib] = 0.000001;
+                    bdancer.set_read_density(lib, 0.000001f);
                     cout << lib << " does not contain any normals" << endl;
                 }
             }
             else{
                 uint32_t nreads = lib_info._summary.read_count_in_bam(lib_config.bam_file);
-                bdancer.read_density[lib_config.bam_file] = float(nreads)/covered_ref_len;
+                bdancer.set_read_density(lib_config.bam_file, float(nreads)/covered_ref_len);
             }
 
             float physical_coverage = float(lib_read_count*lib_config.mean_insertsize)/covered_ref_len/2;

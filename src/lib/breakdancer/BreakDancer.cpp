@@ -258,7 +258,7 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     }
 
     reads_in_current_region.push_back(aln); // store each read in the region_sequence buffer
-    //
+
     //If we just added the first read, flip the flag that lets us collect all reads
     if(reads_in_current_region.size() == 1)
         _collecting_normal_reads = true;
@@ -410,7 +410,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
     if (snodes.size() == 2) {
         _rdata.accumulate_reads_between_regions(read_count_accumulator, snodes[0], snodes[1]);
     }
-    svb.compute_copy_number(read_count_accumulator, read_density);
+    svb.compute_copy_number(read_count_accumulator, _read_density);
 
 
     if(svb.flag != bd::ARP_RF && svb.flag != bd::ARP_RR && svb.pos[0] + _max_readlen - 5 < svb.pos[1])
@@ -552,4 +552,8 @@ void BreakDancer::process_final_region(bam_header_t const* bam_header) {
         process_breakpoint(bam_header);
     }
     build_connection(bam_header);
+}
+
+void BreakDancer::set_read_density(std::string const& libName, float density) {
+    _read_density[libName] = density;
 }

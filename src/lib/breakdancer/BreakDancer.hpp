@@ -26,7 +26,6 @@ class Options;
 class BamConfig; //FIXME we probably won't need to store this once done stubbing in LibraryInfo
 class LibraryInfo;
 class BamReaderBase;
-class Logger;
 
 class BreakDancer {
 public:
@@ -48,6 +47,8 @@ public:
     void push_read(ReadType& aln, bam_header_t const* bam_header);
     void build_connection(bam_header_t const* bam_header);
 
+
+    void process_sv(std::vector<int> const& snodes, bam_header_t const* bam_header);
     void set_max_read_window_size(int val) {
         _max_read_window_size = val;
     }
@@ -59,6 +60,8 @@ public:
 
     void run();
 
+    void set_read_density(std::string const& libName, float density);
+
 private:
     uint32_t _region_lib_counts(size_t region_idx, std::string const& lib, RoiReadCounts const& x) const {
         if (region_idx >= x.size())
@@ -69,7 +72,7 @@ private:
         return 0;
     }
 
-private:
+private: // data
     Options const& _opts;
     BamConfig const& _cfg;
     LibraryInfo const& _lib_info;
@@ -93,9 +96,5 @@ private:
     boost::scoped_ptr<std::ofstream> _bed_stream;
     boost::scoped_ptr<BedWriter> _bed_writer;
 
-
-public:
-    std::map<std::string, float> read_density;
-
-    void process_sv(std::vector<int> const& snodes, bam_header_t const* bam_header);
+    std::map<std::string, float> _read_density;
 };
