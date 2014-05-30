@@ -39,7 +39,6 @@ public:
 
     void summary(std::ostream& s) const;
 
-//    Graph region_graph() const;
 
     void accumulate_reads_between_regions(ReadCountsByLib& acc, size_t begin, size_t end) const;
     uint32_t region_lib_read_count(size_t region_idx, std::string const& lib) const;
@@ -185,5 +184,5 @@ void ReadRegionData::erase_read(std::string const& read_name) {
 
 inline
 bool ReadRegionData::read_exists(ReadType const& read) const {
-    return _read_regions.count(read.query_name()) > 0;
+    return _read_regions.find(read.query_name()) != _read_regions.end();
 }
