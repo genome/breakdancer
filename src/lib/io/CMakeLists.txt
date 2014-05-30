@@ -8,6 +8,8 @@ set(SOURCES
     BamMerger.hpp
     BamReader.hpp
     BamReaderBase.hpp
+    BamWriter.cpp
+    BamWriter.hpp
     FastqWriter.cpp
     FastqWriter.hpp
     RawBamEntry.hpp
