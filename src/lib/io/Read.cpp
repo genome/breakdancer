@@ -76,6 +76,8 @@ Read::Read(bam1_t const* record, bool seq_data)
     , _bdqual(determine_bdqual(record))
     , _isize(record->core.isize)
     , _pos(record->core.pos)
+    , _mpos(record->core.mpos)
+    , _endPos(bam_calend(&record->core, bam1_cigar(record)))
     , _query_length(record->core.l_qseq)
     , _tid(record->core.tid)
     , _query_name(bam1_qname(record))
@@ -91,6 +93,15 @@ Read::Read(bam1_t const* record, bool seq_data)
 
     if(uint8_t* tmp = bam_aux_get(record, "RG"))
         _readgroup = bam_aux2Z(tmp);
+}
+
+int Read::pair_overlap() const {
+    if (is_leftmost() && _endPos > _mpos) {
+        return _endPos - _mpos;
+    }
+    else {
+        return 0;
+    }
 }
 
 END_NAMESPACE(breakdancer)

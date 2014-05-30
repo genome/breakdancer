@@ -46,8 +46,10 @@ public:
     void set_lib_index(std::size_t const& index);
     std::size_t const& lib_index() const;
     int const& abs_isize() const;
+    int pair_overlap() const;
 
     void to_fastq(std::ostream& stream) const;
+    bool is_leftmost() const;
 
 
 private: // Data
@@ -57,6 +59,8 @@ private: // Data
     int _bdqual;
     int _isize;
     int _pos;
+    int _mpos;
+    int _endPos;
     int _query_length;
     int _tid;
     std::string _query_name;
@@ -74,6 +78,11 @@ private: // Data
 
     std::size_t _lib_index;
 };
+
+inline
+bool Read::is_leftmost() const {
+    return _pos < _mpos;
+}
 
 inline
 void Read::set_bdflag(pair_orientation_flag const& new_flag) {
