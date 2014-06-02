@@ -17,7 +17,9 @@ BamSummary::BamSummary()
 BamSummary::BamSummary(Options const& opts, BamConfig const& bam_config)
     : _covered_ref_len(0)
 {
-    _library_flag_distribution.resize(bam_config.num_libs());
+    _library_flag_distributions.resize(bam_config.num_libs());
+    _library_sequence_coverages.resize(_library_flag_distributions.size());
+
     _analyze_bams(opts, bam_config);
 }
 
@@ -29,8 +31,12 @@ uint32_t BamSummary::read_count_in_bam(std::string const& key) const {
     return _read_count_per_bam.at(key);
 }
 
-LibraryFlagDistribution const& BamSummary::library_flag_distribution_for_index(size_t const& index) const {
-    return _library_flag_distribution[index];
+LibraryFlagDistribution const& BamSummary::library_flag_distribution(size_t libIdx) const {
+    return _library_flag_distributions[libIdx];
+}
+
+float BamSummary::library_sequence_coverage(size_t libIdx) const {
+    return _library_sequence_coverages[libIdx];
 }
 
 void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, BamReaderBase& reader) {
@@ -42,12 +48,6 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
 
     RawBamEntry b;
     while (reader.next(b) > 0) {
-        // FLAGMESS:
-        // Constructing the read here sets an initial bdflag that is going to be
-        // updated later. Let's see if we can trace what values of the flag are
-        // meaningful up until that point.
-        // Also, let's refer to this initial flag value as the "guess" and the
-        // updated version as the "final" flag value.
         breakdancer::Read aln(b, false);
 
         string const& lib = bam_config.readgroup_library(aln.readgroup());
@@ -55,7 +55,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
             continue;
 
         LibraryConfig const& lib_config = bam_config.library_config(lib);
-        LibraryFlagDistribution& lib_flag_dist = _library_flag_distribution[lib_config.index];   //FIXME This is bad encapsulation
+        LibraryFlagDistribution& lib_flag_dist = _library_flag_distributions[lib_config.index];
 
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
@@ -63,41 +63,17 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
         last_pos = aln.pos();
         last_tid = aln.tid();
 
-        // FLAGMESS:
-        // Here, we look at the guess, and care only whether or not it was
-        // normal (FR or RF, who cares?!). This could be a separate bool
-        // on the read class (something like proper_pair). It seems to me
-        // like there is no reason for making the FR/RF distinction in the
-        // guess. This check really just wants to know if tid == mtid and if
-        // flag & BAM_FPROPERPAIR != 0.
-        if(aln.bdqual() > opts.min_map_qual && (aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF)) {
-            ++lib_flag_dist.read_count; // FIXME: this is a bad side effect modifying another object. Switch to use a setter or something.
-            ++read_count;
-        }
-
-        //XXX This seems weird to me as well. Why are we checking the
-        //mapping quality in two different places and performing some
-        //calculations before this is applied?
-        //-dlarson
-
         int min_mapq = lib_config.min_mapping_quality < 0 ?
                 opts.min_map_qual : lib_config.min_mapping_quality;
 
         if (aln.bdqual() <= min_mapq)
             continue;
 
-        // FLAGMESS:
-        // Go look at the code in the Read class. I think the only way that
-        // the guess can be NA is if the read is marked as a duplicate
-        // (BAM_FDUP) or not paired (!BAM_FPAIRED). For reads that suffer
-        // neither of these conditions, it looks like another value will
-        // ALWAYS be set.
-        //
-        // Our bam readers have the ability to filter based on flag, so we
-        // could just filter all dup/unpaired alignments so that they never
-        // even make it this far.
-        if(aln.bdflag() == breakdancer::NA)
-            continue;
+
+        if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
+            ++lib_flag_dist.read_count;
+            ++read_count;
+        }
 
         // FLAGMESS:
         // mtid != tid is a property that is not modified when we transform
@@ -110,8 +86,14 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
         // seems silly...), so we can't immediately filter them in the bam
         // readers. However, being unmapped or having an unmapped mate could
         // be a separate method call that doesn't involve "bdflag".
-        if((opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX) || aln.bdflag() == breakdancer::MATE_UNMAPPED || aln.bdflag() == breakdancer::UNMAPPED)
+        if (aln.bdflag() == breakdancer::NA
+            || (opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX)
+            || aln.bdflag() == breakdancer::MATE_UNMAPPED
+            || aln.bdflag() == breakdancer::UNMAPPED
+            )
+        {
             continue;
+        }
 
         // FLAGMESS:
         // Below, we replace the guess with the final flag value, which
@@ -132,7 +114,11 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
                 aln.set_bdflag(breakdancer::NORMAL_RF);
             }
             if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
-                aln.set_bdflag(breakdancer::ARP_FR_small_insert); //FIXME this name doesn't make a whole lot of sense here
+                //FIXME: this name doesn't make a whole lot of sense here -dl
+                // Right, RF instead of FR would make more sense. We should
+                // probably just use ARP_{small,big}_insert for these in either
+                // lib type.
+                aln.set_bdflag(breakdancer::ARP_FR_small_insert);
             }
         }
         else{
@@ -154,7 +140,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
             continue;
         }
 
-        ++lib_flag_dist.read_counts_by_flag[aln.bdflag()];  //FIXME this needs an accessor as well
+        ++lib_flag_dist.read_counts_by_flag[aln.bdflag()];
     }
 
     if(ref_len == 0) {
@@ -176,12 +162,24 @@ void BamSummary::_analyze_bams(Options const& opts, BamConfig const& bam_config)
         auto_ptr<BamReaderBase> reader(openBam(*iter, opts.chr));
         _analyze_bam(opts, bam_config, *reader);
     }
+
+    for (size_t i = 0; i < _library_flag_distributions.size(); ++i) {
+        LibraryConfig const& lib_config = bam_config.library_config(i);
+        uint32_t lib_read_count = library_flag_distribution(i).read_count;
+
+        float covg = 0;
+        if (lib_read_count != 0 && _covered_ref_len != 0) {
+            covg = float(lib_read_count) * lib_config.readlens / _covered_ref_len;
+        }
+        _library_sequence_coverages[i] = covg;
+    }
 }
 
 bool BamSummary::operator==(BamSummary const& rhs) const {
     return _covered_ref_len == rhs._covered_ref_len
         && _read_count_per_bam == rhs._read_count_per_bam
-        && _library_flag_distribution == _library_flag_distribution
+        && _library_flag_distributions == _library_flag_distributions
+        && _library_sequence_coverages == _library_sequence_coverages
         ;
 }
 

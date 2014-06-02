@@ -56,7 +56,7 @@ namespace {
             size_t const& libindex = ii_rlibrary_readcount->first;
             int const& readcount = ii_rlibrary_readcount->second;
             LibraryConfig const& lib_config = lib_info._cfg.library_config(libindex);
-            LibraryFlagDistribution const& lib_flags = lib_info._summary.library_flag_distribution_for_index(lib_config.index);
+            LibraryFlagDistribution const& lib_flags = lib_info._summary.library_flag_distribution(lib_config.index);
 
             uint32_t read_count_for_flag = lib_flags.read_counts_by_flag[type];
             lambda = real_type(total_region_size)* (real_type(read_count_for_flag)/real_type(lib_info._summary.covered_reference_length()));
@@ -419,7 +419,11 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
     string sptype_tmp;
     float diff = 0;
     if(_opts.CN_lib == 1){
-        for(map<size_t,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
+        for(
+            map<size_t,int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin();
+            ii_type_lib_rc != svb.type_library_readcount[svb.flag].end();
+            ii_type_lib_rc ++)
+        {
             size_t const& index = ii_type_lib_rc->first;
             int const& read_count = ii_type_lib_rc->second;
             LibraryConfig const& lib_config = _lib_info._cfg.library_config(index);
@@ -447,14 +451,24 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
     } // do lib for copy number and support reads
     else{
         map<string, int> type_bam_readcount;
-        for(map<size_t, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin(); ii_type_lib_rc != svb.type_library_readcount[svb.flag].end(); ii_type_lib_rc ++){
+        for(
+            map<size_t, int>::const_iterator ii_type_lib_rc = svb.type_library_readcount[svb.flag].begin();
+            ii_type_lib_rc != svb.type_library_readcount[svb.flag].end();
+            ii_type_lib_rc ++)
+        {
             size_t const& index = ii_type_lib_rc->first;
             int const& read_count = ii_type_lib_rc->second;
             LibraryConfig const& lib_config = _lib_info._cfg.library_config(index);
+
             type_bam_readcount[lib_config.bam_file] += read_count;
+
             diff += float(svb.type_library_meanspan[svb.flag][index]) - float(svb.type_library_readcount[svb.flag][index])*lib_config.mean_insertsize;
         }
-        for(map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin(); ii_type_bam_rc != type_bam_readcount.end(); ii_type_bam_rc ++){
+        for(
+            map<string, int>::const_iterator ii_type_bam_rc = type_bam_readcount.begin();
+            ii_type_bam_rc != type_bam_readcount.end();
+            ii_type_bam_rc ++)
+        {
             string const& sp = ii_type_bam_rc->first;
             if(!sptype_tmp.empty())
                 sptype_tmp += ":";

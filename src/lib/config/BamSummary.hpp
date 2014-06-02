@@ -22,7 +22,8 @@ public:
     uint32_t covered_reference_length() const;
     uint32_t read_count_in_bam(std::string const& key) const;
 
-    LibraryFlagDistribution const& library_flag_distribution_for_index(size_t const& index) const;
+    LibraryFlagDistribution const& library_flag_distribution(size_t libIdx) const;
+    float library_sequence_coverage(size_t libIdx) const;
 
     bool operator==(BamSummary const& rhs) const;
     bool operator!=(BamSummary const& rhs) const;
@@ -38,7 +39,8 @@ private:
 private:
     uint32_t _covered_ref_len;
     ConfigMap<std::string, uint32_t>::type _read_count_per_bam;
-    std::vector<LibraryFlagDistribution> _library_flag_distribution;
+    std::vector<LibraryFlagDistribution> _library_flag_distributions;
+    std::vector<float> _library_sequence_coverages;
 };
 
 template<typename Archive>
@@ -47,6 +49,6 @@ void BamSummary::serialize(Archive& arch, const unsigned int version) {
     arch
         & bs::make_nvp("coveredReferenceLength", _covered_ref_len)
         & bs::make_nvp("readCountPerBam", _read_count_per_bam)
-        & bs::make_nvp("libraryFlagDistribution", _library_flag_distribution)
+        & bs::make_nvp("libraryFlagDistributions", _library_flag_distributions)
         ;
 }
