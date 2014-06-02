@@ -137,15 +137,15 @@ void BreakDancer::run() {
         string const& lib = _cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
             aln.set_lib_index(_lib_info._cfg.library_config(lib).index);
-            push_read(aln, _merged_reader.header());
+            push_read(aln);
         }
     }
-    process_final_region(_merged_reader.header());
+    process_final_region();
 }
 
 
 
-void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
+void BreakDancer::push_read(bd::Read &aln) {
     LibraryConfig const& lib_config = _lib_info._cfg.library_config(aln.lib_index());
 
     //main analysis code
@@ -243,7 +243,7 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     bool do_break = aln.tid() != _region_end_tid || aln.pos() - _region_end_pos > _max_read_window_size;
 
     if(do_break) { // breakpoint in the assembly
-        process_breakpoint(bam_header);
+        process_breakpoint();
         // clear out this node
         _region_start_tid = aln.tid();
         _region_start_pos = aln.pos();
@@ -270,7 +270,7 @@ void BreakDancer::push_read(bd::Read &aln, bam_header_t const* bam_header) {
     return;
 }
 
-void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
+void BreakDancer::process_breakpoint() {
     float seq_coverage = _ntotal_nucleotides/float(_region_end_pos - _region_start_pos + 1 + _max_readlen);
     if(_region_end_pos - _region_start_pos > _opts.min_len
             && seq_coverage < _opts.seq_coverage_lim) // skip short/unreliable flanking supporting regions
@@ -282,7 +282,7 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
 
         ++_buffer_size; //increment tracking of number of regions in buffer???
         if(_buffer_size > _opts.buffer_size){
-            build_connection(bam_header);
+            build_connection();
             //flush buffer by building connection
             _buffer_size = 0;
         }
@@ -292,7 +292,7 @@ void BreakDancer::process_breakpoint(bam_header_t const* bam_header) {
     }
 }
 
-void BreakDancer::build_connection(bam_header_t const* bam_header) {
+void BreakDancer::build_connection() {
     // build connections
     // find paired regions that are supported by paired reads
 
@@ -350,7 +350,7 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
                         snodes.push_back(s1);
 
                     newtails.push_back(s1);
-                    process_sv(snodes, bam_header);
+                    process_sv(snodes);
                 }
                 if (tail == ii_graph->first) {
                     // The fact that this is postincrement is critical
@@ -374,7 +374,7 @@ void BreakDancer::build_connection(bam_header_t const* bam_header) {
     graph.clear();
 }
 
-void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const* bam_header) {
+void BreakDancer::process_sv(std::vector<int> const& snodes) {
     typedef ReadRegionData::read_iter_range ReadRange;
     BasicRegion const* regions[2] = {0};
     ReadRange read_ranges[2];
@@ -492,6 +492,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes, bam_header_t const*
     ++svb.pos[0];
     ++svb.pos[1];
     if(PhredQ > _opts.score_threshold){
+        bam_header_t const* bam_header = _merged_reader.header();
         cout << bam_header->target_name[svb.chr[0]]
             << "\t" << svb.pos[0]
             << "\t" << svb.fwd_read_count[0] << "+" << svb.rev_read_count[0] << "-"
@@ -561,11 +562,11 @@ void BreakDancer::dump_fastq(
     }
 }
 
-void BreakDancer::process_final_region(bam_header_t const* bam_header) {
+void BreakDancer::process_final_region() {
     if (reads_in_current_region.size() != 0) {
-        process_breakpoint(bam_header);
+        process_breakpoint();
     }
-    build_connection(bam_header);
+    build_connection();
 }
 
 void BreakDancer::set_read_density(std::string const& libName, float density) {

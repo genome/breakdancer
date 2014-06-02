@@ -44,17 +44,17 @@ public:
         int max_read_window_size
         );
 
-    void push_read(ReadType& aln, bam_header_t const* bam_header);
-    void build_connection(bam_header_t const* bam_header);
+    void push_read(ReadType& aln);
+    void build_connection();
 
 
-    void process_sv(std::vector<int> const& snodes, bam_header_t const* bam_header);
+    void process_sv(std::vector<int> const& snodes);
     void set_max_read_window_size(int val) {
         _max_read_window_size = val;
     }
 
-    void process_breakpoint(bam_header_t const* bam_header);
-    void process_final_region(bam_header_t const* bam_header);
+    void process_breakpoint();
+    void process_final_region();
 
     void dump_fastq(breakdancer::pair_orientation_flag const& flag, std::vector<ReadType> const& support_reads);
 
