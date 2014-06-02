@@ -12,3 +12,11 @@ bool LibraryFlagDistribution::operator==(LibraryFlagDistribution const& rhs) con
 }
 
 
+void LibraryFlagDistribution::merge(LibraryFlagDistribution const& other) {
+    assert(read_counts_by_flag.size() == other.read_counts_by_flag.size());
+    for (size_t i = 0; i < read_counts_by_flag.size(); ++i) {
+        read_counts_by_flag[i] += other.read_counts_by_flag[i];
+    }
+
+    read_count += other.read_count;
+}

@@ -18,6 +18,8 @@ public:
     size_t read_count;
     std::vector<uint32_t> read_counts_by_flag;
 
+    void merge(LibraryFlagDistribution const& other);
+
     LibraryFlagDistribution();
     bool operator==(LibraryFlagDistribution const& rhs) const;
 
