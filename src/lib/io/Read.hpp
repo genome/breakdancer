@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <ostream>
+#include <stdint.h>
 #include <string>
 #include <vector>
 
@@ -74,7 +75,7 @@ private: // Data
     mutable std::string _quality_string;
     mutable bool _quality_converted;
 
-    std::string _bam_data;
+    std::vector<uint8_t> _bam_data;
 
     std::size_t _lib_index;
 };
@@ -149,7 +150,7 @@ std::string const& Read::query_sequence() const {
 inline
 std::string const& Read::quality_string() const {
     if (!_quality_converted) {
-        char const* qdata = _bam_data.data() + ((_query_length+1) >> 1);
+        uint8_t const* qdata = _bam_data.data() + ((_query_length+1) >> 1);
         if (qdata[0] != 0xff) {
             _quality_string.reserve(_query_length);
             for (int i = 0; i < _query_length; ++i)

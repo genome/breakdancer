@@ -87,9 +87,10 @@ Read::Read(bam1_t const* record, bool seq_data)
 {
     // FIXME: if *bam1_qual(record) = 0xff, there is no quality string?
     // we should test for that
-    if (seq_data)
-        _bam_data.assign(reinterpret_cast<char const*>(bam1_seq(record)),
-                reinterpret_cast<char const*>(bam1_qual(record) + record->core.l_qseq));
+    if (seq_data) {
+        _bam_data.assign(bam1_seq(record),
+                bam1_qual(record) + record->core.l_qseq);
+    }
 
     if(uint8_t* tmp = bam_aux_get(record, "RG"))
         _readgroup = bam_aux2Z(tmp);
