@@ -70,7 +70,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
             continue;
 
 
-        if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
+        if(aln.proper_pair()) {
             ++lib_flag_dist.read_count;
             ++read_count;
         }
@@ -88,8 +88,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
         // be a separate method call that doesn't involve "bdflag".
         if (aln.bdflag() == breakdancer::NA
             || (opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX)
-            || aln.bdflag() == breakdancer::MATE_UNMAPPED
-            || aln.bdflag() == breakdancer::UNMAPPED
+            || aln.either_unmapped()
             )
         {
             continue;

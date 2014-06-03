@@ -23,7 +23,8 @@ public:
     Read(bam1_t const* record, bool seq_data = true);
 
     Read()
-        : _bdflag(NA)
+        : _raw_flag(0)
+        , _bdflag(NA)
         , _ori(FWD)
         , _abs_isize(0)
         , _bdqual(0)
@@ -31,6 +32,8 @@ public:
     {}
 
     void set_bdflag(pair_orientation_flag const& new_flag);
+    bool proper_pair() const;
+    bool either_unmapped() const;
 
     std::string const& query_name() const;
     std::string const& query_sequence() const;
@@ -54,6 +57,7 @@ public:
 
 
 private: // Data
+    int _raw_flag;
     pair_orientation_flag _bdflag;
     strand_e _ori;
     int _abs_isize;

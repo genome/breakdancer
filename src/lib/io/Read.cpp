@@ -70,7 +70,8 @@ pair_orientation_flag determine_bdflag(bam1_t const* record) {
 }
 
 Read::Read(bam1_t const* record, bool seq_data)
-    : _bdflag(determine_bdflag(record))
+    : _raw_flag(record->core.flag)
+    , _bdflag(determine_bdflag(record))
     , _ori(record->core.flag & BAM_FREVERSE ? REV : FWD)
     , _abs_isize(abs(record->core.isize))
     , _bdqual(determine_bdqual(record))
@@ -94,6 +95,16 @@ Read::Read(bam1_t const* record, bool seq_data)
 
     if(uint8_t* tmp = bam_aux_get(record, "RG"))
         _readgroup = bam_aux2Z(tmp);
+}
+
+bool Read::proper_pair() const {
+    static int const mask = BAM_FPROPER_PAIR | BAM_FUNMAP | BAM_FMUNMAP | BAM_FPAIRED | BAM_FDUP;
+    static int const want = BAM_FPROPER_PAIR | BAM_FPAIRED;
+    return (_raw_flag & mask) == want;
+}
+
+bool Read::either_unmapped() const {
+    return _raw_flag & (BAM_FUNMAP | BAM_FMUNMAP);
 }
 
 int Read::pair_overlap() const {
