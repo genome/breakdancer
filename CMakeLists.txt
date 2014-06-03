@@ -20,28 +20,54 @@ set(CMAKE_MODULE_PATH
 include(TestHelper)
 include(VersionHelper)
 include(ProjectHelper)
+include(BuildDeps)
+include(PlatformChecks)
 
 set(EXE_VERSION_SUFFIX ${FULL_VERSION})
 
 configure_file(version/version.h.in version/version.h @ONLY)
 include_directories(${PROJECT_BINARY_DIR}/version)
 
-# Build dependencies (samtools and boost)
-include(BuildSamtools)
-include_directories(${Samtools_INCLUDE_DIRS})
 
+###########################################################################
+# Setup compiler flags
+if(${CMAKE_C_COMPILER_ID} MATCHES "GNU|Clang")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -pedantic -fPIC")
+endif()
+
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU|Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -fPIC ")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wnon-virtual-dtor")
+else()
+    message(
+        WARNING
+        "Unknown compiler: ${CMAKE_C_COMPILER_ID}, we'll see how this goes..."
+    )
+endif()
+
+# Find C++11 flags
+find_cxx11_flags(CXX11_FLAGS CXX11_FOUND)
+if(NOT CXX11_FOUND)
+    message(FATAL_ERROR
+        "Failed to find C++11 support with compiler:
+         ${CMAKE_CXX_COMPILER} (${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}).")
+endif(NOT CXX11_FOUND)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX11_FLAGS}")
+
+###########################################################################
+# Build dependencies (samtools and boost)
+add_custom_target(deps ALL)
+
+set(SAMTOOLS_URL ${CMAKE_SOURCE_DIR}/vendor/samtools-0.1.19.tar.gz)
+set(BOOST_URL ${CMAKE_SOURCE_DIR}/vendor/boost-1.54-breakdancer.tar.gz)
 set(REQUIRED_BOOST_LIBS filesystem program_options serialization system chrono regex)
-include(BuildBoost)
+
+build_boost(${BOOST_URL} ${CMAKE_BINARY_DIR}/vendor/boost ${REQUIRED_BOOST_LIBS})
 include_directories(${Boost_INCLUDE_DIRS})
 
-if (CMAKE_COMPILER_IS_GNUCC)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -Wall -ansi -pedantic")
-endif ()
-
-if (CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-long-long -Wall -std=c++0x")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pedantic -Wno-variadic-macros")
-endif ()
+build_samtools(${SAMTOOLS_URL} ${CMAKE_BINARY_DIR}/vendor/samtools)
+include_directories(${Samtools_INCLUDE_DIRS})
 
 # make sure to pick up headers from library dirs
 include_directories("src/lib")
