@@ -85,6 +85,7 @@ namespace {
 }
 
 BreakDancer::BreakDancer(
+        IReadClassifier const& read_classifier,
         Options const& opts,
         BamConfig const& cfg,
         LibraryInfo const& lib_info,
@@ -92,7 +93,8 @@ BreakDancer::BreakDancer(
         BamReaderBase& merged_reader,
         int max_read_window_size
         )
-    : _opts(opts)
+    : _read_classifier(read_classifier)
+    , _opts(opts)
     , _cfg(cfg)
     , _lib_info(lib_info)
     , _rdata(read_regions)
@@ -128,6 +130,7 @@ BreakDancer::BreakDancer(
     }
 }
 
+
 void BreakDancer::run() {
     RawBamEntry b;
     while (_merged_reader.next(b) >= 0) {
@@ -136,12 +139,12 @@ void BreakDancer::run() {
         string const& lib = _cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
             aln.set_lib_index(_lib_info._cfg.library_config(lib).index);
+            _read_classifier.set_flag(aln);
             push_read(aln);
         }
     }
     process_final_region();
 }
-
 
 
 void BreakDancer::push_read(Read &aln) {
@@ -173,7 +176,7 @@ void BreakDancer::push_read(Read &aln) {
     }
 
 
-    if ((_opts.transchr_rearrange && aln.inter_chrom_pair()) || aln.either_unmapped()) {
+    if ((_opts.transchr_rearrange && aln.interchrom_pair()) || aln.either_unmapped()) {
         return;
     }
 
@@ -186,7 +189,7 @@ void BreakDancer::push_read(Read &aln) {
     // Mate pair libraries have different expected orientations so adjust
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
-    if(_opts.Illumina_long_insert){
+    if(_opts.Illumina_long_insert) {
         if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_RF) {
             aln.set_bdflag(ReadFlag::ARP_RF);
         }
@@ -197,6 +200,7 @@ void BreakDancer::push_read(Read &aln) {
             aln.set_bdflag(ReadFlag::ARP_FR_small_insert);
         }
     }
+#ifdef DEATHSTAR
     else{
         if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_FR) {
             aln.set_bdflag(ReadFlag::ARP_FR_big_insert);
@@ -211,6 +215,8 @@ void BreakDancer::push_read(Read &aln) {
             aln.set_bdflag(ReadFlag::ARP_RF);
         }
     }
+#endif
+
     // This makes FF and RR the same thing
     if(aln.bdflag() == ReadFlag::ARP_RR) {
         aln.set_bdflag(ReadFlag::ARP_FF);

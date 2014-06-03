@@ -91,15 +91,15 @@ TEST_F(TestBam, pair_overlap) {
 }
 
 
-TEST_F(TestBam, is_leftmost) {
+TEST_F(TestBam, leftmost) {
 
     // We only test for overlap on the first (leftmost) read
-    EXPECT_TRUE (reads[0].is_leftmost());
-    EXPECT_FALSE(reads[1].is_leftmost());
-    EXPECT_TRUE (reads[2].is_leftmost());
-    EXPECT_FALSE(reads[3].is_leftmost());
-    EXPECT_TRUE (reads[4].is_leftmost());
-    EXPECT_FALSE(reads[5].is_leftmost());
+    EXPECT_TRUE (reads[0].leftmost());
+    EXPECT_FALSE(reads[1].leftmost());
+    EXPECT_TRUE (reads[2].leftmost());
+    EXPECT_FALSE(reads[3].leftmost());
+    EXPECT_TRUE (reads[4].leftmost());
+    EXPECT_FALSE(reads[5].leftmost());
 }
 
 

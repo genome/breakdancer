@@ -6,6 +6,7 @@
 #include "ReadRegionData.hpp"
 #include "common/Timer.hpp"
 #include "io/FastqWriter.hpp"
+#include "io/IReadClassifier.hpp"
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/unordered_map.hpp>
@@ -35,6 +36,7 @@ public:
     typedef ReadRegionData::ReadsToRegionsMap ReadsToRegionsMap;
 
     BreakDancer(
+        IReadClassifier const& read_classifier,
         Options const& opts,
         BamConfig const& cfg,
         LibraryInfo const& lib_info,
@@ -72,6 +74,7 @@ private:
     }
 
 private: // data
+    IReadClassifier const& _read_classifier;
     Options const& _opts;
     BamConfig const& _cfg;
     LibraryInfo const& _lib_info;

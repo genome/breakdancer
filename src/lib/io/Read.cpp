@@ -68,7 +68,7 @@ ReadFlag determine_bdflag(bam1_t const* record) {
 }
 
 Read::Read(bam1_t const* record, bool seq_data)
-    : _raw_flag(record->core.flag)
+    : _sam_flag(record->core.flag)
     , _bdflag(determine_bdflag(record))
     , _ori(record->core.flag & BAM_FREVERSE ? REV : FWD)
     , _abs_isize(abs(record->core.isize))
@@ -96,18 +96,22 @@ Read::Read(bam1_t const* record, bool seq_data)
         _readgroup = bam_aux2Z(tmp);
 }
 
+int Read::sam_flag() const {
+    return _sam_flag;
+}
+
 bool Read::proper_pair() const {
     static int const mask = BAM_FPROPER_PAIR | BAM_FUNMAP | BAM_FMUNMAP | BAM_FPAIRED | BAM_FDUP;
     static int const want = BAM_FPROPER_PAIR | BAM_FPAIRED;
-    return (_raw_flag & mask) == want;
+    return (_sam_flag & mask) == want;
 }
 
 bool Read::either_unmapped() const {
-    return _raw_flag & (BAM_FUNMAP | BAM_FMUNMAP);
+    return _sam_flag & (BAM_FUNMAP | BAM_FMUNMAP);
 }
 
 int Read::pair_overlap() const {
-    if (is_leftmost() && _endPos > _mpos) {
+    if (leftmost() && _endPos > _mpos) {
         return _endPos - _mpos;
     }
     else {
@@ -115,6 +119,6 @@ int Read::pair_overlap() const {
     }
 }
 
-bool Read::inter_chrom_pair() const {
+bool Read::interchrom_pair() const {
     return _tid != _mtid;
 }

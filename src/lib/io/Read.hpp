@@ -15,12 +15,14 @@ extern "C" {
 
 class LibraryInfo;
 
+ReadFlag determine_bdflag(bam1_t const* record);
+
 class Read {
 public:
     Read(bam1_t const* record, bool seq_data = true);
 
     Read()
-        : _raw_flag(0)
+        : _sam_flag(0)
         , _bdflag(ReadFlag::NA)
         , _ori(FWD)
         , _abs_isize(0)
@@ -31,13 +33,14 @@ public:
     void set_bdflag(ReadFlag const& new_flag);
     bool proper_pair() const;
     bool either_unmapped() const;
-    bool inter_chrom_pair() const;
+    bool interchrom_pair() const;
 
     std::string const& query_name() const;
     std::string const& query_sequence() const;
     std::string const& quality_string() const;
     std::string const& readgroup() const;
     ReadFlag const& bdflag() const;
+    int sam_flag() const;
     int const& bdqual() const;
     int const& tid() const;
     int const& pos() const;
@@ -51,11 +54,11 @@ public:
     int pair_overlap() const;
 
     void to_fastq(std::ostream& stream) const;
-    bool is_leftmost() const;
+    bool leftmost() const;
 
 
 private: // Data
-    int _raw_flag;
+    int _sam_flag;
     ReadFlag _bdflag;
     strand_e _ori;
     int _abs_isize;
@@ -84,7 +87,7 @@ private: // Data
 };
 
 inline
-bool Read::is_leftmost() const {
+bool Read::leftmost() const {
     return _pos < _mpos;
 }
 

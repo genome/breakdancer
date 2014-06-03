@@ -34,14 +34,16 @@ struct FlagValues {
     FlagValues();
 
     int operator[](ReadFlag idx) const;
+    std::string const& string_name(ReadFlag flag) const;
 
 private:
-    PerFlagArray<int>::type _values;
+    PerFlagArray<int>::type values_;
+    PerFlagArray<std::string>::type strings_;
 };
 
 inline
 int FlagValues::operator[](ReadFlag idx) const {
-    return _values[int(idx)];
+    return values_[int(idx)];
 }
 
 extern const FlagValues FLAG_VALUES;

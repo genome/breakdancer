@@ -3,13 +3,14 @@
 #include "breakdancer/ReadRegionData.hpp"
 #include "common/ConfigMap.hpp"
 #include "common/Options.hpp"
-#include "config/ConfigLoader.hpp"
 #include "config/BamConfig.hpp"
 #include "config/BamSummary.hpp"
+#include "config/ConfigLoader.hpp"
 #include "config/LibraryConfig.hpp"
 #include "config/LibraryInfo.hpp"
 #include "io/BamIo.hpp"
 #include "io/BamMerger.hpp"
+#include "io/IlluminaPEReadClassifier.hpp"
 #include "io/Read.hpp"
 
 #include "version.h"
@@ -67,7 +68,10 @@ int main(int argc, char *argv[]) {
 
         BamMerger merged_reader(readers);
         ReadRegionData read_regions(opts);
+        IlluminaPEReadClassifier read_classifier(lib_info);
+
         BreakDancer bdancer(
+            read_classifier,
             opts,
             cfg,
             lib_info,

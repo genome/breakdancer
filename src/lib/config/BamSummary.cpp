@@ -76,7 +76,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
         }
 
         if (aln.bdflag() == ReadFlag::NA
-            || (opts.transchr_rearrange && !aln.inter_chrom_pair())
+            || (opts.transchr_rearrange && !aln.interchrom_pair())
             || aln.either_unmapped()
             )
         {
