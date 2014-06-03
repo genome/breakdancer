@@ -103,19 +103,19 @@ Options::Options(int argc, char** argv)
 
     // define the map SVtype
     if (Illumina_long_insert) {
-        SVtype[breakdancer::ARP_FF] = "INV";
-        SVtype[breakdancer::ARP_FR_small_insert] = "INS";
-        SVtype[breakdancer::ARP_RF] = "DEL";
-        SVtype[breakdancer::ARP_RR] = "INV";
-        SVtype[breakdancer::ARP_CTX] = "CTX";
+        SVtype[ReadFlag::ARP_FF] = "INV";
+        SVtype[ReadFlag::ARP_FR_small_insert] = "INS";
+        SVtype[ReadFlag::ARP_RF] = "DEL";
+        SVtype[ReadFlag::ARP_RR] = "INV";
+        SVtype[ReadFlag::ARP_CTX] = "CTX";
     }
     else {
-        SVtype[breakdancer::ARP_FF] = "INV";
-        SVtype[breakdancer::ARP_FR_big_insert] = "DEL";
-        SVtype[breakdancer::ARP_FR_small_insert] = "INS";
-        SVtype[breakdancer::ARP_RF] = "ITX";
-        SVtype[breakdancer::ARP_RR] = "INV";
-        SVtype[breakdancer::ARP_CTX] = "CTX";
+        SVtype[ReadFlag::ARP_FF] = "INV";
+        SVtype[ReadFlag::ARP_FR_big_insert] = "DEL";
+        SVtype[ReadFlag::ARP_FR_small_insert] = "INS";
+        SVtype[ReadFlag::ARP_RF] = "ITX";
+        SVtype[ReadFlag::ARP_RR] = "INV";
+        SVtype[ReadFlag::ARP_CTX] = "CTX";
     }
 
     bam_config_path = argv[optind];

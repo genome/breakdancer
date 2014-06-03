@@ -6,7 +6,6 @@
 #include <gtest/gtest.h>
 
 using namespace std;
-using namespace breakdancer;
 
 namespace {
     uint8_t data[23] ={
@@ -83,9 +82,9 @@ TEST_F(TestRead, abs_isize) {
 }
 
 TEST_F(TestRead, set_bdflag) {
-    test_read->set_bdflag(breakdancer::ARP_CTX);
-    ASSERT_EQ(test_read->bdflag(),breakdancer::ARP_CTX);
-    test_read->set_bdflag(breakdancer::NORMAL_FR);
+    test_read->set_bdflag(ReadFlag::ARP_CTX);
+    ASSERT_EQ(test_read->bdflag(), ReadFlag::ARP_CTX);
+    test_read->set_bdflag(ReadFlag::NORMAL_FR);
 }
 
 TEST_F(TestRead, copy_constructor) {

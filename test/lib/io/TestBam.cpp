@@ -63,7 +63,7 @@ public:
 
         boost::shared_ptr<RawBamEntry> entry(new RawBamEntry);
         while (reader->next(*entry) > 0) {
-            reads.push_back(breakdancer::Read(*entry));
+            reads.push_back(Read(*entry));
             rawEntries.push_back(entry);
             entry.reset(new RawBamEntry);
         }
@@ -77,7 +77,7 @@ public:
 
 protected:
     std::string samPath_;
-    std::vector<breakdancer::Read> reads;
+    std::vector<Read> reads;
     std::vector<boost::shared_ptr<RawBamEntry> > rawEntries;
     boost::shared_ptr<BamReaderBase> reader;
 };

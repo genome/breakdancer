@@ -1,7 +1,6 @@
 #pragma once
 
 #include "common/ReadFlags.hpp"
-#include "common/namespace.hpp"
 
 #include <cassert>
 #include <ostream>
@@ -16,30 +15,29 @@ extern "C" {
 
 class LibraryInfo;
 
-BEGIN_NAMESPACE(breakdancer)
-
 class Read {
 public:
     Read(bam1_t const* record, bool seq_data = true);
 
     Read()
         : _raw_flag(0)
-        , _bdflag(NA)
+        , _bdflag(ReadFlag::NA)
         , _ori(FWD)
         , _abs_isize(0)
         , _bdqual(0)
         , _lib_index(-1)
     {}
 
-    void set_bdflag(pair_orientation_flag const& new_flag);
+    void set_bdflag(ReadFlag const& new_flag);
     bool proper_pair() const;
     bool either_unmapped() const;
+    bool inter_chrom_pair() const;
 
     std::string const& query_name() const;
     std::string const& query_sequence() const;
     std::string const& quality_string() const;
     std::string const& readgroup() const;
-    pair_orientation_flag const& bdflag() const;
+    ReadFlag const& bdflag() const;
     int const& bdqual() const;
     int const& tid() const;
     int const& pos() const;
@@ -58,7 +56,7 @@ public:
 
 private: // Data
     int _raw_flag;
-    pair_orientation_flag _bdflag;
+    ReadFlag _bdflag;
     strand_e _ori;
     int _abs_isize;
     int _bdqual;
@@ -68,6 +66,7 @@ private: // Data
     int _endPos;
     int _query_length;
     int _tid;
+    int _mtid;
     std::string _query_name;
     std::string _readgroup;
 
@@ -90,12 +89,12 @@ bool Read::is_leftmost() const {
 }
 
 inline
-void Read::set_bdflag(pair_orientation_flag const& new_flag) {
+void Read::set_bdflag(ReadFlag const& new_flag) {
     _bdflag = new_flag;
 }
 
 inline
-pair_orientation_flag const& Read::bdflag() const {
+ReadFlag const& Read::bdflag() const {
     return _bdflag;
 }
 
@@ -190,6 +189,3 @@ inline
 std::string const& Read::readgroup() const {
     return _readgroup;
 }
-
-
-END_NAMESPACE(breakdancer)

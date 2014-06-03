@@ -39,7 +39,7 @@ struct Options {
     std::string bam_file;
     std::string prefix_fastq;
     std::string dump_BED;
-    breakdancer::PerFlagArray<std::string>::type SVtype;
+    PerFlagArray<std::string>::type SVtype;
     std::vector<std::string> orig_argv;
 
     template<typename Archive>

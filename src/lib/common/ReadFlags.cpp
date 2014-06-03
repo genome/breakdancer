@@ -1,7 +1,5 @@
 #include "ReadFlags.hpp"
 
-BEGIN_NAMESPACE(breakdancer)
-
 FlagValues::FlagValues() {
     _values[NA] = 0; //NA means not applicable.
     _values[ARP_FF] = 1;
@@ -17,6 +15,3 @@ FlagValues::FlagValues() {
 }
 
 const FlagValues FLAG_VALUES;
-
-END_NAMESPACE(breakdancer)
-

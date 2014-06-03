@@ -12,7 +12,7 @@ class ReadStats {
 public:
     ReadStats(Options const& opts, BamConfig const& bam_config);
 
-    void push_read(breakdancer::Read const& read);
+    void push_read(Read const& read);
 
 private:
     Options const& opts_;

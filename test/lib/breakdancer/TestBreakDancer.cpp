@@ -9,7 +9,6 @@
 #include <gtest/gtest.h>
 
 using namespace std;
-using namespace breakdancer;
 
 TEST(BreakDancer, accumulate_reads_in_region) {
 // The code this tests is under active development.

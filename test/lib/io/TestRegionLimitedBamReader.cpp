@@ -14,7 +14,6 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace bdaf = breakdancer::alnfilter;
 using boost::lexical_cast;
 using namespace std;
 
@@ -35,7 +34,7 @@ namespace {
     }
 
     RegionCount getTestRegion(string const& bam_path, size_t max_reads) {
-        BamReader<bdaf::True> in(bam_path);
+        BamReader<AlignmentFilter::True> in(bam_path);
         RawBamEntry b;
 
         // Get sequence id (tid) of the first read in the bam
@@ -94,7 +93,7 @@ TEST_P(TestRegionLimitedBamReader, read_count) {
 
     vector<string> observed_read_names;
 
-    RegionLimitedBamReader<bdaf::True> reader(path, region.c_str());
+    RegionLimitedBamReader<AlignmentFilter::True> reader(path, region.c_str());
     RawBamEntry b;
 
     size_t observed_read_count = 0;

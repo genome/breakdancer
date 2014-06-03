@@ -34,7 +34,6 @@
 using boost::shared_ptr;
 
 using namespace std;
-namespace bd = breakdancer;
 
 typedef SCORE_FLOAT_TYPE real_type;
 real_type _max_kahan_err = 0.0;
@@ -111,8 +110,8 @@ int main(int argc, char *argv[]) {
             bdancer.set_read_density(density_libkey, dens);
 
             int nread_lengthDiscrepant = \
-                lib_info._summary.library_flag_distribution(i).read_counts_by_flag[bd::ARP_FR_big_insert] +
-                lib_info._summary.library_flag_distribution(i).read_counts_by_flag[bd::ARP_FR_small_insert];
+                lib_info._summary.library_flag_distribution(i).read_counts_by_flag[ReadFlag::ARP_FR_big_insert] +
+                lib_info._summary.library_flag_distribution(i).read_counts_by_flag[ReadFlag::ARP_FR_small_insert];
 
 
             int tmp = (nread_lengthDiscrepant > 0)?(float)covered_ref_len/(float)nread_lengthDiscrepant:50;
@@ -132,10 +131,10 @@ int main(int argc, char *argv[]) {
                 ;
 
             for (size_t j = 0; j < lib_info._summary.library_flag_distribution(i).read_counts_by_flag.size(); ++j) {
-                bd::pair_orientation_flag flag = bd::pair_orientation_flag(j);
+                ReadFlag flag = ReadFlag(j);
                 uint32_t count = lib_info._summary.library_flag_distribution(i).read_counts_by_flag[flag];
                 if (count)
-                    cout << "\t" << bd::FLAG_VALUES[flag] << ":" << count;
+                    cout << "\t" << FLAG_VALUES[flag] << ":" << count;
             }
             cout << "\n";
         }

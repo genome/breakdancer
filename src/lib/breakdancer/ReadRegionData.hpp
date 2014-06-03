@@ -20,7 +20,7 @@
 
 class ReadRegionData {
 public:
-    typedef breakdancer::Read ReadType;
+    typedef Read ReadType;
     typedef BasicRegion::ReadVector ReadVector;
     typedef BasicRegion::const_read_iterator const_read_iterator;
     typedef BasicRegion::iterator_range read_iter_range;

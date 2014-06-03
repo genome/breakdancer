@@ -17,7 +17,7 @@ ReadStats::ReadStats(Options const& opts, BamConfig const& bam_config)
 {
 }
 
-void ReadStats::push_read(breakdancer::Read const& read) {
+void ReadStats::push_read(Read const& read) {
     ++total_count_;
 
     std::string const& lib = bam_config_.readgroup_library(read.readgroup());
@@ -46,7 +46,6 @@ void ReadStats::push_read(breakdancer::Read const& read) {
     last_tid_ = read.tid();
 
     if (read.normal_pair()) {
-        ++lib_flag_dist.read_count;
         ++read_count;
     }
 
@@ -61,13 +60,13 @@ void ReadStats::push_read(breakdancer::Read const& read) {
     // seems silly...), so we can't immediately filter them in the bam
     // readers. However, being unmapped or having an unmapped mate could
     // be a separate method call that doesn't involve "bdflag".
-    if (read.bdflag() == breakdancer::NA
-        || (opts.transchr_rearrange && read.bdflag() != breakdancer::ARP_CTX)
-        || read.bdflag() == breakdancer::MATE_UNMAPPED
-        || read.bdflag() == breakdancer::UNMAPPED
+    //
+    if (aln.bdflag() == breakdancer::NA
+        || (opts.transchr_rearrange && !aln.inter_chrom_pair())
+        || aln.either_unmapped()
         )
     {
-        continue;
+        return;
     }
 
     // FLAGMESS:
@@ -112,10 +111,9 @@ void ReadStats::push_read(breakdancer::Read const& read) {
     }
 
     if(read.bdflag() == breakdancer::NORMAL_FR || read.bdflag() == breakdancer::NORMAL_RF) {
-        continue;
+        return;
     }
 
     ++lib_flag_dist.read_counts_by_flag[read.bdflag()];
-
 }
 

@@ -27,7 +27,6 @@
 #define ZERO exp(LZERO)
 
 using namespace std;
-namespace bd = breakdancer;
 using boost::format;
 using boost::lexical_cast;
 using boost::math::cdf;
@@ -44,7 +43,7 @@ namespace {
     real_type ComputeProbScore(
             int total_region_size,
             map<size_t,int> &rlibrary_readcount,
-            bd::pair_orientation_flag type,
+            ReadFlag type,
             int fisher,
             LibraryInfo const& lib_info
             )
@@ -132,7 +131,7 @@ BreakDancer::BreakDancer(
 void BreakDancer::run() {
     RawBamEntry b;
     while (_merged_reader.next(b) >= 0) {
-        bd::Read aln(b, _opts.need_sequence_data());
+        Read aln(b, _opts.need_sequence_data());
 
         string const& lib = _cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
@@ -145,11 +144,11 @@ void BreakDancer::run() {
 
 
 
-void BreakDancer::push_read(bd::Read &aln) {
+void BreakDancer::push_read(Read &aln) {
     LibraryConfig const& lib_config = _lib_info._cfg.library_config(aln.lib_index());
 
     //main analysis code
-    if(aln.bdflag() == bd::NA)
+    if(aln.bdflag() == ReadFlag::NA)
         return; // return fragment reads and other bad ones
 
     // min_mapping_quality is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
@@ -168,24 +167,18 @@ void BreakDancer::push_read(bd::Read &aln) {
     // I believe this only counts normally mapped reads
     // FIXME Weird to me that this one uses opts.min_map_qual directly
     // seems like it should use min_mapq from above. Could fix now that I've moved it
-    if(aln.bdqual() > _opts.min_map_qual
-        && (aln.bdflag() == bd::NORMAL_FR || aln.bdflag() == bd::NORMAL_RF))
-    {
+    if (aln.proper_pair()) {
         string const& key = _opts.CN_lib == 1 ? lib_config.name : lib_config.bam_file;
         _rdata.incr_normal_read_count(key);
     }
 
 
-    if ((_opts.transchr_rearrange && aln.bdflag() != bd::ARP_CTX)
-            || aln.bdflag() == bd::MATE_UNMAPPED
-            || aln.bdflag() == bd::UNMAPPED) // only care flag 32 for CTX
-    {
+    if ((_opts.transchr_rearrange && aln.inter_chrom_pair()) || aln.either_unmapped()) {
         return;
     }
 
-    //this isn't an exact match to what was here previously
-    //but I believe it should be equivalent since we ignore reads are unmapped or have amate unmapped
-    if(aln.bdflag() != bd::ARP_CTX && aln.abs_isize() > _opts.max_sd) {// skip read pairs mapped too distantly on the same chromosome
+    if(aln.bdflag() != ReadFlag::ARP_CTX && aln.abs_isize() > _opts.max_sd) {
+        // skip read pairs mapped too distantly on the same chromosome
         return;
     }
 
@@ -194,39 +187,39 @@ void BreakDancer::push_read(bd::Read &aln) {
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
     if(_opts.Illumina_long_insert){
-        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == bd::NORMAL_RF) {
-            aln.set_bdflag(bd::ARP_RF);
+        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_RF) {
+            aln.set_bdflag(ReadFlag::ARP_RF);
         }
-        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == bd::ARP_RF) {
-            aln.set_bdflag(bd::NORMAL_RF);
+        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == ReadFlag::ARP_RF) {
+            aln.set_bdflag(ReadFlag::NORMAL_RF);
         }
-        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == bd::NORMAL_RF) {
-            aln.set_bdflag(bd::ARP_FR_small_insert);
+        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == ReadFlag::NORMAL_RF) {
+            aln.set_bdflag(ReadFlag::ARP_FR_small_insert);
         }
     }
     else{
-        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == bd::NORMAL_FR) {
-            aln.set_bdflag(bd::ARP_FR_big_insert);
+        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_FR) {
+            aln.set_bdflag(ReadFlag::ARP_FR_big_insert);
         }
-        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == bd::ARP_FR_big_insert) {
-            aln.set_bdflag(bd::NORMAL_FR);
+        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == ReadFlag::ARP_FR_big_insert) {
+            aln.set_bdflag(ReadFlag::NORMAL_FR);
         }
-        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == bd::NORMAL_FR) {
-            aln.set_bdflag(bd::ARP_FR_small_insert);
+        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == ReadFlag::NORMAL_FR) {
+            aln.set_bdflag(ReadFlag::ARP_FR_small_insert);
         }
-        if(aln.bdflag() == bd::NORMAL_RF) {
-            aln.set_bdflag(bd::ARP_RF);
+        if(aln.bdflag() == ReadFlag::NORMAL_RF) {
+            aln.set_bdflag(ReadFlag::ARP_RF);
         }
     }
     // This makes FF and RR the same thing
-    if(aln.bdflag() == bd::ARP_RR) {
-        aln.set_bdflag(bd::ARP_FF);
+    if(aln.bdflag() == ReadFlag::ARP_RR) {
+        aln.set_bdflag(ReadFlag::ARP_FF);
     }
 
     //count reads mapped by SW, FR and RF reads, but only if normal_switch is true
     //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
     //I suspect this is to include those reads in the fastq dump for assembly!
-    if(aln.bdflag() == bd::NORMAL_FR || aln.bdflag() == bd::NORMAL_RF) {
+    if(aln.bdflag() == ReadFlag::NORMAL_FR || aln.bdflag() == ReadFlag::NORMAL_RF) {
         if(_collecting_normal_reads && aln.isize() > 0){
             ++_nnormal_reads;
         }
@@ -389,9 +382,9 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
     // This predicate takes a read and evaluates:
     //      read_pair.count(read.query_name()) == 0
     using boost::bind;
-    boost::function<bool(ReadType const&)> is_supportive = bind(
+    boost::function<bool(Read const&)> is_supportive = bind(
         std::equal_to<size_t>(), 0, bind(&SvBuilder::ObservedReads::count,
-            &svb.observed_reads, bind(&ReadType::query_name, _1)));
+            &svb.observed_reads, bind(&Read::query_name, _1)));
 
     for (vector<int>::const_iterator i = snodes.begin(); i != snodes.end(); ++i)
         _rdata.remove_reads_in_region_if(*i, is_supportive);
@@ -413,7 +406,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
     svb.compute_copy_number(read_count_accumulator, _read_density);
 
 
-    if(svb.flag != bd::ARP_RF && svb.flag != bd::ARP_RR && svb.pos[0] + _max_readlen - 5 < svb.pos[1])
+    if(svb.flag != ReadFlag::ARP_RF && svb.flag != ReadFlag::ARP_RR && svb.pos[0] + _max_readlen - 5 < svb.pos[1])
         svb.pos[0] += _max_readlen - 5; // apply extra padding to the start coordinates
 
     string sptype_tmp;
@@ -430,7 +423,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
             // intialize to be zero, in case of no library, or DEL, or ITX.
 
             string copy_number_str = "NA";
-            if(svb.flag != bd::ARP_CTX){
+            if(svb.flag != ReadFlag::ARP_CTX){
                 float copy_number_ = 0;
 
                 if(svb.copy_number.find(lib_config.name) != svb.copy_number.end()){
@@ -509,7 +502,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
         if(_opts.print_AF == 1)
             cout <<  "\t" << svb.allele_frequency;
 
-        if(_opts.CN_lib == 0 && svb.flag != bd::ARP_CTX){
+        if(_opts.CN_lib == 0 && svb.flag != ReadFlag::ARP_CTX){
             vector<string> const& bams = _cfg.bam_files();
             for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
                 map<string, float>::const_iterator cniter = svb.copy_number.find(*iter);
@@ -541,13 +534,13 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
 }
 
 void BreakDancer::dump_fastq(
-        bd::pair_orientation_flag const& flag,
-        std::vector<ReadType> const& support_reads
+        ReadFlag const& flag,
+        std::vector<Read> const& support_reads
         )
 {
     map<string,int> pairing;
-    for (vector<bd::Read>::const_iterator i = support_reads.begin(); i != support_reads.end(); ++i) {
-        bd::Read const& y = *i;
+    for (vector<Read>::const_iterator i = support_reads.begin(); i != support_reads.end(); ++i) {
+        Read const& y = *i;
 
         if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
             continue;

@@ -10,10 +10,9 @@
 #include <stdexcept>
 
 using namespace std;
-namespace bd = breakdancer;
 
 namespace {
-    const static bd::PerFlagArray<int>::type ZEROS = {{0}};
+    const static PerFlagArray<int>::type ZEROS = {{0}};
 }
 
 SvBuilder::SvBuilder(Options const& opts, int n, BasicRegion const* regions[2],
@@ -49,14 +48,14 @@ SvBuilder::SvBuilder(Options const& opts, int n, BasicRegion const* regions[2],
     // the sv may be contained in a single region, in which case
     // regions[1] will be null.
     if (n == 2) {
-        if(flag == bd::ARP_RF) {
+        if(flag == ReadFlag::ARP_RF) {
             pos[1] = regions[1]->end + max_readlen - 5;
         }
-        else if(flag == bd::ARP_FF) {
+        else if(flag == ReadFlag::ARP_FF) {
             pos[0] = pos[1];
             pos[1] = regions[1]->end + max_readlen - 5;
         }
-        else if(flag == bd::ARP_RR) {
+        else if(flag == ReadFlag::ARP_RR) {
             pos[1] = regions[1]->start;
         }
         else {
@@ -90,11 +89,11 @@ void SvBuilder::compute_copy_number(ReadCountsByLib const& counts,
 
 
 // choose the predominant type of read in a region
-bd::pair_orientation_flag SvBuilder::choose_sv_flag() {
-    bd::pair_orientation_flag flag = bd::NA;
+ReadFlag SvBuilder::choose_sv_flag() {
+    ReadFlag flag = ReadFlag::NA;
     int const* max_ptr = max_element(flag_counts.begin(), flag_counts.end());
     if (max_ptr != flag_counts.end() && *max_ptr > 0) {
-        flag = bd::pair_orientation_flag(max_ptr - flag_counts.begin());
+        flag = static_cast<ReadFlag>(max_ptr - flag_counts.begin());
     }
     return flag;
 }
@@ -108,7 +107,7 @@ void SvBuilder::_observe_read(Read const& read, int region_idx) {
     }
     else {
         // We just found an existing read's mate. Good for him/her.
-        bd::pair_orientation_flag bdflag = read.bdflag();
+        ReadFlag bdflag = read.bdflag();
         size_t const& index = read.lib_index();
         ++flag_counts[bdflag];
         ++type_library_readcount[bdflag][index];

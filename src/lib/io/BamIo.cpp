@@ -8,9 +8,8 @@ BamReaderBase* openBam(
         std::string const& region /* = "" */
         )
 {
-    namespace bdaf = breakdancer::alnfilter;
-    typedef bdaf::Chain<
-        std::logical_and<bool>, bdaf::IsPrimary, bdaf::IsAligned
+    typedef AlignmentFilter::Chain<
+        std::logical_and<bool>, AlignmentFilter::IsPrimary, AlignmentFilter::IsAligned
         > IsPrimaryAligned;
 
     if (region.empty())

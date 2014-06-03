@@ -9,7 +9,6 @@ class IOutputStreamFactory;
 
 class FastqWriter {
 public:
-    typedef breakdancer::Read Read;
     typedef boost::unordered_map<std::string, std::ofstream*> MapType;
 
     FastqWriter(std::string const& output_prefix);
@@ -19,7 +18,7 @@ public:
     void write(std::string const& lib_name, bool is_read1, Read const& read);
 
 private:
-    void write(std::string const& path, breakdancer::Read const& read);
+    void write(std::string const& path, Read const& read);
 
 private:
     std::string _output_prefix;

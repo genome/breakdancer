@@ -9,7 +9,6 @@
 
 #include <gtest/gtest.h>
 
-namespace bdaf = breakdancer::alnfilter;
 using namespace std;
 
 TEST(TestBamMerger, read_count) {
@@ -22,7 +21,7 @@ TEST(TestBamMerger, read_count) {
     for (size_t i = 0; i < TEST_BAMS.size(); ++i) {
         paths.push_back(TEST_BAMS[i].path);
         expected += TEST_BAMS[i].n_reads;
-        boost::shared_ptr<BamReaderBase> p(new BamReader<bdaf::True>(TEST_BAMS[i].path));
+        boost::shared_ptr<BamReaderBase> p(new BamReader<AlignmentFilter::True>(TEST_BAMS[i].path));
         spReaders.push_back(p);
         readers.push_back(p.get());
     }

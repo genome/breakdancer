@@ -21,13 +21,11 @@ namespace {
     }
 }
 
-BEGIN_NAMESPACE(breakdancer)
-
 //FIXME This is practically illegible and there are many flag definitions that need to be added
 //In addition, there is some caching that could happen to make this whole thing shorter
 //and less computationally expensive
 //ideally the majority of this code could be pulled into another class.
-pair_orientation_flag determine_bdflag(bam1_t const* record) {
+ReadFlag determine_bdflag(bam1_t const* record) {
 
     // this should probably include QCfail as well
     if((record->core.flag & BAM_FDUP) || !(record->core.flag & BAM_FPAIRED))
@@ -35,7 +33,7 @@ pair_orientation_flag determine_bdflag(bam1_t const* record) {
 
     bool read_reversed = record->core.flag & BAM_FREVERSE;
     bool mate_reversed = record->core.flag & BAM_FMREVERSE;
-    pair_orientation_flag flag = NA;
+    ReadFlag flag = NA;
 
     if(record->core.flag & BAM_FUNMAP) {
         flag = UNMAPPED;
@@ -81,6 +79,7 @@ Read::Read(bam1_t const* record, bool seq_data)
     , _endPos(bam_calend(&record->core, bam1_cigar(record)))
     , _query_length(record->core.l_qseq)
     , _tid(record->core.tid)
+    , _mtid(record->core.mtid)
     , _query_name(bam1_qname(record))
     , _seq_converted(false)
     , _quality_converted(false)
@@ -116,4 +115,6 @@ int Read::pair_overlap() const {
     }
 }
 
-END_NAMESPACE(breakdancer)
+bool Read::inter_chrom_pair() const {
+    return _tid != _mtid;
+}

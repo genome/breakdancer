@@ -7,8 +7,6 @@
 
 #include <gtest/gtest.h>
 
-namespace bdaf = breakdancer::alnfilter;
-
 class TestBamReader : public ::testing::TestWithParam<BamInfo> {
 };
 
@@ -18,7 +16,7 @@ TEST_P(TestBamReader, read_count) {
     std::string const& path = GetParam().path;
     size_t expected_count = GetParam().n_reads;
 
-    BamReader<bdaf::True> reader(path);
+    BamReader<AlignmentFilter::True> reader(path);
     EXPECT_EQ(path, reader.path());
 
     RawBamEntry b;

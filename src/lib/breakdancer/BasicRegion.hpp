@@ -10,7 +10,7 @@
 
 class BasicRegion {
 public:
-    typedef breakdancer::Read ReadType;
+    typedef Read ReadType;
     typedef std::vector<ReadType> ReadVector;
     typedef boost::filter_iterator<
             boost::function<bool(ReadType const&)>,

@@ -10,9 +10,7 @@ enum strand_e {
     REV = 1
 };
 
-BEGIN_NAMESPACE(breakdancer)
-
-enum pair_orientation_flag {
+enum ReadFlag {
     NA = 0, //NA means not applicable.
     ARP_FF,
     ARP_FR_big_insert,
@@ -35,18 +33,15 @@ struct PerFlagArray {
 struct FlagValues {
     FlagValues();
 
-    int operator[](pair_orientation_flag const& idx) const;
+    int operator[](ReadFlag idx) const;
 
 private:
     PerFlagArray<int>::type _values;
 };
 
 inline
-int FlagValues::operator[](pair_orientation_flag const& idx) const {
+int FlagValues::operator[](ReadFlag idx) const {
     return _values[int(idx)];
 }
 
 extern const FlagValues FLAG_VALUES;
-
-END_NAMESPACE(breakdancer)
-

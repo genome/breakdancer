@@ -29,7 +29,6 @@ class BamReaderBase;
 
 class BreakDancer {
 public:
-    typedef breakdancer::Read ReadType;
     typedef BasicRegion::ReadVector ReadVector;
     typedef std::vector<BasicRegion*> RegionData;
     typedef std::vector<ReadCountsByLib> RoiReadCounts;
@@ -44,7 +43,7 @@ public:
         int max_read_window_size
         );
 
-    void push_read(ReadType& aln);
+    void push_read(Read& aln);
     void build_connection();
 
 
@@ -56,7 +55,7 @@ public:
     void process_breakpoint();
     void process_final_region();
 
-    void dump_fastq(breakdancer::pair_orientation_flag const& flag, std::vector<ReadType> const& support_reads);
+    void dump_fastq(ReadFlag const& flag, std::vector<Read> const& support_reads);
 
     void run();
 

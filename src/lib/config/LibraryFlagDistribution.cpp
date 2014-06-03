@@ -2,7 +2,7 @@
 
 LibraryFlagDistribution::LibraryFlagDistribution()
     : read_count(0)
-    , read_counts_by_flag(breakdancer::NUM_ORIENTATION_FLAGS, 0u)
+    , read_counts_by_flag(ReadFlag::NUM_ORIENTATION_FLAGS, 0u)
 {
 }
 

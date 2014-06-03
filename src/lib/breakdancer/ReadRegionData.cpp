@@ -97,7 +97,7 @@ size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int
 
     // This adds the region id to an array of region ids
     for(ReadVector::const_iterator iter = reads.begin(); iter != reads.end(); ++iter) {
-        if (iter->bdflag() != breakdancer::ARP_CTX)
+        if (iter->bdflag() != ReadFlag::ARP_CTX)
             ++non_ctx_reads;
 
         if (iter->ori() == FWD)
@@ -128,7 +128,7 @@ bool ReadRegionData::is_region_final(size_t region_idx) const {
 
     ReadVector const& v = _reads_in_region(region_idx);
     for (ReadVector::const_iterator i = v.begin(); i != v.end(); ++i) {
-        if (!_opts.chr.empty() && i->bdflag() == breakdancer::ARP_CTX)
+        if (!_opts.chr.empty() && i->bdflag() == ReadFlag::ARP_CTX)
             continue;
 
         ReadsToRegionsMap::const_iterator found = _read_regions.find(i->query_name());

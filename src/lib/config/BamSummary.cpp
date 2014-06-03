@@ -48,7 +48,7 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
 
     RawBamEntry b;
     while (reader.next(b) > 0) {
-        breakdancer::Read aln(b, false);
+        Read aln(b, false);
 
         string const& lib = bam_config.readgroup_library(aln.readgroup());
         if (lib.empty())
@@ -75,67 +75,45 @@ void BamSummary::_analyze_bam(Options const& opts, BamConfig const& bam_config, 
             ++read_count;
         }
 
-        // FLAGMESS:
-        // mtid != tid is a property that is not modified when we transform
-        // the guess into the final flag value (if the guess is ARP_CTX,
-        // the final flag will also be ARP_CTX).
-        //
-        // The current code still wants to see unmapped reads and reads with
-        // unmapped mates for the purpose of computing the min/max read
-        // position (counting positions from reads that claim to be unmapped
-        // seems silly...), so we can't immediately filter them in the bam
-        // readers. However, being unmapped or having an unmapped mate could
-        // be a separate method call that doesn't involve "bdflag".
-        if (aln.bdflag() == breakdancer::NA
-            || (opts.transchr_rearrange && aln.bdflag() != breakdancer::ARP_CTX)
+        if (aln.bdflag() == ReadFlag::NA
+            || (opts.transchr_rearrange && !aln.inter_chrom_pair())
             || aln.either_unmapped()
             )
         {
             continue;
         }
 
-        // FLAGMESS:
-        // Below, we replace the guess with the final flag value, which
-        // requires access to the library from whence the read sprang. I wonder
-        // if we should just update the Read class to be able to answer all the
-        // questions it has been asked up until now and make calculation of the
-        // final flag something external. I could imagine a new class that holds
-        // Read, the library info, and the final flag. This class would be the
-        // currency of all downstream analysis.
-
-        //It would be nice if this was pulled into the Read class as well
-        //for now, let's just set the bdflag directly here since it is public
         if(opts.Illumina_long_insert) {
-            if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
-                aln.set_bdflag(breakdancer::ARP_RF);
+            if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_RF) {
+                aln.set_bdflag(ReadFlag::ARP_RF);
             }
-            if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == breakdancer::ARP_RF) {
-                aln.set_bdflag(breakdancer::NORMAL_RF);
+            if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == ReadFlag::ARP_RF) {
+                aln.set_bdflag(ReadFlag::NORMAL_RF);
             }
-            if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == breakdancer::NORMAL_RF) {
+            if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == ReadFlag::NORMAL_RF) {
                 //FIXME: this name doesn't make a whole lot of sense here -dl
                 // Right, RF instead of FR would make more sense. We should
                 // probably just use ARP_{small,big}_insert for these in either
                 // lib type.
-                aln.set_bdflag(breakdancer::ARP_FR_small_insert);
+                aln.set_bdflag(ReadFlag::ARP_FR_small_insert);
             }
         }
         else{
-            if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
-                aln.set_bdflag(breakdancer::ARP_FR_big_insert);
+            if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_FR) {
+                aln.set_bdflag(ReadFlag::ARP_FR_big_insert);
             }
-            if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == breakdancer::ARP_FR_big_insert) {
-                aln.set_bdflag(breakdancer::NORMAL_FR);
+            if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == ReadFlag::ARP_FR_big_insert) {
+                aln.set_bdflag(ReadFlag::NORMAL_FR);
             }
-            if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == breakdancer::NORMAL_FR) {
-                aln.set_bdflag(breakdancer::ARP_FR_small_insert);
+            if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == ReadFlag::NORMAL_FR) {
+                aln.set_bdflag(ReadFlag::ARP_FR_small_insert);
             }
-            if(aln.bdflag() == breakdancer::NORMAL_RF) {
-                aln.set_bdflag(breakdancer::ARP_RF);
+            if(aln.bdflag() == ReadFlag::NORMAL_RF) {
+                aln.set_bdflag(ReadFlag::ARP_RF);
             }
         }
 
-        if(aln.bdflag() == breakdancer::NORMAL_FR || aln.bdflag() == breakdancer::NORMAL_RF) {
+        if(aln.bdflag() == ReadFlag::NORMAL_FR || aln.bdflag() == ReadFlag::NORMAL_RF) {
             continue;
         }
 

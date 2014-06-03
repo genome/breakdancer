@@ -15,7 +15,6 @@
 #include <string>
 #include <utility>
 
-namespace bdaf = breakdancer::alnfilter;
 using namespace std;
 
 class TestBamIo : public ::testing::TestWithParam<BamInfo> {
