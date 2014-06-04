@@ -5,6 +5,9 @@ IlluminaPEReadClassifier::IlluminaPEReadClassifier(LibraryInfo const& lib_info)
 {
 }
 
+// Given the set of features described in the argument list, classify a read
+// pair under the assumption that both reads are mapped to the same
+// chromosome/sequence.
 ReadFlag pe_classify(
     bool read_reversed,
     bool mate_reversed,
@@ -13,51 +16,41 @@ ReadFlag pe_classify(
     bool large_insert,
     bool small_insert)
 {
-
-    // this should probably include QCfail as well
-
-    ReadFlag rv = NA;
-
+    // If both reads have the same orientation, then this is an abnormally
+    // oriented read pair. We don't care about the other features in such
+    // cases.
     if (read_reversed == mate_reversed) {
-        rv = (read_reversed) ? ARP_RR : ARP_FF;
-    }
-    else if (proper_pair) {
-        if (leftmost) {
-            rv = (read_reversed) ? ARP_RF : NORMAL_FR;
-        }
-        else {
-            rv = (read_reversed) ? NORMAL_FR : ARP_RF;
-        }
-
-        if (rv == NORMAL_FR && large_insert) {
-            rv = ReadFlag::ARP_FR_big_insert;
-        }
-    }
-    else if (leftmost == read_reversed) {
-        rv = ARP_RF;
-    }
-    else {
-        rv = ARP_FR_big_insert;
+        return read_reversed ? ARP_RR : ARP_FF;
     }
 
-
-    if (large_insert && rv == ReadFlag::NORMAL_FR) {
-        rv = ReadFlag::ARP_FR_big_insert;
+    // For paired-end data, the "leftmost" read (the read with strictly smaller
+    // position on the same chromosome) should always align to the forward
+    // strand, and the non-leftmost to the reverse. We already know that
+    // the strands are different due to the previous condition, so if the
+    // leftmost read is reversed, the other is not. We can classify a read as
+    // RF whenever the leftmost flag is equal to the reversed flag:
+    //    leftmost read is reversed -> RF
+    //    !leftmost read is !reversed -> RF
+    if (leftmost == read_reversed) {
+        return ARP_RF;
     }
 
-    if (!large_insert && rv == ReadFlag::ARP_FR_big_insert) {
-        rv = ReadFlag::NORMAL_FR;
+    // We have already dealt with FF, FR, and RF orientations. At this point
+    // we are surely dealing with a pair with FR orientation. Let's check the
+    // insert size. The large and small _insert flags should not be true
+    // simultaneously (unless there is a coding error), so the order of the
+    // tests doesn't really matter.
+    if (large_insert) {
+        return ARP_FR_big_insert;
     }
 
-    if (small_insert && rv == ReadFlag::NORMAL_FR) {
-        rv = ReadFlag::ARP_FR_small_insert;
+    if (small_insert) {
+        return ARP_FR_small_insert;
     }
 
-    if (rv == ReadFlag::NORMAL_RF) {
-        rv = ReadFlag::ARP_RF;
-    }
-
-    return rv;
+    // The pair is FR oriented, not too small and not too large. It is in fact
+    // juuuust right. Only one option left:
+    return NORMAL_FR;
 }
 
 
@@ -65,17 +58,14 @@ ReadFlag IlluminaPEReadClassifier::classify(Read const& read) const {
     int sam_flag = read.sam_flag();
     LibraryConfig const& lib_config = lib_info_._cfg.library_config(read.lib_index());
 
+    // These features can completely determine the outcome.
+    // We'll treat them first to reduce the size of the truth table required
+    // to analyze this function.
     bool dup = sam_flag & BAM_FDUP;
     bool paired = sam_flag & BAM_FPAIRED;
-    bool read_reversed = sam_flag & BAM_FREVERSE;
-    bool mate_reversed = sam_flag & BAM_FMREVERSE;
-    bool leftmost = read.leftmost();
     bool unmapped = sam_flag & BAM_FUNMAP;
     bool mate_unmapped = sam_flag & BAM_FMUNMAP;
     bool interchrom_pair = read.interchrom_pair();
-    bool proper_pair = read.proper_pair();
-    bool large_insert = read.abs_isize() > lib_config.uppercutoff;
-    bool small_insert = read.abs_isize() < lib_config.lowercutoff;
 
     if(dup || !paired) {
         return NA;
@@ -90,6 +80,15 @@ ReadFlag IlluminaPEReadClassifier::classify(Read const& read) const {
         return ARP_CTX;
     }
 
+
+    // These features can have interactions.
+    bool read_reversed = sam_flag & BAM_FREVERSE;
+    bool mate_reversed = sam_flag & BAM_FMREVERSE;
+    bool leftmost = read.leftmost();
+    bool proper_pair = read.proper_pair();
+    bool large_insert = read.abs_isize() > lib_config.uppercutoff;
+    bool small_insert = read.abs_isize() < lib_config.lowercutoff;
+
     return pe_classify(
         read_reversed,
         mate_reversed,
@@ -97,68 +96,4 @@ ReadFlag IlluminaPEReadClassifier::classify(Read const& read) const {
         proper_pair,
         large_insert,
         small_insert);
-#if 0
-
-
-
-    // this should probably include QCfail as well
-    if(dup || !paired) {
-        return NA;
-    }
-
-
-
-    ReadFlag rv = NA;
-
-    if (unmapped) {
-        rv = UNMAPPED;
-    }
-    else if (mate_unmapped) {
-        rv = MATE_UNMAPPED;
-    }
-    else if (interchrom_pair) {
-        rv = ARP_CTX;
-    }
-    else if (proper_pair) {
-        if(leftmost) {
-            rv = (read_reversed) ? ARP_RF : NORMAL_FR;
-        }
-        else {
-            rv = (read_reversed) ? NORMAL_FR : ARP_RF;
-        }
-
-        if (rv == NORMAL_FR && large_insert) {
-            rv = ReadFlag::ARP_FR_big_insert;
-        }
-    }
-    else if (read_reversed == mate_reversed) {
-
-            rv = (mate_reversed) ? ARP_RR : ARP_FF;
-    }
-    else if (leftmost == read_reversed) {
-        rv = ARP_RF;
-    }
-    else {
-        rv = ARP_FR_big_insert;
-    }
-
-
-    if (large_insert && rv == ReadFlag::NORMAL_FR) {
-        rv = ReadFlag::ARP_FR_big_insert;
-    }
-
-    if (!large_insert && rv == ReadFlag::ARP_FR_big_insert) {
-        rv = ReadFlag::NORMAL_FR;
-    }
-
-    if (small_insert && rv == ReadFlag::NORMAL_FR) {
-        rv = ReadFlag::ARP_FR_small_insert;
-    }
-
-    if (rv == ReadFlag::NORMAL_RF) {
-        rv = ReadFlag::ARP_RF;
-    }
-
-    return rv;
-#endif
 }
