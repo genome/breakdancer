@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-class Options;
+struct Options;
 class ReadCountsByLib;
 
 class SvBuilder {

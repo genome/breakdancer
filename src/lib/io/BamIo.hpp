@@ -6,8 +6,8 @@
 #include <vector>
 #include <string>
 
-class Options;
 class BamReaderBase;
+struct Options;
 
 BamReaderBase* openBam(std::string const& path, std::string const& region = "");
 

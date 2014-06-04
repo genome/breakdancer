@@ -6,15 +6,14 @@
 
 #include <ostream>
 
-class LibraryInfo;
-class Options;
+struct LibraryInfo;
+struct Options;
 class SvBuilder;
 
 class BedWriter {
 public:
     BedWriter(
         std::ostream& stream,
-        Options const& opts,
         LibraryInfo const& lib_info,
         bam_header_t const* bam_header);
 
@@ -22,7 +21,6 @@ public:
 
 private:
     std::ostream& _stream;
-    Options const& _opts;
     LibraryInfo const& _lib_info;
     bam_header_t const* _bam_header;
 };

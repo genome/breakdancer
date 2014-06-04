@@ -87,7 +87,6 @@ namespace {
 BreakDancer::BreakDancer(
         IReadClassifier const& read_classifier,
         Options const& opts,
-        BamConfig const& cfg,
         LibraryInfo const& lib_info,
         ReadRegionData& read_regions,
         BamReaderBase& merged_reader,
@@ -95,7 +94,6 @@ BreakDancer::BreakDancer(
         )
     : _read_classifier(read_classifier)
     , _opts(opts)
-    , _cfg(cfg)
     , _lib_info(lib_info)
     , _rdata(read_regions)
     , _merged_reader(merged_reader)
@@ -115,8 +113,8 @@ BreakDancer::BreakDancer(
 {
     if (!_opts.prefix_fastq.empty()) {
         _fastq_writer.reset(new FastqWriter(opts.prefix_fastq));
-        for (size_t i = 0; i < cfg.num_libs(); ++i) {
-            LibraryConfig const& lib = cfg.library_config(i);
+        for (size_t i = 0; i < _lib_info._cfg.num_libs(); ++i) {
+            LibraryConfig const& lib = _lib_info._cfg.library_config(i);
             // This will throw if the files cannot be created
             _fastq_writer->open(lib.name, true); // is_read1 = true
             _fastq_writer->open(lib.name, false); // is_read2 = false
@@ -126,7 +124,7 @@ BreakDancer::BreakDancer(
 
     if (!_opts.dump_BED.empty()) {
         _bed_stream.reset(new ofstream(_opts.dump_BED.c_str()));
-        _bed_writer.reset(new BedWriter(*_bed_stream, _opts, _lib_info, _merged_reader.header()));
+        _bed_writer.reset(new BedWriter(*_bed_stream, _lib_info, _merged_reader.header()));
     }
 }
 
@@ -136,7 +134,7 @@ void BreakDancer::run() {
     while (_merged_reader.next(b) >= 0) {
         Read aln(b, _opts.need_sequence_data());
 
-        string const& lib = _cfg.readgroup_library(aln.readgroup());
+        string const& lib = _lib_info._cfg.readgroup_library(aln.readgroup());
         if(!lib.empty()) {
             aln.set_lib_index(_lib_info._cfg.library_config(lib).index);
             _read_classifier.set_flag(aln);
@@ -509,7 +507,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
             cout <<  "\t" << svb.allele_frequency;
 
         if(_opts.CN_lib == 0 && svb.flag != ReadFlag::ARP_CTX){
-            vector<string> const& bams = _cfg.bam_files();
+            vector<string> const& bams = _lib_info._cfg.bam_files();
             for(vector<string>::const_iterator iter = bams.begin(); iter != bams.end(); ++iter) {
                 map<string, float>::const_iterator cniter = svb.copy_number.find(*iter);
 

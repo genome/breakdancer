@@ -1,11 +1,11 @@
 #pragma once
 
-class Options;
-class BamConfig;
-class BamSummary;
-
 #include <memory>
 #include <iostream>
+
+struct Options;
+class BamConfig;
+class BamSummary;
 
 class ConfigLoader {
 public:

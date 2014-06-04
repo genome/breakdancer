@@ -23,10 +23,9 @@
 #include <string>
 #include <vector>
 
-class Options;
-class BamConfig; //FIXME we probably won't need to store this once done stubbing in LibraryInfo
-class LibraryInfo;
 class BamReaderBase;
+struct LibraryInfo;
+struct Options;
 
 class BreakDancer {
 public:
@@ -38,7 +37,6 @@ public:
     BreakDancer(
         IReadClassifier const& read_classifier,
         Options const& opts,
-        BamConfig const& cfg,
         LibraryInfo const& lib_info,
         ReadRegionData& read_regions,
         BamReaderBase& merged_reader,
@@ -76,7 +74,6 @@ private:
 private: // data
     IReadClassifier const& _read_classifier;
     Options const& _opts;
-    BamConfig const& _cfg;
     LibraryInfo const& _lib_info;
     ReadRegionData& _rdata;
     BamReaderBase& _merged_reader;

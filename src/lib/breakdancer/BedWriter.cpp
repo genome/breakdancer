@@ -10,11 +10,9 @@
 using namespace std;
 
 BedWriter::BedWriter(std::ostream& stream,
-        Options const& opts,
         LibraryInfo const& lib_info,
         bam_header_t const* bam_header)
     : _stream(stream)
-    , _opts(opts)
     , _lib_info(lib_info)
     , _bam_header(bam_header)
 {

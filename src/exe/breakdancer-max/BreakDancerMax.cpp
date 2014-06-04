@@ -73,7 +73,6 @@ int main(int argc, char *argv[]) {
         BreakDancer bdancer(
             read_classifier,
             opts,
-            cfg,
             lib_info,
             read_regions,
             merged_reader,

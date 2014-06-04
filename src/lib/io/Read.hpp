@@ -13,7 +13,7 @@ extern "C" {
     #include <bam.h>
 }
 
-class LibraryInfo;
+struct LibraryInfo;
 
 ReadFlag determine_bdflag(bam1_t const* record);
 
