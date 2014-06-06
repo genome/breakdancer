@@ -1,4 +1,4 @@
-#include "io/IlluminaPEReadClassifier.hpp"
+#include "config/IlluminaPEReadClassifier.hpp"
 
 #include <gtest/gtest.h>
 

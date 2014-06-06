@@ -8,7 +8,6 @@ add_unit_tests(TestIoLib
     TestBamIo.cpp
     TestBamMerger.cpp
     TestBamReader.cpp
-    TestIlluminaPEReadClassifier.cpp
     TestRead.cpp
     TestRegionLimitedBamReader.cpp
 )

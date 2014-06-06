@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Read.hpp"
+#include "io/Read.hpp"
 #include "common/ReadFlags.hpp"
 
 class IReadClassifier {

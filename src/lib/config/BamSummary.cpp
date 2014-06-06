@@ -1,10 +1,10 @@
 #include "BamSummary.hpp"
 
+#include "IReadClassifier.hpp"
+
 #include "io/BamIo.hpp"
 #include "io/RawBamEntry.hpp"
 #include "io/Read.hpp"
-
-#include "io/IReadClassifier.hpp"
 
 #include <iostream>
 

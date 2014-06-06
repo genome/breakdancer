@@ -10,7 +10,6 @@
 #include "config/LibraryInfo.hpp"
 #include "io/BamIo.hpp"
 #include "io/BamMerger.hpp"
-#include "io/IlluminaPEReadClassifier.hpp"
 #include "io/Read.hpp"
 
 #include "version.h"

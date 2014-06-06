@@ -12,9 +12,6 @@ set(SOURCES
     BamWriter.hpp
     FastqWriter.cpp
     FastqWriter.hpp
-    IReadClassifier.hpp
-    IlluminaPEReadClassifier.cpp
-    IlluminaPEReadClassifier.hpp
     RawBamEntry.hpp
     Read.cpp
     Read.hpp

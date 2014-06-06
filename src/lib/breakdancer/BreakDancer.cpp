@@ -4,6 +4,7 @@
 #include "common/Options.hpp"
 #include "common/Timer.hpp"
 #include "config/BamConfig.hpp"
+#include "config/IReadClassifier.hpp"
 #include "config/LibraryInfo.hpp"
 #include "io/BamReaderBase.hpp"
 #include "io/RawBamEntry.hpp"

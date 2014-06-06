@@ -2,8 +2,8 @@
 
 #include "BamConfig.hpp"
 #include "BamSummary.hpp"
+#include "IlluminaPEReadClassifier.hpp"
 #include "common/Options.hpp"
-#include "io/IlluminaPEReadClassifier.hpp"
 
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>

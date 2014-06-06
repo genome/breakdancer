@@ -6,7 +6,6 @@
 #include "ReadRegionData.hpp"
 #include "common/Timer.hpp"
 #include "io/FastqWriter.hpp"
-#include "io/IReadClassifier.hpp"
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/unordered_map.hpp>
@@ -24,6 +23,7 @@
 #include <vector>
 
 class BamReaderBase;
+class IReadClassifier;
 struct LibraryInfo;
 struct Options;
 

@@ -9,6 +9,9 @@ set(SOURCES
     BamSummary.hpp
     ConfigLoader.cpp
     ConfigLoader.hpp
+    IReadClassifier.hpp
+    IlluminaPEReadClassifier.cpp
+    IlluminaPEReadClassifier.hpp
     LibraryConfig.hpp
     LibraryFlagDistribution.cpp
     LibraryFlagDistribution.hpp
