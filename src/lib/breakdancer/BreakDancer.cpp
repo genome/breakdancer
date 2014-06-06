@@ -198,22 +198,6 @@ void BreakDancer::push_read(Read &aln) {
             aln.set_bdflag(ReadFlag::ARP_FR_small_insert);
         }
     }
-#ifdef DEATHSTAR
-    else{
-        if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_FR) {
-            aln.set_bdflag(ReadFlag::ARP_FR_big_insert);
-        }
-        if(aln.abs_isize() < lib_config.uppercutoff && aln.bdflag() == ReadFlag::ARP_FR_big_insert) {
-            aln.set_bdflag(ReadFlag::NORMAL_FR);
-        }
-        if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == ReadFlag::NORMAL_FR) {
-            aln.set_bdflag(ReadFlag::ARP_FR_small_insert);
-        }
-        if(aln.bdflag() == ReadFlag::NORMAL_RF) {
-            aln.set_bdflag(ReadFlag::ARP_RF);
-        }
-    }
-#endif
 
     // This makes FF and RR the same thing
     if(aln.bdflag() == ReadFlag::ARP_RR) {
