@@ -84,7 +84,7 @@ class TestRegionLimitedBamReader : public ::testing::TestWithParam<BamInfo> {
 
 TEST_P(TestRegionLimitedBamReader, read_count) {
     string const& path = GetParam().path;
-    RegionCount rc = getTestRegion(path, 104);
+    RegionCount rc = getTestRegion(path, 104); // take at most 104 reads
 
     // Samtools region parsing uses one based coordinates, but the C api
     // (which produced rc.begin, rc.end) uses one based coordinates.
@@ -94,11 +94,13 @@ TEST_P(TestRegionLimitedBamReader, read_count) {
     vector<string> observed_read_names;
 
     RegionLimitedBamReader<AlignmentFilter::True> reader(path, region.c_str());
-    RawBamEntry b;
+    EXPECT_EQ(path, reader.path());
+    EXPECT_EQ(path + " (region: " + region + ")", reader.description());
 
     size_t observed_read_count = 0;
     int first_pos = -1;
     int last_pos = -1;
+    RawBamEntry b;
     while (reader.next(b) > 0) {
         if (first_pos == -1)
             first_pos = b->core.pos;

@@ -17,8 +17,13 @@ public:
     int beg() const { return _beg; }
     int end() const { return _end; }
 
+    std::string const& description() const {
+        return _description;
+    }
+
 protected:
     std::string _region;
+    std::string _description;
     bam_index_t* _index;
     bam_iter_t _iter;
     int _tid;
@@ -31,6 +36,7 @@ inline
 RegionLimitedBamReader<Filter>::RegionLimitedBamReader(std::string const& path, char const* region)
     : BamReader<Filter>(path)
     , _region(region)
+    , _description(path + " (region: " + _region + ")")
     , _index(bam_index_load(path.c_str()))
 {
     using boost::format;

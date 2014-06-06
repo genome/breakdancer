@@ -18,6 +18,7 @@ TEST_P(TestBamReader, read_count) {
 
     BamReader<AlignmentFilter::True> reader(path);
     EXPECT_EQ(path, reader.path());
+    EXPECT_EQ(path, reader.description());
 
     RawBamEntry b;
     size_t n_reads = 0;
