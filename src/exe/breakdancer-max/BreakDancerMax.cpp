@@ -68,10 +68,9 @@ int main(int argc, char *argv[]) {
 
         BamMerger merged_reader(readers);
         ReadRegionData read_regions(opts);
-        IlluminaPEReadClassifier read_classifier(lib_info);
 
         BreakDancer bdancer(
-            read_classifier,
+            context.read_classifier(),
             opts,
             lib_info,
             read_regions,

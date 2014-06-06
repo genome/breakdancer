@@ -1,7 +1,9 @@
 #include "IlluminaPEReadClassifier.hpp"
 
-IlluminaPEReadClassifier::IlluminaPEReadClassifier(LibraryInfo const& lib_info)
-    : lib_info_(lib_info)
+#include "config/BamConfig.hpp"
+
+IlluminaPEReadClassifier::IlluminaPEReadClassifier(BamConfig const& bam_cfg)
+    : bam_cfg_(bam_cfg)
 {
 }
 
@@ -56,7 +58,7 @@ ReadFlag pe_classify(
 
 ReadFlag IlluminaPEReadClassifier::classify(Read const& read) const {
     int sam_flag = read.sam_flag();
-    LibraryConfig const& lib_config = lib_info_._cfg.library_config(read.lib_index());
+    LibraryConfig const& lib_config = bam_cfg_.library_config(read.lib_index());
 
     // These features can completely determine the outcome.
     // We'll treat them first to reduce the size of the truth table required

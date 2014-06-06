@@ -11,13 +11,19 @@
 
 #include <vector>
 
+class IReadClassifier;
+
 class BamSummary {
 public:
     friend class boost::serialization::access;
 
     BamSummary();
     // Construct flag distribution from bam files listed in in BamConfig.
-    BamSummary(Options const& opts, BamConfig const& bam_config);
+    BamSummary(
+        Options const& opts,
+        BamConfig const& bam_config,
+        IReadClassifier const& read_classifier
+        );
 
     uint32_t covered_reference_length() const;
     uint32_t read_count_in_bam(std::string const& key) const;
@@ -29,8 +35,15 @@ public:
     bool operator!=(BamSummary const& rhs) const;
 
 private:
-    void _analyze_bam(Options const& opts, BamConfig const& bam_confg, BamReaderBase& reads);
-    void _analyze_bams(Options const& opts, BamConfig const& bam_config);
+    void _analyze_bam(
+        Options const& opts,
+        BamConfig const& bam_confg,
+        BamReaderBase& reads,
+        IReadClassifier const& read_classifier);
+
+    void _analyze_bams(Options const& opts,
+        BamConfig const& bam_config,
+        IReadClassifier const& read_classifier);
 
 private:
     template<typename Archive>

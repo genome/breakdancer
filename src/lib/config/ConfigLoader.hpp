@@ -3,9 +3,10 @@
 #include <memory>
 #include <iostream>
 
-struct Options;
 class BamConfig;
 class BamSummary;
+class IReadClassifier;
+struct Options;
 
 class ConfigLoader {
 public:
@@ -14,11 +15,16 @@ public:
     Options const& options() const;
     BamConfig const& bam_config() const;
     BamSummary const& bam_summary() const;
+    IReadClassifier const& read_classifier() const;
 
     void save_config(std::ostream& stream);
     void load_config(std::istream& stream);
 
 private:
+    void create_read_classifier() const;
+
+private:
+    mutable std::auto_ptr<IReadClassifier> _read_classifier;
     std::auto_ptr<Options> _options;
     std::auto_ptr<BamConfig> _bam_config;
     std::auto_ptr<BamSummary> _bam_summary;

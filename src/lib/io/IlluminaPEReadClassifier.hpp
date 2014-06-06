@@ -1,8 +1,9 @@
 #pragma once
 
 #include "IReadClassifier.hpp"
-#include "config/LibraryConfig.hpp"
-#include "config/LibraryInfo.hpp"
+
+class Read;
+class BamConfig;
 
 ReadFlag pe_classify(
     bool read_reversed,
@@ -15,10 +16,10 @@ ReadFlag pe_classify(
 
 class IlluminaPEReadClassifier : public IReadClassifier {
 public:
-    explicit IlluminaPEReadClassifier (LibraryInfo const& lib_info);
+    explicit IlluminaPEReadClassifier(BamConfig const& bam_cfg);
 
     ReadFlag classify(Read const& read) const;
 
 private:
-    LibraryInfo const& lib_info_;
+    BamConfig const& bam_cfg_;
 };

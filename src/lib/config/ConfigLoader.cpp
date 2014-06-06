@@ -3,6 +3,7 @@
 #include "BamConfig.hpp"
 #include "BamSummary.hpp"
 #include "common/Options.hpp"
+#include "io/IlluminaPEReadClassifier.hpp"
 
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>
@@ -26,8 +27,9 @@ ConfigLoader::ConfigLoader(Options const& initial_options) {
         // load bam config file
         ifstream config_stream(initial_options.bam_config_path.c_str());
         _bam_config.reset(new BamConfig(config_stream, initial_options.cut_sd));
+
         // create bam summary (parses all bams to create flag distribution etc)
-        _bam_summary.reset(new BamSummary(initial_options, *_bam_config));
+        _bam_summary.reset(new BamSummary(initial_options, *_bam_config, read_classifier()));
 
         // the above can be expensive, we have the option to write that data
         // to disk in case we need to rerun later (useful for debugging and
@@ -40,7 +42,6 @@ ConfigLoader::ConfigLoader(Options const& initial_options) {
         }
     }
 }
-
 
 void ConfigLoader::save_config(std::ostream& stream) {
     barch::xml_oarchive arch(stream);
@@ -64,6 +65,16 @@ void ConfigLoader::load_config(std::istream& stream) {
             ;
 }
 
+void ConfigLoader::create_read_classifier() const {
+    if (!_read_classifier.get()) {
+        if (!_bam_config.get()) {
+            throw std::logic_error("ConfigLoader::read_classifier called before bam_config() is available!");
+        }
+        _read_classifier.reset(new IlluminaPEReadClassifier(bam_config()));
+    }
+}
+
+
 
 Options const& ConfigLoader::options() const {
     return *_options;
@@ -75,4 +86,9 @@ BamConfig const& ConfigLoader::bam_config() const {
 
 BamSummary const& ConfigLoader::bam_summary() const {
     return *_bam_summary;
+}
+
+IReadClassifier const& ConfigLoader::read_classifier() const {
+    create_read_classifier();
+    return *_read_classifier;
 }
