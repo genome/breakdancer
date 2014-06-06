@@ -22,10 +22,9 @@ BamSummary::BamSummary(
         IReadClassifier const& read_classifier
         )
     : _covered_ref_len(0)
+    , _library_flag_distributions(bam_config.num_libs())
+    , _library_sequence_coverages(_library_flag_distributions.size())
 {
-    _library_flag_distributions.resize(bam_config.num_libs());
-    _library_sequence_coverages.resize(_library_flag_distributions.size());
-
     _analyze_bams(opts, bam_config, read_classifier);
 }
 
@@ -51,7 +50,6 @@ void BamSummary::_analyze_bam(
         BamReaderBase& reader,
         IReadClassifier const& read_classifier)
 {
-
     int last_pos = 0;
     int last_tid = -1;
 
@@ -59,7 +57,6 @@ void BamSummary::_analyze_bam(
     uint32_t read_count = 0;
 
     RawBamEntry b;
-
     while (reader.next(b) > 0) {
         Read aln(b, false);
 
@@ -70,24 +67,23 @@ void BamSummary::_analyze_bam(
         aln.set_lib_index(bam_config.library_config(lib).index);
         read_classifier.set_flag(aln);
 
-        LibraryConfig const& lib_config = bam_config.library_config(lib);
-        LibraryFlagDistribution& lib_flag_dist = _library_flag_distributions[lib_config.index];
-
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
 
         last_pos = aln.pos();
         last_tid = aln.tid();
 
+        LibraryConfig const& lib_config = bam_config.library_config(lib);
         int min_mapq = lib_config.min_mapping_quality < 0 ?
                 opts.min_map_qual : lib_config.min_mapping_quality;
 
         if (aln.bdqual() <= min_mapq)
             continue;
 
+        LibraryFlagDistribution& lib_flag_dist = _library_flag_distributions[lib_config.index];
         if (aln.proper_pair()) {
-            ++lib_flag_dist.read_count;
-            ++read_count;
+            ++lib_flag_dist.read_count; // per lib read count
+            ++read_count; // per bam read count
         }
 
         if (aln.bdflag() == ReadFlag::NA || aln.either_unmapped()
@@ -117,10 +113,10 @@ void BamSummary::_analyze_bam(
     }
 
     if (ref_len == 0) {
-        cerr << "Input file " << reader.path() <<
+        cerr << "Input file " << reader.description() <<
             " does not contain legitimate paired end alignment. "
             "Please check that you have the correct paths and the "
-            "map/bam files are properly formated and indexed.";
+            "map/bam files are properly formated and indexed.\n";
     }
 
     _read_count_per_bam[reader.path()] = read_count;
