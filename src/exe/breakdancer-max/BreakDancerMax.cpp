@@ -112,8 +112,8 @@ int main(int argc, char *argv[]) {
             bdancer.set_read_density(density_libkey, dens);
 
             int nread_lengthDiscrepant = \
-                lib_info._summary.library_flag_distribution(i).read_counts_by_flag[ReadFlag::ARP_FR_big_insert] +
-                lib_info._summary.library_flag_distribution(i).read_counts_by_flag[ReadFlag::ARP_FR_small_insert];
+                lib_info._summary.library_flag_distribution(i).read_counts_by_flag[ReadFlag::ARP_LARGE_INSERT] +
+                lib_info._summary.library_flag_distribution(i).read_counts_by_flag[ReadFlag::ARP_SMALL_INSERT];
 
 
             int tmp = (nread_lengthDiscrepant > 0)?(float)covered_ref_len/(float)nread_lengthDiscrepant:50;

@@ -92,18 +92,18 @@ void ReadStats::push_read(Read const& read) {
             // Right, RF instead of FR would make more sense. We should
             // probably just use ARP_{small,big}_insert for these in either
             // lib type.
-            read.set_bdflag(breakdancer::ARP_FR_small_insert);
+            read.set_bdflag(breakdancer::ARP_SMALL_INSERT);
         }
     }
     else{
         if(read.abs_isize() > lib_config.uppercutoff && read.bdflag() == breakdancer::NORMAL_FR) {
-            read.set_bdflag(breakdancer::ARP_FR_big_insert);
+            read.set_bdflag(breakdancer::ARP_LARGE_INSERT);
         }
-        if(read.abs_isize() < lib_config.uppercutoff && read.bdflag() == breakdancer::ARP_FR_big_insert) {
+        if(read.abs_isize() < lib_config.uppercutoff && read.bdflag() == breakdancer::ARP_LARGE_INSERT) {
             read.set_bdflag(breakdancer::NORMAL_FR);
         }
         if(read.abs_isize() < lib_config.lowercutoff && read.bdflag() == breakdancer::NORMAL_FR) {
-            read.set_bdflag(breakdancer::ARP_FR_small_insert);
+            read.set_bdflag(breakdancer::ARP_SMALL_INSERT);
         }
         if(read.bdflag() == breakdancer::NORMAL_RF) {
             read.set_bdflag(breakdancer::ARP_RF);

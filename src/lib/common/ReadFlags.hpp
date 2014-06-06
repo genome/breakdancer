@@ -13,8 +13,8 @@ enum strand_e {
 enum ReadFlag {
     NA = 0, //NA means not applicable.
     ARP_FF,
-    ARP_FR_big_insert,
-    ARP_FR_small_insert,
+    ARP_LARGE_INSERT,
+    ARP_SMALL_INSERT,
     ARP_RF,
     ARP_RR,
     NORMAL_FR,

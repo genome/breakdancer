@@ -3,8 +3,8 @@
 FlagValues::FlagValues() {
     values_[NA] = 0;
     values_[ARP_FF] = 1;
-    values_[ARP_FR_big_insert] = 2;
-    values_[ARP_FR_small_insert] = 3;
+    values_[ARP_LARGE_INSERT] = 2;
+    values_[ARP_SMALL_INSERT] = 3;
     values_[ARP_RF] = 4;
     values_[ARP_RR] = 8;
     values_[NORMAL_FR] = 18;
@@ -15,8 +15,8 @@ FlagValues::FlagValues() {
 
     strings_[NA] = "NA";
     strings_[ARP_FF] = "ARP_FF";
-    strings_[ARP_FR_big_insert] = "ARP_FR_big_insert";
-    strings_[ARP_FR_small_insert] = "ARP_FR_small_insert";
+    strings_[ARP_LARGE_INSERT] = "ARP_LARGE_INSERT";
+    strings_[ARP_SMALL_INSERT] = "ARP_SMALL_INSERT";
     strings_[ARP_RF] = "ARP_RF";
     strings_[ARP_RR] = "ARP_RR";
     strings_[NORMAL_FR] = "NORMAL_FR";

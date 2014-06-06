@@ -43,11 +43,11 @@ ReadFlag pe_classify(
     // simultaneously (unless there is a coding error), so the order of the
     // tests doesn't really matter.
     if (large_insert) {
-        return ARP_FR_big_insert;
+        return ARP_LARGE_INSERT;
     }
 
     if (small_insert) {
-        return ARP_FR_small_insert;
+        return ARP_SMALL_INSERT;
     }
 
     // The pair is FR oriented, not too small and not too large. It is in fact

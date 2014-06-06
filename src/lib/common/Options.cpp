@@ -104,15 +104,15 @@ Options::Options(int argc, char** argv)
     // define the map SVtype
     if (Illumina_long_insert) {
         SVtype[ReadFlag::ARP_FF] = "INV";
-        SVtype[ReadFlag::ARP_FR_small_insert] = "INS";
+        SVtype[ReadFlag::ARP_SMALL_INSERT] = "INS";
         SVtype[ReadFlag::ARP_RF] = "DEL";
         SVtype[ReadFlag::ARP_RR] = "INV";
         SVtype[ReadFlag::ARP_CTX] = "CTX";
     }
     else {
         SVtype[ReadFlag::ARP_FF] = "INV";
-        SVtype[ReadFlag::ARP_FR_big_insert] = "DEL";
-        SVtype[ReadFlag::ARP_FR_small_insert] = "INS";
+        SVtype[ReadFlag::ARP_LARGE_INSERT] = "DEL";
+        SVtype[ReadFlag::ARP_SMALL_INSERT] = "INS";
         SVtype[ReadFlag::ARP_RF] = "ITX";
         SVtype[ReadFlag::ARP_RR] = "INV";
         SVtype[ReadFlag::ARP_CTX] = "CTX";

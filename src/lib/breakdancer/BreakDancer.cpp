@@ -195,7 +195,7 @@ void BreakDancer::push_read(Read &aln) {
             aln.set_bdflag(ReadFlag::NORMAL_RF);
         }
         if(aln.abs_isize() < lib_config.lowercutoff && aln.bdflag() == ReadFlag::NORMAL_RF) {
-            aln.set_bdflag(ReadFlag::ARP_FR_small_insert);
+            aln.set_bdflag(ReadFlag::ARP_SMALL_INSERT);
         }
     }
 

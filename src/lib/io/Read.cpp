@@ -61,7 +61,7 @@ ReadFlag determine_bdflag(bam1_t const* record) {
         flag = ARP_RF;
     }
     else {
-        flag = ARP_FR_big_insert;
+        flag = ARP_LARGE_INSERT;
     }
 
     return flag;
