@@ -35,9 +35,8 @@ public:
     bool either_unmapped() const;
     bool interchrom_pair() const;
 
+    bool has_sequence() const;
     std::string const& query_name() const;
-    std::string const& query_sequence() const;
-    std::string const& quality_string() const;
     std::string const& readgroup() const;
     ReadFlag const& bdflag() const;
     int sam_flag() const;
@@ -56,6 +55,9 @@ public:
     void to_fastq(std::ostream& stream) const;
     bool leftmost() const;
 
+private:
+    std::string const& query_sequence() const;
+    std::string const& quality_string() const;
 
 private: // Data
     int _sam_flag;
@@ -72,8 +74,6 @@ private: // Data
     int _mtid;
     std::string _query_name;
     std::string _readgroup;
-
-
 
     mutable std::string _query_sequence;
     mutable bool _seq_converted;
@@ -191,4 +191,9 @@ void Read::to_fastq(std::ostream& stream) const {
 inline
 std::string const& Read::readgroup() const {
     return _readgroup;
+}
+
+inline
+bool Read::has_sequence() const {
+    return !(query_sequence().empty() || quality_string().empty());
 }

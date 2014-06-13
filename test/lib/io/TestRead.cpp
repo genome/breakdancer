@@ -12,6 +12,13 @@ namespace {
         0x6a, 0x75, 0x6e, 0x6b, 0x0, 0x20, 0x0, 0x0, 0x0, 0x28, 0x27, 0x21,
         0x52, 0x47, 0x5a, 0x72, 0x67, 0x33, 0x0, 0x41, 0x4d, 0x43, 0x25
     };
+
+    std::string expected_fastq(
+        "@junk\n"
+        "CT\n"
+        "+\n"
+        "HB\n"
+        );
 }
 
 class TestRead : public ::testing::Test {
@@ -49,12 +56,11 @@ TEST_F(TestRead, query_name) {
     ASSERT_EQ(test_read->query_name(), "junk");
 }
 
-TEST_F(TestRead, query_sequence) {
-    ASSERT_EQ(test_read->query_sequence(), "CT");
-}
-
-TEST_F(TestRead, quality_string) {
-    ASSERT_EQ(test_read->quality_string(), "HB");
+TEST_F(TestRead, to_fastq) {
+    ASSERT_TRUE(test_read->has_sequence());
+    std::stringstream fq;
+    test_read->to_fastq(fq);
+    EXPECT_EQ(expected_fastq, fq.str());
 }
 
 TEST_F(TestRead, ori) {
@@ -90,17 +96,22 @@ TEST_F(TestRead, set_bdflag) {
 TEST_F(TestRead, copy_constructor) {
     Read test_copy(*test_read);
     ASSERT_EQ(test_copy.ori(), FWD);
-    ASSERT_EQ(test_copy.quality_string(), "HB");
-    ASSERT_EQ(test_copy.query_sequence(), "CT");
+
     ASSERT_EQ(test_copy.query_name(), "junk");
     ASSERT_EQ(test_copy.readgroup(), "rg3");
+
+    std::stringstream fq;
+    test_copy.to_fastq(fq);
+    EXPECT_EQ(expected_fastq, fq.str());
 }
 
 TEST_F(TestRead, assignment) {
     Read test_copy = *test_read;
     ASSERT_EQ(test_copy.ori(), FWD);
-    ASSERT_EQ(test_copy.quality_string(), "HB");
-    ASSERT_EQ(test_copy.query_sequence(), "CT");
     ASSERT_EQ(test_copy.query_name(), "junk");
     ASSERT_EQ(test_copy.readgroup(), "rg3");
+
+    std::stringstream fq;
+    test_copy.to_fastq(fq);
+    EXPECT_EQ(expected_fastq, fq.str());
 }

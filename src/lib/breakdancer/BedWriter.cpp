@@ -34,7 +34,7 @@ void BedWriter::write(SvBuilder const& sv) {
     typedef vector<Read>::const_iterator IterType;
     for(IterType i = sv.support_reads.begin(); i != sv.support_reads.end(); ++i) {
         Read const& y = *i;
-        if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != sv.flag)
+        if(!y.has_sequence() || y.bdflag() != sv.flag)
             continue;
         int aln_end = y.pos() - y.query_length() - 1;
         string color = y.ori() == FWD ? "0,0,255" : "255,0,0";

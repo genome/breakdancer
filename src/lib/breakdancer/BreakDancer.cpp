@@ -531,7 +531,7 @@ void BreakDancer::dump_fastq(
     for (vector<Read>::const_iterator i = support_reads.begin(); i != support_reads.end(); ++i) {
         Read const& y = *i;
 
-        if(y.query_sequence().empty() || y.quality_string().empty() || y.bdflag() != flag)
+        if(!y.has_sequence() || y.bdflag() != flag)
             continue;
 
         //Paradoxically, the first read seen is put in file 2 and the second in file 1
