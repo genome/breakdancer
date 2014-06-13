@@ -45,7 +45,6 @@ public:
     int const& pos() const;
     int const& query_length() const;
     strand_e const& ori() const;
-    int const& isize() const;
 
     void set_lib_index(std::size_t const& index);
     std::size_t const& lib_index() const;
@@ -65,7 +64,6 @@ private: // Data
     strand_e _ori;
     int _abs_isize;
     int _bdqual;
-    int _isize;
     int _pos;
     int _mpos;
     int _endPos;
@@ -124,11 +122,6 @@ int const& Read::query_length() const {
 inline
 strand_e const& Read::ori() const {
     return  _ori;
-}
-
-inline
-int const& Read::isize() const {
-    return _isize;
 }
 
 inline

@@ -209,7 +209,7 @@ void BreakDancer::push_read(Read &aln) {
     //normal_switch is set to 1 as soon as reads are accumulated for dumping to fastq??? Not sure on this. Happens later in this function
     //I suspect this is to include those reads in the fastq dump for assembly!
     if(aln.bdflag() == ReadFlag::NORMAL_FR || aln.bdflag() == ReadFlag::NORMAL_RF) {
-        if(_collecting_normal_reads && aln.isize() > 0){
+        if(_collecting_normal_reads && aln.leftmost()) {
             ++_nnormal_reads;
         }
         return;
