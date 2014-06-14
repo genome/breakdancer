@@ -187,6 +187,7 @@ void BreakDancer::push_read(Alignment &aln) {
     // Mate pair libraries have different expected orientations so adjust
     // Also, aligner COULD have marked (if it was maq) that reads had abnormally large or small insert sizes
     // Remark based on BD options
+    // FIXME: make mate-pair alignment classifier class
     if(_opts.Illumina_long_insert) {
         if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_RF) {
             aln.set_bdflag(ReadFlag::ARP_RF);
@@ -247,8 +248,6 @@ void BreakDancer::push_read(Alignment &aln) {
     _region_end_pos = aln.pos();
 
     _rdata.clear_region_accumulator();
-
-    return;
 }
 
 void BreakDancer::process_breakpoint() {

@@ -93,6 +93,7 @@ void BamSummary::_analyze_bam(
             continue;
         }
 
+        // FIXME: make mate-pair alignment classifier class
         if (opts.Illumina_long_insert) {
             if(aln.abs_isize() > lib_config.uppercutoff && aln.bdflag() == ReadFlag::NORMAL_RF) {
                 aln.set_bdflag(ReadFlag::ARP_RF);
