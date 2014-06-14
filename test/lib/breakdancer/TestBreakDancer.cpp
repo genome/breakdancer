@@ -1,7 +1,7 @@
 #include "breakdancer/BreakDancer.hpp"
 
 #include "breakdancer/ReadCountsByLib.hpp"
-#include "config/BamConfig.hpp"
+#include "io/BamConfig.hpp"
 
 #include <map>
 #include <memory>

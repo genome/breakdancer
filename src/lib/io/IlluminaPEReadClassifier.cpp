@@ -1,6 +1,6 @@
 #include "IlluminaPEReadClassifier.hpp"
 
-#include "config/BamConfig.hpp"
+#include "io/BamConfig.hpp"
 
 IlluminaPEReadClassifier::IlluminaPEReadClassifier(BamConfig const& bam_cfg)
     : bam_cfg_(bam_cfg)

@@ -1,4 +1,4 @@
-#include "config/BamConfig.hpp"
+#include "io/BamConfig.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <boost/assign/list_of.hpp>

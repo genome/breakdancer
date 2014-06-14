@@ -1,4 +1,4 @@
-#include "config/LibraryFlagDistribution.hpp"
+#include "io/LibraryFlagDistribution.hpp"
 
 #include <gtest/gtest.h>
 

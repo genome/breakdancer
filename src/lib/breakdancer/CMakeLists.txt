@@ -14,4 +14,4 @@ set(SOURCES
 )
 
 add_library(breakdancer ${SOURCES})
-target_link_libraries(breakdancer common io config ${Samtools_LIBRARIES} z m)
+target_link_libraries(breakdancer ${Samtools_LIBRARIES} z m)

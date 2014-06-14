@@ -2,7 +2,7 @@
 
 #include "SvBuilder.hpp"
 #include "common/Options.hpp"
-#include "config/LibraryInfo.hpp"
+#include "io/LibraryInfo.hpp"
 #include "io/Read.hpp"
 
 #include <sstream>

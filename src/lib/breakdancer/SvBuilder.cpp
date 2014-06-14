@@ -1,6 +1,6 @@
 #include "SvBuilder.hpp"
 #include "ReadCountsByLib.hpp"
-#include "config/LibraryInfo.hpp"
+#include "io/LibraryInfo.hpp"
 
 #include <boost/bind.hpp>
 #include <boost/range/algorithm/for_each.hpp>

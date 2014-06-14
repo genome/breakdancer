@@ -2,8 +2,8 @@
 
 #include "common/ConfigMap.hpp"
 #include "common/Options.hpp"
-#include "config/BamConfig.hpp"
-#include "config/LibraryFlagDistribution.hpp"
+#include "io/BamConfig.hpp"
+#include "io/LibraryFlagDistribution.hpp"
 #include "io/BamReaderBase.hpp"
 
 #include <boost/serialization/nvp.hpp>

@@ -1,4 +1,4 @@
-#include "config/BamConfigEntry.hpp"
+#include "io/BamConfigEntry.hpp"
 
 #include "common/Options.hpp"
 
