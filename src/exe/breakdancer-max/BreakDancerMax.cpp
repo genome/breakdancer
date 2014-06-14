@@ -35,7 +35,6 @@ using boost::shared_ptr;
 using namespace std;
 
 typedef SCORE_FLOAT_TYPE real_type;
-real_type _max_kahan_err = 0.0;
 
 // main function
 int main(int argc, char *argv[]) {

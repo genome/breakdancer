@@ -66,7 +66,6 @@ namespace {
             real_type tmp_a = log(cdf(complement(poisson, readcount))) - err;
             real_type tmp_b = logpvalue + tmp_a;
             err = (tmp_b - logpvalue) - tmp_a;
-            //_max_kahan_err = max(_max_kahan_err, err);
             logpvalue = tmp_b;
         }
 
@@ -217,7 +216,7 @@ void BreakDancer::push_read(Alignment &aln) {
         return;
     }
 
-    if(_collecting_normal_reads){
+    if(_collecting_normal_reads) {
         _ntotal_nucleotides += aln.query_length();
         _max_readlen = std::max(_max_readlen, aln.query_length());
     }
