@@ -8,7 +8,6 @@
 #include "io/BamReaderBase.hpp"
 #include "io/IAlignmentClassifier.hpp"
 #include "io/LibraryInfo.hpp"
-#include "io/RawBamEntry.hpp"
 
 #include <boost/array.hpp>
 #include <boost/bind.hpp>
@@ -130,7 +129,6 @@ BreakDancer::BreakDancer(
 
 
 void BreakDancer::run() {
-    RawBamEntry b;
     AlignmentSource src(
         _merged_reader,
         _read_classifier,

@@ -4,7 +4,6 @@
 #include "IAlignmentClassifier.hpp"
 
 #include "io/BamIo.hpp"
-#include "io/RawBamEntry.hpp"
 #include "io/Alignment.hpp"
 
 #include <iostream>
@@ -57,7 +56,6 @@ void BamSummary::_analyze_bam(
     size_t ref_len = 0;
     uint32_t read_count = 0;
 
-    RawBamEntry b;
     AlignmentSource src(
         reader,
         alignment_classifier,

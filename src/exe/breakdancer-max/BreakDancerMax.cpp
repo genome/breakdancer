@@ -34,8 +34,6 @@ using boost::shared_ptr;
 
 using namespace std;
 
-typedef SCORE_FLOAT_TYPE real_type;
-
 // main function
 int main(int argc, char *argv[]) {
     try {
