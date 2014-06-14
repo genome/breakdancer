@@ -6,19 +6,24 @@
 
 using namespace std;
 
-namespace {
-    int determine_bdqual(bam1_t const* record) {
-        // Breakdancer always takes the alternative mapping quality, if available
-        // it originally contained support for AQ, but the newer tag appears to be
-        // AM. Dropping support for AQ.
-        if(uint8_t* alt_qual = bam_aux_get(record, "AM")) {
-             return bam_aux2i(alt_qual);
-        }
-        else {
-            // if no alternative mapping quality, use core quality
-            return record->core.qual;
-        }
+
+int determine_bdqual(bam1_t const* record) {
+    // Breakdancer always takes the alternative mapping quality, if available
+    // it originally contained support for AQ, but the newer tag appears to be
+    // AM. Dropping support for AQ.
+    if(uint8_t* alt_qual = bam_aux_get(record, "AM")) {
+         return bam_aux2i(alt_qual);
     }
+    else {
+        // if no alternative mapping quality, use core quality
+        return record->core.qual;
+    }
+}
+
+std::string determine_read_group(bam1_t const* record) {
+    if(uint8_t* tmp = bam_aux_get(record, "RG"))
+        return bam_aux2Z(tmp);
+    return "";
 }
 
 //FIXME This is practically illegible and there are many flag definitions that need to be added
@@ -69,55 +74,39 @@ ReadFlag determine_bdflag(bam1_t const* record) {
 
 Read::Read(bam1_t const* record, bool seq_data)
     : _sam_flag(record->core.flag)
-    , _bdflag(determine_bdflag(record))
-    , _ori(record->core.flag & BAM_FREVERSE ? REV : FWD)
     , _abs_isize(abs(record->core.isize))
     , _bdqual(determine_bdqual(record))
     , _pos(record->core.pos)
     , _mpos(record->core.mpos)
-    , _endPos(bam_calend(&record->core, bam1_cigar(record)))
     , _query_length(record->core.l_qseq)
     , _tid(record->core.tid)
     , _mtid(record->core.mtid)
     , _query_name(bam1_qname(record))
-    , _seq_converted(false)
-    , _quality_converted(false)
     , _lib_index(~0)
+    , _bdflag(determine_bdflag(record))
 {
-    // FIXME: if *bam1_qual(record) = 0xff, there is no quality string?
-    // we should test for that
     if (seq_data) {
-        _bam_data.assign(bam1_seq(record),
-                bam1_qual(record) + record->core.l_qseq);
+        uint8_t* end = bam1_qual(record);
+        if (*end != 0xff)
+            end += record->core.l_qseq;
+        _bam_data.assign(bam1_seq(record), end);
     }
 
     if(uint8_t* tmp = bam_aux_get(record, "RG"))
         _readgroup = bam_aux2Z(tmp);
 }
 
-int Read::sam_flag() const {
-    return _sam_flag;
-}
-
-bool Read::proper_pair() const {
-    static int const mask = BAM_FPROPER_PAIR | BAM_FUNMAP | BAM_FMUNMAP | BAM_FPAIRED | BAM_FDUP;
-    static int const want = BAM_FPROPER_PAIR | BAM_FPAIRED;
-    return (_sam_flag & mask) == want;
-}
-
-bool Read::either_unmapped() const {
-    return _sam_flag & (BAM_FUNMAP | BAM_FMUNMAP);
-}
-
-int Read::pair_overlap() const {
-    if (leftmost() && _endPos > _mpos) {
-        return _endPos - _mpos;
+void Read::to_fastq(std::ostream& stream) const {
+    stream << "@" << query_name() << "\n";
+    for (int i = 0; i < _query_length; ++i) {
+        stream << char(bam_nt16_rev_table[bam1_seqi(_bam_data.data(), i)]);
     }
-    else {
-        return 0;
-    }
-}
 
-bool Read::interchrom_pair() const {
-    return _tid != _mtid;
+    stream << "\n+\n";
+    uint8_t const* qdata = _bam_data.data() + ((_query_length+1) >> 1);
+    if (qdata[0] != 0xff) {
+        for (int i = 0; i < _query_length; ++i)
+            stream << char(qdata[i] + 33);
+    }
+    stream << "\n";
 }

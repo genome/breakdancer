@@ -82,15 +82,6 @@ protected:
     boost::shared_ptr<BamReaderBase> reader;
 };
 
-TEST_F(TestBam, pair_overlap) {
-
-    // We only test for overlap on the first (leftmost) read
-    EXPECT_EQ(0, reads[0].pair_overlap());
-    EXPECT_EQ(1, reads[2].pair_overlap());
-    EXPECT_EQ(5, reads[4].pair_overlap());
-}
-
-
 TEST_F(TestBam, leftmost) {
 
     // We only test for overlap on the first (leftmost) read

@@ -92,26 +92,3 @@ TEST_F(TestRead, set_bdflag) {
     ASSERT_EQ(test_read->bdflag(), ReadFlag::ARP_CTX);
     test_read->set_bdflag(ReadFlag::NORMAL_FR);
 }
-
-TEST_F(TestRead, copy_constructor) {
-    Read test_copy(*test_read);
-    ASSERT_EQ(test_copy.ori(), FWD);
-
-    ASSERT_EQ(test_copy.query_name(), "junk");
-    ASSERT_EQ(test_copy.readgroup(), "rg3");
-
-    std::stringstream fq;
-    test_copy.to_fastq(fq);
-    EXPECT_EQ(expected_fastq, fq.str());
-}
-
-TEST_F(TestRead, assignment) {
-    Read test_copy = *test_read;
-    ASSERT_EQ(test_copy.ori(), FWD);
-    ASSERT_EQ(test_copy.query_name(), "junk");
-    ASSERT_EQ(test_copy.readgroup(), "rg3");
-
-    std::stringstream fq;
-    test_copy.to_fastq(fq);
-    EXPECT_EQ(expected_fastq, fq.str());
-}

@@ -133,11 +133,14 @@ BreakDancer::BreakDancer(
 void BreakDancer::run() {
     RawBamEntry b;
     while (_merged_reader.next(b) >= 0) {
-        Read aln(b, _opts.need_sequence_data());
+        std::string read_group = determine_read_group(b);
+        std::string const& lib = _lib_info._cfg.readgroup_library(read_group);
 
-        string const& lib = _lib_info._cfg.readgroup_library(aln.readgroup());
+
         if(!lib.empty()) {
-            aln.set_lib_index(_lib_info._cfg.library_config(lib).index);
+            std::size_t lib_index = _lib_info._cfg.library_config(lib).index;
+            Read aln(b, _opts.need_sequence_data());
+            aln.set_lib_index(lib_index);
             _read_classifier.set_flag(aln);
             push_read(aln);
         }
