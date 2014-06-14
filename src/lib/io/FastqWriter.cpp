@@ -41,6 +41,6 @@ ofstream& FastqWriter::open(std::string const& lib_name, bool is_read1) {
     return *stream;
 }
 
-void FastqWriter::write(std::string const& lib_name, bool is_read1, Read const& read) {
-    read.to_fastq(open(lib_name, is_read1));
+void FastqWriter::write(std::string const& lib_name, bool is_read1, Alignment const& aln) {
+    aln.to_fastq(open(lib_name, is_read1));
 }

@@ -23,7 +23,7 @@
 #include <vector>
 
 class BamReaderBase;
-class IReadClassifier;
+class IAlignmentClassifier;
 struct LibraryInfo;
 struct Options;
 
@@ -35,7 +35,7 @@ public:
     typedef ReadRegionData::ReadsToRegionsMap ReadsToRegionsMap;
 
     BreakDancer(
-        IReadClassifier const& read_classifier,
+        IAlignmentClassifier const& read_classifier,
         Options const& opts,
         LibraryInfo const& lib_info,
         ReadRegionData& read_regions,
@@ -43,7 +43,7 @@ public:
         int max_read_window_size
         );
 
-    void push_read(Read& aln);
+    void push_read(Alignment& aln);
     void build_connection();
 
 
@@ -55,7 +55,7 @@ public:
     void process_breakpoint();
     void process_final_region();
 
-    void dump_fastq(ReadFlag const& flag, std::vector<Read> const& support_reads);
+    void dump_fastq(ReadFlag const& flag, std::vector<Alignment> const& support_reads);
 
     void run();
 
@@ -72,7 +72,7 @@ private:
     }
 
 private: // data
-    IReadClassifier const& _read_classifier;
+    IAlignmentClassifier const& _read_classifier;
     Options const& _opts;
     LibraryInfo const& _lib_info;
     ReadRegionData& _rdata;

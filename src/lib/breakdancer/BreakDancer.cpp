@@ -4,7 +4,7 @@
 #include "common/Options.hpp"
 #include "common/Timer.hpp"
 #include "io/BamConfig.hpp"
-#include "io/IReadClassifier.hpp"
+#include "io/IAlignmentClassifier.hpp"
 #include "io/LibraryInfo.hpp"
 #include "io/BamReaderBase.hpp"
 #include "io/RawBamEntry.hpp"
@@ -86,7 +86,7 @@ namespace {
 }
 
 BreakDancer::BreakDancer(
-        IReadClassifier const& read_classifier,
+        IAlignmentClassifier const& read_classifier,
         Options const& opts,
         LibraryInfo const& lib_info,
         ReadRegionData& read_regions,
@@ -139,7 +139,7 @@ void BreakDancer::run() {
 
         if(!lib.empty()) {
             std::size_t lib_index = _lib_info._cfg.library_config(lib).index;
-            Read aln(b, _opts.need_sequence_data());
+            Alignment aln(b, _opts.need_sequence_data());
             aln.set_lib_index(lib_index);
             _read_classifier.set_flag(aln);
             push_read(aln);
@@ -149,7 +149,7 @@ void BreakDancer::run() {
 }
 
 
-void BreakDancer::push_read(Read &aln) {
+void BreakDancer::push_read(Alignment &aln) {
     LibraryConfig const& lib_config = _lib_info._cfg.library_config(aln.lib_index());
 
     //main analysis code
@@ -374,9 +374,9 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
     // This predicate takes a read and evaluates:
     //      read_pair.count(read.query_name()) == 0
     using boost::bind;
-    boost::function<bool(Read const&)> is_supportive = bind(
+    boost::function<bool(Alignment const&)> is_supportive = bind(
         std::equal_to<size_t>(), 0, bind(&SvBuilder::ObservedReads::count,
-            &svb.observed_reads, bind(&Read::query_name, _1)));
+            &svb.observed_reads, bind(&Alignment::query_name, _1)));
 
     for (vector<int>::const_iterator i = snodes.begin(); i != snodes.end(); ++i)
         _rdata.remove_reads_in_region_if(*i, is_supportive);
@@ -527,12 +527,12 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
 
 void BreakDancer::dump_fastq(
         ReadFlag const& flag,
-        std::vector<Read> const& support_reads
+        std::vector<Alignment> const& support_reads
         )
 {
     map<string,int> pairing;
-    for (vector<Read>::const_iterator i = support_reads.begin(); i != support_reads.end(); ++i) {
-        Read const& y = *i;
+    for (vector<Alignment>::const_iterator i = support_reads.begin(); i != support_reads.end(); ++i) {
+        Alignment const& y = *i;
 
         if(!y.has_sequence() || y.bdflag() != flag)
             continue;

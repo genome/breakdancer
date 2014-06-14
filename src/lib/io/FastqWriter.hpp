@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Read.hpp"
+#include "Alignment.hpp"
 
 #include <boost/unordered_map.hpp>
 #include <fstream>
@@ -15,10 +15,7 @@ public:
     ~FastqWriter();
 
     std::ofstream& open(std::string const& lib_name, bool is_read1);
-    void write(std::string const& lib_name, bool is_read1, Read const& read);
-
-private:
-    void write(std::string const& path, Read const& read);
+    void write(std::string const& lib_name, bool is_read1, Alignment const& aln);
 
 private:
     std::string _output_prefix;

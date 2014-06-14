@@ -19,11 +19,11 @@ ReadFlag determine_bdflag(bam1_t const* record);
 int determine_bdqual(bam1_t const* record);
 std::string determine_read_group(bam1_t const* record);
 
-class Read {
+class Alignment {
 public:
-    Read(bam1_t const* record, bool seq_data = true);
+    Alignment(bam1_t const* record, bool seq_data = true);
 
-    Read()
+    Alignment()
         : _sam_flag(0)
         , _abs_isize(0)
         , _bdqual(0)
@@ -73,95 +73,95 @@ private: // Data
 };
 
 inline
-bool Read::leftmost() const {
+bool Alignment::leftmost() const {
     return _pos < _mpos;
 }
 
 inline
-void Read::set_bdflag(ReadFlag const& new_flag) {
+void Alignment::set_bdflag(ReadFlag const& new_flag) {
     _bdflag = new_flag;
 }
 
 inline
-ReadFlag const& Read::bdflag() const {
+ReadFlag const& Alignment::bdflag() const {
     return _bdflag;
 }
 
 inline
-int Read::bdqual() const {
+int Alignment::bdqual() const {
     return _bdqual;
 }
 
 inline
-int Read::tid() const {
+int Alignment::tid() const {
     return _tid;
 }
 
 inline
-int Read::pos() const {
+int Alignment::pos() const {
     return _pos;
 }
 
 inline
-int Read::query_length() const {
+int Alignment::query_length() const {
     return _query_length;
 }
 
 inline
-strand_e Read::ori() const {
+strand_e Alignment::ori() const {
     return sam_flag() & BAM_FREVERSE ? REV : FWD;
 }
 
 inline
-int Read::abs_isize() const {
+int Alignment::abs_isize() const {
     return _abs_isize;
 }
 
 inline
-std::string const& Read::query_name() const {
+std::string const& Alignment::query_name() const {
     return _query_name;
 }
 
 inline
-void Read::set_lib_index(std::size_t const& index) {
+void Alignment::set_lib_index(std::size_t const& index) {
     _lib_index = index;
 }
 
 
 inline
-std::size_t const& Read::lib_index() const {
+std::size_t const& Alignment::lib_index() const {
     assert(_lib_index != ~0ull);
     return _lib_index;
 }
 
 inline
-std::string const& Read::readgroup() const {
+std::string const& Alignment::readgroup() const {
     return _readgroup;
 }
 
 inline
-bool Read::has_sequence() const {
+bool Alignment::has_sequence() const {
     return !_bam_data.empty() && query_length() > 0;
 }
 
 inline
-int Read::sam_flag() const {
+int Alignment::sam_flag() const {
     return _sam_flag;
 }
 
 inline
-bool Read::proper_pair() const {
+bool Alignment::proper_pair() const {
     static int const mask = BAM_FPROPER_PAIR | BAM_FUNMAP | BAM_FMUNMAP | BAM_FPAIRED | BAM_FDUP;
     static int const want = BAM_FPROPER_PAIR | BAM_FPAIRED;
     return (sam_flag() & mask) == want;
 }
 
 inline
-bool Read::either_unmapped() const {
+bool Alignment::either_unmapped() const {
     return sam_flag() & (BAM_FUNMAP | BAM_FMUNMAP);
 }
 
 inline
-bool Read::interchrom_pair() const {
+bool Alignment::interchrom_pair() const {
     return _tid != _mtid;
 }

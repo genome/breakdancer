@@ -88,7 +88,7 @@ BamSummary const& ConfigLoader::bam_summary() const {
     return *_bam_summary;
 }
 
-IReadClassifier const& ConfigLoader::read_classifier() const {
+IAlignmentClassifier const& ConfigLoader::read_classifier() const {
     create_read_classifier();
     return *_read_classifier;
 }

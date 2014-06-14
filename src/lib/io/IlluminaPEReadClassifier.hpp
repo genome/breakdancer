@@ -1,8 +1,8 @@
 #pragma once
 
-#include "IReadClassifier.hpp"
+#include "IAlignmentClassifier.hpp"
 
-class Read;
+class Alignment;
 class BamConfig;
 
 ReadFlag pe_classify(
@@ -14,11 +14,11 @@ ReadFlag pe_classify(
     bool small_insert);
 
 
-class IlluminaPEReadClassifier : public IReadClassifier {
+class IlluminaPEReadClassifier : public IAlignmentClassifier {
 public:
     explicit IlluminaPEReadClassifier(BamConfig const& bam_cfg);
 
-    ReadFlag classify(Read const& read) const;
+    ReadFlag classify(Alignment const& aln) const;
 
 private:
     BamConfig const& bam_cfg_;

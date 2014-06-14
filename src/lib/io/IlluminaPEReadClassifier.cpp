@@ -56,9 +56,9 @@ ReadFlag pe_classify(
 }
 
 
-ReadFlag IlluminaPEReadClassifier::classify(Read const& read) const {
-    int sam_flag = read.sam_flag();
-    LibraryConfig const& lib_config = bam_cfg_.library_config(read.lib_index());
+ReadFlag IlluminaPEReadClassifier::classify(Alignment const& aln) const {
+    int sam_flag = aln.sam_flag();
+    LibraryConfig const& lib_config = bam_cfg_.library_config(aln.lib_index());
 
     // These features can completely determine the outcome.
     // We'll treat them first to reduce the size of the truth table required
@@ -67,7 +67,7 @@ ReadFlag IlluminaPEReadClassifier::classify(Read const& read) const {
     bool paired = sam_flag & BAM_FPAIRED;
     bool unmapped = sam_flag & BAM_FUNMAP;
     bool mate_unmapped = sam_flag & BAM_FMUNMAP;
-    bool interchrom_pair = read.interchrom_pair();
+    bool interchrom_pair = aln.interchrom_pair();
 
     if(dup || !paired) {
         return NA;
@@ -86,10 +86,10 @@ ReadFlag IlluminaPEReadClassifier::classify(Read const& read) const {
     // These features can have interactions.
     bool read_reversed = sam_flag & BAM_FREVERSE;
     bool mate_reversed = sam_flag & BAM_FMREVERSE;
-    bool leftmost = read.leftmost();
-    bool proper_pair = read.proper_pair();
-    bool large_insert = read.abs_isize() > lib_config.uppercutoff;
-    bool small_insert = read.abs_isize() < lib_config.lowercutoff;
+    bool leftmost = aln.leftmost();
+    bool proper_pair = aln.proper_pair();
+    bool large_insert = aln.abs_isize() > lib_config.uppercutoff;
+    bool small_insert = aln.abs_isize() < lib_config.lowercutoff;
 
     return pe_classify(
         read_reversed,

@@ -1,4 +1,4 @@
-#include "Read.hpp"
+#include "Alignment.hpp"
 
 #include <cstdlib>
 #include <cstddef>
@@ -72,7 +72,7 @@ ReadFlag determine_bdflag(bam1_t const* record) {
     return flag;
 }
 
-Read::Read(bam1_t const* record, bool seq_data)
+Alignment::Alignment(bam1_t const* record, bool seq_data)
     : _sam_flag(record->core.flag)
     , _abs_isize(abs(record->core.isize))
     , _bdqual(determine_bdqual(record))
@@ -96,7 +96,7 @@ Read::Read(bam1_t const* record, bool seq_data)
         _readgroup = bam_aux2Z(tmp);
 }
 
-void Read::to_fastq(std::ostream& stream) const {
+void Alignment::to_fastq(std::ostream& stream) const {
     stream << "@" << query_name() << "\n";
     for (int i = 0; i < _query_length; ++i) {
         stream << char(bam_nt16_rev_table[bam1_seqi(_bam_data.data(), i)]);

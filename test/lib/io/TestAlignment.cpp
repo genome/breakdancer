@@ -1,4 +1,4 @@
-#include "io/Read.hpp"
+#include "io/Alignment.hpp"
 
 #include <map>
 #include <memory>
@@ -21,7 +21,7 @@ namespace {
         );
 }
 
-class TestRead : public ::testing::Test {
+class TestAlignment : public ::testing::Test {
     protected:
         void SetUp() {
             core.tid = 22;
@@ -40,54 +40,54 @@ class TestRead : public ::testing::Test {
             bam_record.data_len = 23;
             bam_record.m_data = 32;
             bam_record.data = &data[0];
-            test_read.reset(new Read(&bam_record));
+            test_read.reset(new Alignment(&bam_record));
         }
 
         bam1_core_t core;
         bam1_t bam_record;
-        auto_ptr<Read> test_read;
+        auto_ptr<Alignment> test_read;
 };
 
-TEST_F(TestRead, readgroup) {
+TEST_F(TestAlignment, readgroup) {
     ASSERT_EQ(test_read->readgroup(), "rg3");
 }
 
-TEST_F(TestRead, query_name) {
+TEST_F(TestAlignment, query_name) {
     ASSERT_EQ(test_read->query_name(), "junk");
 }
 
-TEST_F(TestRead, to_fastq) {
+TEST_F(TestAlignment, to_fastq) {
     ASSERT_TRUE(test_read->has_sequence());
     std::stringstream fq;
     test_read->to_fastq(fq);
     EXPECT_EQ(expected_fastq, fq.str());
 }
 
-TEST_F(TestRead, ori) {
+TEST_F(TestAlignment, ori) {
     ASSERT_EQ(test_read->ori(), FWD);
 }
 
-TEST_F(TestRead, tid) {
+TEST_F(TestAlignment, tid) {
     ASSERT_EQ(test_read->tid(), 22);
 }
 
-TEST_F(TestRead, pos) {
+TEST_F(TestAlignment, pos) {
     ASSERT_EQ(test_read->pos(), 29185299);
 }
 
-TEST_F(TestRead, query_length) {
+TEST_F(TestAlignment, query_length) {
     ASSERT_EQ(test_read->query_length(), 2);
 }
 
-TEST_F(TestRead, leftmost) {
+TEST_F(TestAlignment, leftmost) {
     ASSERT_FALSE(test_read->leftmost());
 }
 
-TEST_F(TestRead, abs_isize) {
+TEST_F(TestAlignment, abs_isize) {
     ASSERT_EQ(test_read->abs_isize(), 388);
 }
 
-TEST_F(TestRead, set_bdflag) {
+TEST_F(TestAlignment, set_bdflag) {
     test_read->set_bdflag(ReadFlag::ARP_CTX);
     ASSERT_EQ(test_read->bdflag(), ReadFlag::ARP_CTX);
     test_read->set_bdflag(ReadFlag::NORMAL_FR);

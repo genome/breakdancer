@@ -2,7 +2,7 @@
 
 #include "BasicRegion.hpp"
 #include "common/Options.hpp"
-#include "io/Read.hpp"
+#include "io/Alignment.hpp"
 
 #include <boost/array.hpp>
 
@@ -15,7 +15,7 @@ class ReadCountsByLib;
 
 class SvBuilder {
 public:
-    typedef std::map<std::string, Read> ObservedReads;
+    typedef std::map<std::string, Alignment> ObservedReads;
     typedef BasicRegion::iterator_range ReadsRange;
 
     SvBuilder(Options const& options, int n, BasicRegion const* regions[2],
@@ -40,7 +40,7 @@ public:
 
     ObservedReads observed_reads; //unpaired reads
 
-    std::vector<Read> support_reads; //reads supporting the SV
+    std::vector<Alignment> support_reads; //reads supporting the SV
 
     ReadFlag flag;
     boost::array<int, 2> chr;
@@ -59,7 +59,7 @@ private:
     Options const& _opts;
 
     ReadFlag choose_sv_flag();
-    void _observe_read(Read const& read, int region_idx);
+    void _observe_read(Alignment const& aln, int region_idx);
 
     static boost::array<int, 2> _init_zero() {
         static boost::array<int, 2> zeros = {{0, 0}};

@@ -12,6 +12,6 @@ add_unit_tests(TestIoLib
     TestBamReader.cpp
     TestIlluminaPEReadClassifier.cpp
     TestLibraryFlagDistribution.cpp
-    TestRead.cpp
+    TestAlignment.cpp
     TestRegionLimitedBamReader.cpp
 )

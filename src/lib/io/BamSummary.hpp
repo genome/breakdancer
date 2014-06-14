@@ -11,7 +11,7 @@
 
 #include <vector>
 
-class IReadClassifier;
+class IAlignmentClassifier;
 
 class BamSummary {
 public:
@@ -22,7 +22,7 @@ public:
     BamSummary(
         Options const& opts,
         BamConfig const& bam_config,
-        IReadClassifier const& read_classifier
+        IAlignmentClassifier const& alignment_classifier
         );
 
     uint32_t covered_reference_length() const;
@@ -39,11 +39,11 @@ private:
         Options const& opts,
         BamConfig const& bam_confg,
         BamReaderBase& reads,
-        IReadClassifier const& read_classifier);
+        IAlignmentClassifier const& alignment_classifier);
 
     void _analyze_bams(Options const& opts,
         BamConfig const& bam_config,
-        IReadClassifier const& read_classifier);
+        IAlignmentClassifier const& alignment_classifier);
 
 private:
     template<typename Archive>

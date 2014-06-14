@@ -1,6 +1,8 @@
 project(breakdancer)
 
 set(SOURCES
+    Alignment.cpp
+    Alignment.hpp
     AlignmentFilter.hpp
     BamConfig.cpp
     BamConfig.hpp
@@ -20,7 +22,7 @@ set(SOURCES
     ConfigLoader.hpp
     FastqWriter.cpp
     FastqWriter.hpp
-    IReadClassifier.hpp
+    IAlignmentClassifier.hpp
     IlluminaPEReadClassifier.cpp
     IlluminaPEReadClassifier.hpp
     LibraryConfig.hpp
@@ -28,8 +30,6 @@ set(SOURCES
     LibraryFlagDistribution.hpp
     LibraryInfo.hpp
     RawBamEntry.hpp
-    Read.cpp
-    Read.hpp
     RegionLimitedBamReader.hpp
 )
 

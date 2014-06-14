@@ -1,10 +1,10 @@
 #include "BamSummary.hpp"
 
-#include "IReadClassifier.hpp"
+#include "IAlignmentClassifier.hpp"
 
 #include "io/BamIo.hpp"
 #include "io/RawBamEntry.hpp"
-#include "io/Read.hpp"
+#include "io/Alignment.hpp"
 
 #include <iostream>
 
@@ -19,13 +19,13 @@ BamSummary::BamSummary()
 BamSummary::BamSummary(
         Options const& opts,
         BamConfig const& bam_config,
-        IReadClassifier const& read_classifier
+        IAlignmentClassifier const& alignment_classifier
         )
     : _covered_ref_len(0)
     , _library_flag_distributions(bam_config.num_libs())
     , _library_sequence_coverages(_library_flag_distributions.size())
 {
-    _analyze_bams(opts, bam_config, read_classifier);
+    _analyze_bams(opts, bam_config, alignment_classifier);
 }
 
 uint32_t BamSummary::covered_reference_length() const {
@@ -48,7 +48,7 @@ void BamSummary::_analyze_bam(
         Options const& opts,
         BamConfig const& bam_config,
         BamReaderBase& reader,
-        IReadClassifier const& read_classifier)
+        IAlignmentClassifier const& alignment_classifier)
 {
     int last_pos = 0;
     int last_tid = -1;
@@ -58,14 +58,14 @@ void BamSummary::_analyze_bam(
 
     RawBamEntry b;
     while (reader.next(b) > 0) {
-        Read aln(b, false);
+        Alignment aln(b, false);
 
         string const& lib = bam_config.readgroup_library(aln.readgroup());
         if (lib.empty())
             continue;
 
         aln.set_lib_index(bam_config.library_config(lib).index);
-        read_classifier.set_flag(aln);
+        alignment_classifier.set_flag(aln);
 
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
@@ -128,12 +128,12 @@ void BamSummary::_analyze_bam(
 void BamSummary::_analyze_bams(
         Options const& opts,
         BamConfig const& bam_config,
-        IReadClassifier const& read_classifier)
+        IAlignmentClassifier const& alignment_classifier)
 {
     std::vector<std::string> bam_files = bam_config.bam_files();
     for(std::vector<std::string>::const_iterator iter = bam_files.begin(); iter != bam_files.end(); ++iter) {
         auto_ptr<BamReaderBase> reader(openBam(*iter, opts.chr));
-        _analyze_bam(opts, bam_config, *reader, read_classifier);
+        _analyze_bam(opts, bam_config, *reader, alignment_classifier);
     }
 
     for (size_t i = 0; i < _library_flag_distributions.size(); ++i) {

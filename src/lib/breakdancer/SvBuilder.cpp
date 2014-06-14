@@ -98,24 +98,20 @@ ReadFlag SvBuilder::choose_sv_flag() {
     return flag;
 }
 
-void SvBuilder::_observe_read(Read const& read, int region_idx) {
+void SvBuilder::_observe_read(Alignment const& aln, int region_idx) {
     typedef ObservedReads::iterator IterType;
-    pair<IterType, bool> inserted = observed_reads.insert(make_pair(read.query_name(), read));
-    if(inserted.second) {
-        // This is the first time we have seen a read with this name.
-        observed_reads[read.query_name()] = read;
-    }
-    else {
+    pair<IterType, bool> inserted = observed_reads.insert(make_pair(aln.query_name(), aln));
+    if(!inserted.second) {
         // We just found an existing read's mate. Good for him/her.
-        ReadFlag bdflag = read.bdflag();
-        size_t const& index = read.lib_index();
+        ReadFlag bdflag = aln.bdflag();
+        size_t const& index = aln.lib_index();
         ++flag_counts[bdflag];
         ++type_library_readcount[bdflag][index];
-        type_library_meanspan[bdflag][index] += read.abs_isize();
+        type_library_meanspan[bdflag][index] += aln.abs_isize();
 
         ++num_pairs;
-        reads_to_free.push_back(read.query_name());
-        support_reads.push_back(read);
+        reads_to_free.push_back(aln.query_name());
+        support_reads.push_back(aln);
         support_reads.push_back(inserted.first->second);
         observed_reads.erase(inserted.first);
     }

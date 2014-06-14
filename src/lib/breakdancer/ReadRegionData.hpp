@@ -4,7 +4,7 @@
 #include "ReadCountsByLib.hpp"
 #include "common/Graph.hpp"
 #include "common/Options.hpp"
-#include "io/Read.hpp"
+#include "io/Alignment.hpp"
 
 #include <boost/function.hpp>
 #include <boost/range/algorithm/remove_copy_if.hpp>
@@ -20,7 +20,7 @@
 
 class ReadRegionData {
 public:
-    typedef Read ReadType;
+    typedef Alignment ReadType;
     typedef BasicRegion::ReadVector ReadVector;
     typedef BasicRegion::const_read_iterator const_read_iterator;
     typedef BasicRegion::iterator_range read_iter_range;

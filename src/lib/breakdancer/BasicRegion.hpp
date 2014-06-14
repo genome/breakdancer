@@ -1,6 +1,6 @@
 #pragma once
 
-#include "io/Read.hpp"
+#include "io/Alignment.hpp"
 
 #include <boost/function.hpp>
 #include <boost/iterator/filter_iterator.hpp>
@@ -10,7 +10,7 @@
 
 class BasicRegion {
 public:
-    typedef Read ReadType;
+    typedef Alignment ReadType;
     typedef std::vector<ReadType> ReadVector;
     typedef boost::filter_iterator<
             boost::function<bool(ReadType const&)>,
