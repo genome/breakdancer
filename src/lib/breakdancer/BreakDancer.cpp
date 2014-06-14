@@ -3,10 +3,11 @@
 #include "SvBuilder.hpp"
 #include "common/Options.hpp"
 #include "common/Timer.hpp"
+#include "io/AlignmentSource.hpp"
 #include "io/BamConfig.hpp"
+#include "io/BamReaderBase.hpp"
 #include "io/IAlignmentClassifier.hpp"
 #include "io/LibraryInfo.hpp"
-#include "io/BamReaderBase.hpp"
 #include "io/RawBamEntry.hpp"
 
 #include <boost/array.hpp>
@@ -110,7 +111,6 @@ BreakDancer::BreakDancer(
     , _region_start_pos(-1)
     , _region_end_tid(-1)
     , _region_end_pos(-1)
-
 {
     if (!_opts.prefix_fastq.empty()) {
         _fastq_writer.reset(new FastqWriter(opts.prefix_fastq));
@@ -132,19 +132,18 @@ BreakDancer::BreakDancer(
 
 void BreakDancer::run() {
     RawBamEntry b;
-    while (_merged_reader.next(b) >= 0) {
-        std::string read_group = determine_read_group(b);
-        std::string const& lib = _lib_info._cfg.readgroup_library(read_group);
+    AlignmentSource src(
+        _merged_reader,
+        _read_classifier,
+        _lib_info._cfg,
+        _opts.need_sequence_data()
+        );
 
-
-        if(!lib.empty()) {
-            std::size_t lib_index = _lib_info._cfg.library_config(lib).index;
-            Alignment aln(b, _opts.need_sequence_data());
-            aln.set_lib_index(lib_index);
-            _read_classifier.set_flag(aln);
-            push_read(aln);
-        }
+    Alignment aln;
+    while (src.next(aln)) {
+        push_read(aln);
     }
+
     process_final_region();
 }
 

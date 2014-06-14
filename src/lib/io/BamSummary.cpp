@@ -1,5 +1,6 @@
 #include "BamSummary.hpp"
 
+#include "AlignmentSource.hpp"
 #include "IAlignmentClassifier.hpp"
 
 #include "io/BamIo.hpp"
@@ -57,23 +58,24 @@ void BamSummary::_analyze_bam(
     uint32_t read_count = 0;
 
     RawBamEntry b;
-    while (reader.next(b) > 0) {
-        Alignment aln(b, false);
+    AlignmentSource src(
+        reader,
+        alignment_classifier,
+        bam_config,
+        false // do not need sequence data
+        );
 
-        string const& lib = bam_config.readgroup_library(aln.readgroup());
-        if (lib.empty())
-            continue;
+    Alignment aln;
 
-        aln.set_lib_index(bam_config.library_config(lib).index);
-        alignment_classifier.set_flag(aln);
-
+    // FIXME: test with no read groups
+    while (src.next(aln)) {
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
 
         last_pos = aln.pos();
         last_tid = aln.tid();
 
-        LibraryConfig const& lib_config = bam_config.library_config(lib);
+        LibraryConfig const& lib_config = bam_config.library_config(aln.lib_index());
         int min_mapq = lib_config.min_mapping_quality < 0 ?
                 opts.min_map_qual : lib_config.min_mapping_quality;
 
@@ -159,5 +161,3 @@ bool BamSummary::operator==(BamSummary const& rhs) const {
 bool BamSummary::operator!=(BamSummary const& rhs) const {
     return !(*this == rhs);
 }
-
-
