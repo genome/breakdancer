@@ -166,15 +166,13 @@ void BreakDancer::push_read(Alignment &aln) {
     // region between last and next begin
     // Store readdepth in nread_ROI by bam name (no per library calc) or by library
     // I believe this only counts normally mapped reads
-    // FIXME Weird to me that this one uses opts.min_map_qual directly
-    // seems like it should use min_mapq from above. Could fix now that I've moved it
     if (aln.proper_pair()) {
         string const& key = _opts.CN_lib == 1 ? lib_config.name : lib_config.bam_file;
         _rdata.incr_normal_read_count(key);
     }
 
 
-    if ((_opts.transchr_rearrange && aln.interchrom_pair()) || aln.either_unmapped()) {
+    if ((_opts.transchr_rearrange && !aln.interchrom_pair()) || aln.either_unmapped()) {
         return;
     }
 
