@@ -49,11 +49,11 @@ class TestAlignment : public ::testing::Test {
 };
 
 TEST_F(TestAlignment, readgroup) {
-    ASSERT_EQ(test_read->readgroup(), "rg3");
+    ASSERT_EQ("rg3", determine_read_group(&bam_record));
 }
 
 TEST_F(TestAlignment, query_name) {
-    ASSERT_EQ(test_read->query_name(), "junk");
+    ASSERT_EQ("junk", test_read->query_name());
 }
 
 TEST_F(TestAlignment, to_fastq) {
@@ -68,15 +68,15 @@ TEST_F(TestAlignment, ori) {
 }
 
 TEST_F(TestAlignment, tid) {
-    ASSERT_EQ(test_read->tid(), 22);
+    ASSERT_EQ(22, test_read->tid());
 }
 
 TEST_F(TestAlignment, pos) {
-    ASSERT_EQ(test_read->pos(), 29185299);
+    ASSERT_EQ(29185299, test_read->pos());
 }
 
 TEST_F(TestAlignment, query_length) {
-    ASSERT_EQ(test_read->query_length(), 2);
+    ASSERT_EQ(2, test_read->query_length());
 }
 
 TEST_F(TestAlignment, leftmost) {
@@ -84,11 +84,12 @@ TEST_F(TestAlignment, leftmost) {
 }
 
 TEST_F(TestAlignment, abs_isize) {
-    ASSERT_EQ(test_read->abs_isize(), 388);
+    ASSERT_EQ(388, test_read->abs_isize());
 }
 
 TEST_F(TestAlignment, set_bdflag) {
     test_read->set_bdflag(ReadFlag::ARP_CTX);
-    ASSERT_EQ(test_read->bdflag(), ReadFlag::ARP_CTX);
+    ASSERT_EQ(ReadFlag::ARP_CTX, test_read->bdflag());
     test_read->set_bdflag(ReadFlag::NORMAL_FR);
+    ASSERT_EQ(ReadFlag::NORMAL_FR, test_read->bdflag());
 }
