@@ -31,7 +31,6 @@ public:
     bool has_sequence() const;
 
     std::string const& query_name() const;
-    std::string const& readgroup() const;
 
     ReadFlag bdflag() const;
     uint16_t sam_flag() const;

@@ -63,5 +63,6 @@ void BamSummary::serialize(Archive& arch, const unsigned int version) {
         & bs::make_nvp("coveredReferenceLength", _covered_ref_len)
         & bs::make_nvp("readCountPerBam", _read_count_per_bam)
         & bs::make_nvp("libraryFlagDistributions", _library_flag_distributions)
+        & bs::make_nvp("librarySequenceCoverages", _library_sequence_coverages)
         ;
 }
