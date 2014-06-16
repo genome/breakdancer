@@ -31,9 +31,8 @@ void BedWriter::write(SvBuilder const& sv) {
         << seq_name << " " << sv.pos[0] << " "
         << sv.sv_type() << " " << sv.diffspan << "\"\tuseScore=0\n";
 
-    typedef vector<Alignment>::const_iterator IterType;
-    for(IterType i = sv.support_reads.begin(); i != sv.support_reads.end(); ++i) {
-        Alignment const& y = *i;
+    for(auto i = sv.support_reads.begin(); i != sv.support_reads.end(); ++i) {
+        Alignment const& y = **i;
         if(!y.has_sequence() || y.bdflag() != sv.flag)
             continue;
         int aln_end = y.pos() - y.query_length() - 1;

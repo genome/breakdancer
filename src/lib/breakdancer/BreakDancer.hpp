@@ -43,7 +43,7 @@ public:
         int max_read_window_size
         );
 
-    void push_read(Alignment& aln);
+    void push_read(Alignment::Ptr const& aln);
     void build_connection();
 
 
@@ -55,7 +55,7 @@ public:
     void process_breakpoint();
     void process_final_region();
 
-    void dump_fastq(ReadFlag const& flag, std::vector<Alignment> const& support_reads);
+    void dump_fastq(ReadFlag const& flag, std::vector<Alignment::Ptr> const& support_reads);
 
     void run();
 

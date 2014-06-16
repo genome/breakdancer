@@ -10,7 +10,7 @@
 
 class BasicRegion {
 public:
-    typedef Alignment ReadType;
+    typedef Alignment::Ptr ReadType;
     typedef std::vector<ReadType> ReadVector;
     typedef boost::filter_iterator<
             boost::function<bool(ReadType const&)>,

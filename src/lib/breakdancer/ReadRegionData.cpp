@@ -54,7 +54,7 @@ void ReadRegionData::summary(std::ostream& out) const {
             if (num_reads) {
                 out << "\tfirst " << num_reads << " read names:\n";
                 for (size_t j = 0; j < num_reads; ++j) {
-                    out << "\t\t" << r.reads()[j].query_name() << "\n";
+                    out << "\t\t" << r.reads()[j]->query_name() << "\n";
                 }
             }
         }
@@ -97,15 +97,16 @@ size_t ReadRegionData::add_region(int start_tid, int start_pos, int end_pos, int
 
     // This adds the region id to an array of region ids
     for(ReadVector::const_iterator iter = reads.begin(); iter != reads.end(); ++iter) {
-        if (iter->bdflag() != ReadFlag::ARP_CTX)
+        auto const& aln = **iter;
+        if (aln.bdflag() != ReadFlag::ARP_CTX)
             ++non_ctx_reads;
 
-        if (iter->ori() == FWD)
+        if (aln.ori() == FWD)
             ++_regions.back()->fwd_read_count;
         else
             ++_regions.back()->rev_read_count;
 
-        std::vector<int>& regions = _read_regions[iter->query_name()];
+        std::vector<int>& regions = _read_regions[aln.query_name()];
         regions.push_back(region_idx);
         if (regions.size() == 2) {
             _persistent_graph.increment_edge_weight(regions[0], regions[1]);
@@ -128,10 +129,11 @@ bool ReadRegionData::is_region_final(size_t region_idx) const {
 
     ReadVector const& v = _reads_in_region(region_idx);
     for (ReadVector::const_iterator i = v.begin(); i != v.end(); ++i) {
-        if (!_opts.chr.empty() && i->bdflag() == ReadFlag::ARP_CTX)
+        auto const& aln = **i;
+        if (!_opts.chr.empty() && aln.bdflag() == ReadFlag::ARP_CTX)
             continue;
 
-        ReadsToRegionsMap::const_iterator found = _read_regions.find(i->query_name());
+        ReadsToRegionsMap::const_iterator found = _read_regions.find(aln.query_name());
         if (found == _read_regions.end() || found->second.size() != 2)
             return false;
     }
@@ -153,7 +155,7 @@ void ReadRegionData::clear_region(size_t region_idx) {
 
     BasicRegion::ReadVector const& reads = _reads_in_region(region_idx);
     for(ReadVector::const_iterator i = reads.begin(); i != reads.end(); ++i) {
-        ReadsToRegionsMap::iterator found = _read_regions.find(i->query_name());
+        ReadsToRegionsMap::iterator found = _read_regions.find((*i)->query_name());
         if (found != _read_regions.end()) {
             std::vector<int> new_regions;
             std::vector<int>& old_regions(found->second);
@@ -180,7 +182,7 @@ void ReadRegionData::collapse_accumulated_data_into_last_region(ReadVector const
 
     // remove any reads that are linking the last region with this new, merged in region
     for(ReadVector::const_iterator iter = reads.begin(); iter != reads.end(); ++iter) {
-        std::string const& read_name = iter->query_name();
+        std::string const& read_name = (*iter)->query_name();
 /*
         ReadsToRegionsMap::const_iterator found = _read_regions.find(read_name);
         if (found != _read_regions.end()) {

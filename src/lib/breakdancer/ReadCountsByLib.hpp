@@ -2,11 +2,10 @@
 
 #include "common/utility.hpp"
 
-#include <stdint.h>
-
-#include <iostream>
 #include <functional>
+#include <iostream>
 #include <map>
+#include <stdint.h>
 #include <string>
 
 class ReadCountsByLib {

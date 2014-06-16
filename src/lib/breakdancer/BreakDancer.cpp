@@ -136,8 +136,7 @@ void BreakDancer::run() {
         _opts.need_sequence_data()
         );
 
-    Alignment aln;
-    while (src.next(aln)) {
+    while (Alignment::Ptr aln = src.next()) {
         push_read(aln);
     }
 
@@ -145,14 +144,10 @@ void BreakDancer::run() {
 }
 
 
-void BreakDancer::push_read(Alignment &aln) {
+void BreakDancer::push_read(Alignment::Ptr const& alnptr) {
+    auto& aln = *alnptr;
+
     LibraryConfig const& lib_config = _lib_info._cfg.library_config(aln.lib_index());
-
-    //main analysis code
-    if(aln.bdflag() == ReadFlag::NA)
-        return; // return fragment reads and other bad ones
-
-    // min_mapping_quality is part of the bam2cfg input. I infer it is a perlibrary mapping quality cutoff
 
     // XXX: this value can be missing in the config (indicated by a value of -1),
     // in which case we'll wan't to use the default from the cmdline rather than
@@ -160,8 +155,16 @@ void BreakDancer::push_read(Alignment &aln) {
     int min_mapq = lib_config.min_mapping_quality < 0 ?
             _opts.min_map_qual : lib_config.min_mapping_quality;
 
-    if (aln.bdqual() <= min_mapq)
+    // Ignore fragments, poorly mapped reads, etc.
+    if (aln.bdflag() == ReadFlag::NA || aln.either_unmapped() || aln.bdqual() <= min_mapq
+        // ignore CTX when not in ctx mode
+        || (_opts.transchr_rearrange && !aln.interchrom_pair())
+        // ignore reads mapped too distantly on the same chromosome
+        || (aln.bdflag() != ReadFlag::ARP_CTX && aln.abs_isize() > _opts.max_sd)
+        )
+    {
         return;
+    }
 
     // region between last and next begin
     // Store readdepth in nread_ROI by bam name (no per library calc) or by library
@@ -169,16 +172,6 @@ void BreakDancer::push_read(Alignment &aln) {
     if (aln.proper_pair()) {
         string const& key = _opts.CN_lib == 1 ? lib_config.name : lib_config.bam_file;
         _rdata.incr_normal_read_count(key);
-    }
-
-
-    if ((_opts.transchr_rearrange && !aln.interchrom_pair()) || aln.either_unmapped()) {
-        return;
-    }
-
-    if(aln.bdflag() != ReadFlag::ARP_CTX && aln.abs_isize() > _opts.max_sd) {
-        // skip read pairs mapped too distantly on the same chromosome
-        return;
     }
 
     // for long insert
@@ -237,7 +230,7 @@ void BreakDancer::push_read(Alignment &aln) {
         _rdata.clear_flanking_region_accumulator();
     }
 
-    reads_in_current_region.push_back(aln); // store each read in the region_sequence buffer
+    reads_in_current_region.push_back(alnptr); // store each read in the region_sequence buffer
 
     //If we just added the first read, flip the flag that lets us collect all reads
     if(reads_in_current_region.size() == 1)
@@ -367,7 +360,7 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
     // This predicate takes a read and evaluates:
     //      read_pair.count(read.query_name()) == 0
     using boost::bind;
-    boost::function<bool(Alignment const&)> is_supportive = bind(
+    boost::function<bool(Alignment::Ptr const&)> is_supportive = bind(
         std::equal_to<size_t>(), 0, bind(&SvBuilder::ObservedReads::count,
             &svb.observed_reads, bind(&Alignment::query_name, _1)));
 
@@ -520,12 +513,12 @@ void BreakDancer::process_sv(std::vector<int> const& snodes) {
 
 void BreakDancer::dump_fastq(
         ReadFlag const& flag,
-        std::vector<Alignment> const& support_reads
+        std::vector<Alignment::Ptr> const& support_reads
         )
 {
     map<string,int> pairing;
-    for (vector<Alignment>::const_iterator i = support_reads.begin(); i != support_reads.end(); ++i) {
-        Alignment const& y = *i;
+    for (auto i = support_reads.begin(); i != support_reads.end(); ++i) {
+        Alignment const& y = **i;
 
         if(!y.has_sequence() || y.bdflag() != flag)
             continue;
