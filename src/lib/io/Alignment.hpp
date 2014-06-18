@@ -2,6 +2,9 @@
 
 #include "common/ReadFlags.hpp"
 
+#include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
+
 #include <cassert>
 #include <ostream>
 #include <stdint.h>
@@ -18,8 +21,10 @@ struct LibraryInfo;
 uint8_t determine_bdqual(bam1_t const* record);
 std::string determine_read_group(bam1_t const* record);
 
-class Alignment {
+class Alignment : public boost::noncopyable {
 public:
+    typedef boost::shared_ptr<Alignment> Ptr;
+
     Alignment();
     Alignment(bam1_t const* record, bool seq_data = true);
 

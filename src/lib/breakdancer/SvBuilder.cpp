@@ -98,19 +98,19 @@ ReadFlag SvBuilder::choose_sv_flag() {
     return flag;
 }
 
-void SvBuilder::_observe_read(Alignment const& aln, int region_idx) {
+void SvBuilder::_observe_read(Alignment::Ptr const& aln, int region_idx) {
     typedef ObservedReads::iterator IterType;
-    pair<IterType, bool> inserted = observed_reads.insert(make_pair(aln.query_name(), aln));
+    pair<IterType, bool> inserted = observed_reads.insert(make_pair(aln->query_name(), aln));
     if(!inserted.second) {
         // We just found an existing read's mate. Good for him/her.
-        ReadFlag bdflag = aln.bdflag();
-        size_t const& index = aln.lib_index();
+        ReadFlag bdflag = aln->bdflag();
+        size_t const& index = aln->lib_index();
         ++flag_counts[bdflag];
         ++type_library_readcount[bdflag][index];
-        type_library_meanspan[bdflag][index] += aln.abs_isize();
+        type_library_meanspan[bdflag][index] += aln->abs_isize();
 
         ++num_pairs;
-        reads_to_free.push_back(aln.query_name());
+        reads_to_free.push_back(aln->query_name());
         support_reads.push_back(aln);
         support_reads.push_back(inserted.first->second);
         observed_reads.erase(inserted.first);

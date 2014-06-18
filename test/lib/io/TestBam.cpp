@@ -63,7 +63,7 @@ public:
 
         boost::shared_ptr<RawBamEntry> entry(new RawBamEntry);
         while (reader->next(*entry) > 0) {
-            reads.push_back(Alignment(*entry));
+            reads.emplace_back(new Alignment(*entry));
             rawEntries.push_back(entry);
             entry.reset(new RawBamEntry);
         }
@@ -77,7 +77,7 @@ public:
 
 protected:
     std::string samPath_;
-    std::vector<Alignment> reads;
+    std::vector<Alignment::Ptr> reads;
     std::vector<boost::shared_ptr<RawBamEntry> > rawEntries;
     boost::shared_ptr<BamReaderBase> reader;
 };
@@ -85,12 +85,12 @@ protected:
 TEST_F(TestBam, leftmost) {
 
     // We only test for overlap on the first (leftmost) read
-    EXPECT_TRUE (reads[0].leftmost());
-    EXPECT_FALSE(reads[1].leftmost());
-    EXPECT_TRUE (reads[2].leftmost());
-    EXPECT_FALSE(reads[3].leftmost());
-    EXPECT_TRUE (reads[4].leftmost());
-    EXPECT_FALSE(reads[5].leftmost());
+    EXPECT_TRUE (reads[0]->leftmost());
+    EXPECT_FALSE(reads[1]->leftmost());
+    EXPECT_TRUE (reads[2]->leftmost());
+    EXPECT_FALSE(reads[3]->leftmost());
+    EXPECT_TRUE (reads[4]->leftmost());
+    EXPECT_FALSE(reads[5]->leftmost());
 }
 
 

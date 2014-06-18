@@ -24,6 +24,7 @@ public:
     {
     }
 
+/*
     bool next(Alignment& aln) {
         if (bam_reader_.next(record_) <= 0)
             return false;
@@ -41,6 +42,26 @@ public:
         }
 
         return true;
+    }
+*/
+
+    Alignment::Ptr next() {
+        if (bam_reader_.next(record_) <= 0)
+            return Alignment::Ptr();
+
+        // FIXME: construct alignment more directly rather than using partial
+        // construction then setters
+        Alignment::Ptr aln(new Alignment(record_, seq_data_));
+
+        std::string read_group = determine_read_group(record_);
+        std::string const& lib = bam_config_.readgroup_library(read_group);
+        if(!lib.empty()) {
+            std::size_t lib_index = bam_config_.library_config(lib).index;
+            aln->set_lib_index(lib_index);
+            alignment_classifier_.set_flag(*aln);
+        }
+
+        return aln;
     }
 
 private:

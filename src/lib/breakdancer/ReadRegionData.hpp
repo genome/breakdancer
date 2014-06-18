@@ -20,7 +20,7 @@
 
 class ReadRegionData {
 public:
-    typedef Alignment ReadType;
+    typedef Alignment::Ptr ReadType;
     typedef BasicRegion::ReadVector ReadVector;
     typedef BasicRegion::const_read_iterator const_read_iterator;
     typedef BasicRegion::iterator_range read_iter_range;
@@ -97,7 +97,7 @@ private:
         size_t rv = 0;
         ReadVector const& v = _reads_in_region(region_idx);
         for (ReadVector::const_iterator i = v.begin(); i != v.end(); ++i) {
-            ReadsToRegionsMap::const_iterator found = _read_regions.find(i->query_name());
+            ReadsToRegionsMap::const_iterator found = _read_regions.find((*i)->query_name());
             if (found == _read_regions.end() || found->second.size() != 2)
                 ++rv;
         }
@@ -184,5 +184,5 @@ void ReadRegionData::erase_read(std::string const& read_name) {
 
 inline
 bool ReadRegionData::read_exists(ReadType const& read) const {
-    return _read_regions.find(read.query_name()) != _read_regions.end();
+    return _read_regions.find(read->query_name()) != _read_regions.end();
 }

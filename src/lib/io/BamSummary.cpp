@@ -63,10 +63,10 @@ void BamSummary::_analyze_bam(
         false // do not need sequence data
         );
 
-    Alignment aln;
 
     // FIXME: test with no read groups
-    while (src.next(aln)) {
+    while (Alignment::Ptr alnptr = src.next()) {
+        auto& aln = *alnptr;
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
 
