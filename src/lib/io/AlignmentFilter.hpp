@@ -4,6 +4,10 @@
 
 #include <bam.h>
 
+#ifndef BAM_FSUPPLEMENTAL
+# define BAM_FSUPPLEMENTAL 2048
+#endif
+
 struct AlignmentFilter {
     struct True {
         bool operator()(bam1_t const* aln) const {
@@ -19,7 +23,7 @@ struct AlignmentFilter {
 
     struct IsPrimary {
         bool operator()(bam1_t const* aln) const {
-            return !(aln->core.flag & BAM_FSECONDARY);
+            return !(aln->core.flag & (BAM_FSECONDARY| BAM_FSUPPLEMENTAL));
         }
     };
 
