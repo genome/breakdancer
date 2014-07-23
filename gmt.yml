@@ -1,0 +1,13 @@
+name: BreakDancer
+short_name: breakdancer
+icon_16: gmt/genome_breakdancer_16.png
+icon_48: gmt/genome_breakdancer_16.png
+biostars_tag: BreakDancer
+
+menu:
+  - text: Overview
+    href: gmt/index.md
+  - text: Documentation
+    href: gmt/documentation.md
+  - text: Install
+    href: gmt/install.md
