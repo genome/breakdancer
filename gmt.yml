@@ -1,7 +1,7 @@
 name: BreakDancer
 short_name: breakdancer
 icon_16: gmt/genome_breakdancer_16.png
-icon_48: gmt/genome_breakdancer_16.png
+icon_48: gmt/genome_breakdancer_48.png
 biostars_tag: BreakDancer
 
 menu:
