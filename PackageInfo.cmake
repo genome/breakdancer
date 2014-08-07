@@ -14,7 +14,7 @@ set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "SV detection from paired end read mapping
 
 set(CPACK_PACKAGE_NAME "breakdancer${EXE_VERSION_SUFFIX}")
 set(CPACK_PACKAGE_VENDOR "The Genome Institute")
-set(CPACK_PACKAGE_VERSION ${FULL_VERSION})
+set(CPACK_PACKAGE_VERSION ${FULL_VERSION}${PACKAGE_VERSION_SUFFIX})
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "David Larson <dlarson@genome.wustl.edu> and Travis Abbott <tabbott@genome.wustl.edu>")
 set(CPACK_SYSTEM_NAME "Linux-${ARCH}")
 set(CPACK_TOPLEVEL_TAG "Linux-${ARCH}")
