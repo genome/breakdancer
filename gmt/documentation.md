@@ -239,3 +239,18 @@ The -b parameter specifies the number of anomalous regions resides in the RAM be
 
 The -d specifies a fastq file where all SV supporting reads will be saved in the fastq format. These reads can be realigned by other aligners such as novoalign, and then reanalyzed by BreakDancer.
 
+### GENERAL ADVICE
++ Insert size statistics are accumulated on a per-library (LB) basis using the RG SAM tag and the RG -> LB mapping in the SAM header. Make sure that this information is correct and maintained throughout the pipeline.
+
++ The runtime of the bam2cfg.pl script should generally be measured in seconds, not hours (assuming reasonable i/o speed, WGS data, default-ish params [~10k required satisfactory observations per lib], and a handful of libraries).
+
++ Bwa mem assigns lower mapping qualities than bwa backtrack (0.5.9, 0.6.2) to certain types of SV supporting (~100bp Illumina) reads. This can be controlled with the penalty related params to bwa mem (particularly -L), but we currently do not have a recommendation.
+
++ In a handful of simulations where bwa-mem initially performed worse than bwa backtrack 0.5.9, decreasing the minimum mapping quality to 4 from 10 for the breakdancer executable (NOT the bam2cfg.pl script) launched bwa-mem well ahead in terms of sensitivity without destroying the false discovery rate.
+
++ If bam2cfg.pl complains that a library is unsuitable for further analysis, that may mean:
+	+ It truly is: the insert size distribution of the library in question is too wide / too non-normal for breakdancer to make sense of. Not much can be done in this case.
+	+ Multiple libraries with different insert size characteristics have been accidentally been collapsed into one due to mislabeling (RG SAM tags, RG -> LB mappings in the SAM header). This can sometimes be fixed by repairing the SAM header.
+
++ In recent tests, the score breakdancer reports has been useful for separating signal from noise for indels. My impression (today) is that it's less reliable for inversions and (inter and intra-chromosomal) translocations, however.
+
