@@ -8,6 +8,8 @@ set(SOURCES
     BamConfig.hpp
     BamConfigEntry.cpp
     BamConfigEntry.hpp
+    BamHeader.cpp
+    BamHeader.hpp
     BamIo.cpp
     BamIo.hpp
     BamMerger.cpp
