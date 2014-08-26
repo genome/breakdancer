@@ -2,6 +2,7 @@ project(breakdancer)
 
 set(SOURCES
     ConfigMap.hpp
+    CountsDistribution.hpp
     Graph.hpp
     Options.cpp
     Options.hpp

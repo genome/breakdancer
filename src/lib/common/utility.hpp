@@ -31,3 +31,8 @@ struct deref_compare {
 
     Compare<T> cmp;
 };
+
+struct pass {
+    template<typename ...Xs>
+    pass(Xs...) {}
+};

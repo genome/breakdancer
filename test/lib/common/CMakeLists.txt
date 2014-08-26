@@ -5,6 +5,7 @@ include_directories(${GTEST_INCLUDE_DIRS})
 
 add_unit_tests(TestCommonLib
     TestConfigMap.cpp
+    TestCountsDistribution.cpp
     TestGraph.cpp
     TestUtility.cpp
 )
