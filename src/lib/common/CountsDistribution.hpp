@@ -97,7 +97,7 @@ public:
         std::size_t rv = 0;
         for (auto i = iter; i != counts_.end(); ++i) {
             if (os)
-                *os << "Trimming " << i->first << " (x" << i->second << ")\n";
+                *os << "Ignoring outlier " << i->first << " (x" << i->second << ")\n";
             rv += i->second;
             total_ -= i->second;
         }

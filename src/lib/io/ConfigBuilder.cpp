@@ -22,6 +22,7 @@ ConfigBuilder::ConfigBuilder(
         , double n_devs
         , double n_mads
         , std::size_t no_progress_limit
+        , bool verbose // = false
         )
     : out_(out)
     , dist_out_(dist_out)
@@ -31,6 +32,7 @@ ConfigBuilder::ConfigBuilder(
     , n_devs_(n_devs)
     , n_mads_(n_mads)
     , no_progress_limit_(no_progress_limit)
+    , verbose_(verbose)
 {
     // write distribution table header
     if (dist_out_)
@@ -104,6 +106,10 @@ void ConfigBuilder::process_bam(std::string const& path) {
         }
     }
 
+    std::ostream* trim_log(0);
+    if (verbose_)
+        trim_log = &std::cerr;
+
     for (auto i = dists.begin(); i != dists.end(); ++i) {
         auto& dist = i->second.isize;
         double readlen = i->second.length.mean();
@@ -111,8 +117,9 @@ void ConfigBuilder::process_bam(std::string const& path) {
         double median = dist.median();
         double limit = n_mads_ * mad + median;
         std::cerr << "Read group " << i->first
-            << ": trimming insert sizes above " << limit << "\n";
-        dist.trim_above(limit, &std::cerr);
+            << ": ignoring insert sizes above " << limit << "\n";
+
+        dist.trim_above(limit, trim_log);
 
         std::size_t n = dist.total();
         double mean = dist.mean();

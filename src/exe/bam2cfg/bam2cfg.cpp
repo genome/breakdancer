@@ -37,6 +37,7 @@ int main(int argc, char** argv) {
             , params.num_devs
             , params.num_mads
             , params.no_progress_limit
+            , params.verbose
             );
 
         cfg_builder.execute();

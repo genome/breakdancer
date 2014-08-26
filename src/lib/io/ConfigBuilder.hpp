@@ -23,6 +23,7 @@ public:
             , double n_devs
             , double n_mads
             , std::size_t no_progress_limit
+            , bool verbose = false
             );
 
     void execute();
@@ -46,4 +47,5 @@ private:
     double n_devs_;
     double n_mads_;
     std::size_t no_progress_limit_;
+    bool verbose_;
 };

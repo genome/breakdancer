@@ -47,8 +47,12 @@ Params parse_cmdline(int argc, char** argv) {
 
         ("mad,m"
             , po::value<double>(&rv.num_mads)->default_value(10)
-            , "Ignore observations larger than this many median absolute deviations"
-              " above the median")
+            , "Ignore insert size outliers larger than this many median "
+              "absolute deviations above the median")
+
+        ("verbose,V"
+            , po::bool_switch(&rv.verbose)->default_value(false)
+            , "Print verbose information about outliers")
 
         ;
 

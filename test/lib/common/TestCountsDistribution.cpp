@@ -105,9 +105,9 @@ TEST(TestCountsDistribution, trim_above) {
     EXPECT_EQ(30u, counts.total());
 
     EXPECT_EQ(
-          "Trimming 102 (x1)\n"
-          "Trimming 100 (x2)\n"
-          "Trimming 101 (x1)\n"
+          "Ignoring outlier 102 (x1)\n"
+          "Ignoring outlier 100 (x2)\n"
+          "Ignoring outlier 101 (x1)\n"
         , ss.str()
         );
 }
