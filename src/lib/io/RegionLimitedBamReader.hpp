@@ -2,6 +2,8 @@
 #include "BamReader.hpp"
 
 #include <boost/format.hpp>
+
+#include <cassert>
 #include <stdexcept>
 #include <string>
 
@@ -12,7 +14,7 @@ public:
     ~RegionLimitedBamReader();
 
     void set_region(char const* region);
-    int next(bam1_t* entry);
+    virtual int next(bam1_t* entry);
 
     int tid() const { return _tid; }
     int beg() const { return _beg; }
@@ -83,3 +85,29 @@ int RegionLimitedBamReader<Filter>::next(bam1_t* entry) {
     }
     return 0;
 }
+
+
+template<typename Filter>
+class MultiRegionLimitedBamReader : public RegionLimitedBamReader<Filter> {
+public:
+    MultiRegionLimitedBamReader(std::string const& path, std::vector<std::string> const& regions)
+        : RegionLimitedBamReader<Filter>(path, regions[0].c_str())
+        , regions_(regions)
+        , idx_(0)
+    {
+        assert(!regions.empty());
+    }
+
+    int next(bam1_t* entry) {
+        int rv = RegionLimitedBamReader<Filter>::next(entry);
+        if (rv <= 0 && ++idx_ < regions_.size()) {
+            this->set_region(regions_[idx_].c_str());
+            return next(entry);
+        }
+        return rv;
+    }
+
+private:
+    std::vector<std::string> const& regions_;
+    std::size_t idx_;
+};
