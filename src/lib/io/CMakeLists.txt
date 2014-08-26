@@ -20,6 +20,8 @@ set(SOURCES
     BamSummary.hpp
     BamWriter.cpp
     BamWriter.hpp
+    ConfigBuilder.cpp
+    ConfigBuilder.hpp
     ConfigLoader.cpp
     ConfigLoader.hpp
     FastqWriter.cpp
