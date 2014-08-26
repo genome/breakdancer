@@ -120,5 +120,41 @@ TEST_P(TestRegionLimitedBamReader, read_count) {
     EXPECT_EQ(rc.read_names, observed_read_names);
 }
 
+
+TEST_P(TestRegionLimitedBamReader, set_region) {
+    string const& path = GetParam().path;
+    RegionCount rc = getTestRegion(path, 10); // take at most 104 reads
+
+    string region = make_region(rc.seq, rc.begin + 1, rc.end + 1);
+
+    vector<string> observed_read_names;
+
+    RegionLimitedBamReader<AlignmentFilter::True> reader(path, region.c_str());
+    EXPECT_EQ(path, reader.path());
+    EXPECT_EQ(path + " (region: " + region + ")", reader.description());
+
+    size_t observed_read_count = 0;
+    int first_pos = -1;
+    int last_pos = -1;
+    RawBamEntry b;
+    while (reader.next(b) > 0) {
+        if (first_pos == -1)
+            first_pos = b->core.pos;
+
+        last_pos = b->core.pos;
+
+        observed_read_names.push_back(bam1_qname(b));
+        ++observed_read_count;
+    }
+
+    EXPECT_EQ(rc.region_read_count, observed_read_count)
+        << "bam/region " << path << " " << region;
+
+    reader.set_region(region.c_str());
+    int rv = reader.next(b);
+    EXPECT_GT(rv, 0);
+    EXPECT_EQ(first_pos, b->core.pos);
+}
+
 INSTANTIATE_TEST_CASE_P(RC, TestRegionLimitedBamReader,
     ::testing::ValuesIn(TEST_BAMS));

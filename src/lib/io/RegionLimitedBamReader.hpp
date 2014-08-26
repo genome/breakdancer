@@ -11,19 +11,20 @@ public:
     RegionLimitedBamReader(std::string const& path, char const* region);
     ~RegionLimitedBamReader();
 
+    void set_region(char const* region);
     int next(bam1_t* entry);
 
     int tid() const { return _tid; }
     int beg() const { return _beg; }
     int end() const { return _end; }
 
-    std::string const& description() const {
-        return _description;
+    std::string description() const {
+        return _path + " (region: " + _region + ")";
     }
 
 protected:
     std::string _region;
-    std::string _description;
+    std::string _path;
     bam_index_t* _index;
     bam_iter_t _iter;
     int _tid;
@@ -36,19 +37,32 @@ inline
 RegionLimitedBamReader<Filter>::RegionLimitedBamReader(std::string const& path, char const* region)
     : BamReader<Filter>(path)
     , _region(region)
-    , _description(path + " (region: " + _region + ")")
+    , _path(path)
     , _index(bam_index_load(path.c_str()))
+    , _iter(0)
 {
     using boost::format;
     if (!_index)
         throw std::runtime_error(str(format("Failed to load bam index for %1%") % path));
 
+    set_region(region);
+}
+
+template<typename Filter>
+inline
+void RegionLimitedBamReader<Filter>::set_region(char const* region) {
+    using boost::format;
+
+    _region = region;
+
     if (bam_parse_region(BamReader<Filter>::_in->header, region, &_tid, &_beg, &_end) < 0) {
         throw std::runtime_error(str(format(
-            "Failed to parse bam region '%1%' in file %2%. ")
-            % region % path));
+            "Failed to parse bam region '%1%' for file %2%. ")
+            % region % this->path()));
     }
 
+    if (_iter)
+        bam_iter_destroy(_iter);
     _iter = bam_iter_query(_index, _tid, _beg, _end);
 }
 
