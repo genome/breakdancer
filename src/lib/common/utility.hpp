@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <utility>
 
 // This function is similar to a.insert(b.begin(), b.end()), but it
@@ -36,3 +37,8 @@ struct pass {
     template<typename ...Xs>
     pass(Xs...) {}
 };
+
+template<typename T, typename ...Args>
+std::unique_ptr<T> make_unique_(Args&&... args) {
+    return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
