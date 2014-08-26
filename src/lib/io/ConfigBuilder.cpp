@@ -1,15 +1,18 @@
 #include "ConfigBuilder.hpp"
 
+#include "common/utility.hpp"
 #include "io/Alignment.hpp"
 #include "io/AlignmentFilter.hpp"
 #include "io/BamHeader.hpp"
 #include "io/BamReader.hpp"
 #include "io/RawBamEntry.hpp"
+#include "io/RegionLimitedBamReader.hpp"
 
 #include <iostream>
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 
 std::string const NO_PROGRESS_COUNT_CMDLINE_PARAM_NAME("no-progress-count");
 
@@ -22,6 +25,8 @@ ConfigBuilder::ConfigBuilder(
         , double n_devs
         , double n_mads
         , std::size_t no_progress_limit
+        , std::size_t skip
+        , std::vector<std::string> regions
         , bool verbose // = false
         )
     : out_(out)
@@ -32,6 +37,8 @@ ConfigBuilder::ConfigBuilder(
     , n_devs_(n_devs)
     , n_mads_(n_mads)
     , no_progress_limit_(no_progress_limit)
+    , skip_(skip)
+    , regions_(regions)
     , verbose_(verbose)
 {
     // write distribution table header
@@ -39,9 +46,30 @@ ConfigBuilder::ConfigBuilder(
         *dist_out_ << "bam_path\tread_group\tlibrary\tinsert_size\tcount\n";
 }
 
+std::unique_ptr<BamReaderBase> ConfigBuilder::open_bam(std::string const& path) {
+    if (!regions_.empty()) {
+        if (skip_ != 0) {
+            std::cerr << "Warning: ignoring --skip option since regions are given\n";
+        }
+        return make_unique_<MultiRegionLimitedBamReader<AlignmentFilter::IsPrimary>>(
+            path, regions_);
+    }
+    else {
+        auto reader = make_unique_<BamReader<AlignmentFilter::IsPrimary>>(path);
+        RawBamEntry e;
+        for (size_t i = 0; i < skip_; ++i) {
+            if (reader->next(e) <= 0)
+                break;
+        }
+        return std::move(reader);
+    }
+}
+
 void ConfigBuilder::execute() {
     for (auto i = bam_paths_.begin(); i != bam_paths_.end(); ++i) {
-        process_bam(*i);
+        std::cerr << "Processing bam " << *i << "\n";
+        auto reader = open_bam(*i);
+        process_bam(*reader);
     }
 }
 
@@ -49,14 +77,17 @@ namespace {
     struct ReadStats {
         CountsDistribution<std::size_t> isize;
         CountsDistribution<std::size_t> length;
+
+        void observe(bam1_t const* entry) {
+            isize.observe(entry->core.isize);
+            length.observe(entry->core.l_qseq);
+        }
     };
 }
 
-void ConfigBuilder::process_bam(std::string const& path) {
+void ConfigBuilder::process_bam(BamReaderBase& reader) {
     boost::unordered_map<std::string, ReadStats> dists;
 
-    std::cerr << "Processing bam " << path << "\n";
-    BamReader<AlignmentFilter::IsPrimary> reader(path);
     RawBamEntry entry;
 
     auto rg_lib = rg2lib_map(reader.header());
@@ -67,6 +98,7 @@ void ConfigBuilder::process_bam(std::string const& path) {
     }
 
     std::size_t no_progress_counter = 0;
+    bool first = true;
     while (reader.next(entry) > 0 && !rg_remaining.empty()) {
         double mapq = determine_bdqual(entry);
         if (!(entry->core.flag & BAM_FPROPER_PAIR) || entry->core.isize < 1
@@ -98,8 +130,11 @@ void ConfigBuilder::process_bam(std::string const& path) {
         }
         no_progress_counter = 0;
 
-        dists[rg].isize.observe(entry->core.isize);
-        dists[rg].length.observe(entry->core.l_qseq);
+        if (first) {
+            std::cout << "First read: " << entry->core.tid << "\t" << entry->core.pos << "\n";
+            first = false;
+        }
+        dists[rg].observe(entry);
 
         if (--found->second == 0) {
             rg_remaining.erase(rg);
@@ -128,7 +163,7 @@ void ConfigBuilder::process_bam(std::string const& path) {
         double sd = dist.split_sd(mean, sd_lo, sd_hi);
         out_ << "readgroup:" << i->first
             << "\tplatform:illumina"
-            << "\tmap:" << path
+            << "\tmap:" << reader.path()
             << "\treadlen:" << readlen
             << "\tlib:" << rg_lib[i->first]
             << "\tnum:" << n
@@ -138,7 +173,7 @@ void ConfigBuilder::process_bam(std::string const& path) {
             << "\tstd:" << sd
             << "\n";
 
-        write_distribution(path, i->first, rg_lib[i->first], dist);
+        write_distribution(reader.path(), i->first, rg_lib[i->first], dist);
     }
 }
 

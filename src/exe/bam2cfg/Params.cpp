@@ -16,6 +16,18 @@ Params parse_cmdline(int argc, char** argv) {
     opts.add_options()
         ("help,h", "this message")
 
+        ("input-file,i"
+            , po::value<std::vector<std::string>>(&rv.bams)
+            , "Input bam files (positional arguments work too)")
+
+        ("regions-file,r"
+            , po::value<std::string>(&rv.regions_path)
+            , "File containing regions to same from (region format: 1:100-200, one per line)")
+
+        ("skip,s"
+            , po::value<std::size_t>(&rv.skip)->default_value(0)
+            , "Number of reads to skip before accumulation begins (no effect when -r given)")
+
         (no_progress_count.c_str()
             , po::value<std::size_t>(&rv.no_progress_limit)->default_value(1000)
             , "Abort after observing this many reads with no progress")
@@ -36,10 +48,6 @@ Params parse_cmdline(int argc, char** argv) {
         ("dist-output,d"
             , po::value<std::string>(&rv.dist_out_path)->default_value("")
             , "Output file for insert size distribution (optional)")
-
-        ("input-file,i"
-            , po::value<std::vector<std::string>>(&rv.bams)
-            , "Input bam files (positional arguments work too)")
 
         ("sd,s"
             , po::value<double>(&rv.num_devs)->default_value(4)

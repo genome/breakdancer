@@ -62,3 +62,10 @@ TEST(utility, deref_compare) {
     EXPECT_TRUE(gt(&b, &a));
     EXPECT_FALSE(gt(&a, &b));
 }
+
+TEST(utility, read_lines) {
+    std::stringstream ss("1 2\n3\n4");
+    auto lines = read_lines(ss);
+    std::vector<std::string> expected{"1 2", "3", "4"};
+    EXPECT_EQ(expected, lines);
+}

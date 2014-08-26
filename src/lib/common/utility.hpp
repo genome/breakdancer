@@ -1,7 +1,11 @@
 #pragma once
 
+#include <fstream>
 #include <memory>
+#include <stdexcept>
+#include <string>
 #include <utility>
+#include <vector>
 
 // This function is similar to a.insert(b.begin(), b.end()), but it
 // resolves conflicts by applying the supplied Combiner operation.
@@ -41,4 +45,22 @@ struct pass {
 template<typename T, typename ...Args>
 std::unique_ptr<T> make_unique_(Args&&... args) {
     return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
+}
+
+inline
+std::vector<std::string> read_lines(std::istream& s) {
+    std::vector<std::string> rv;
+    std::string line;
+    while (std::getline(s, line))
+        rv.push_back(std::move(line));
+    return rv;
+}
+
+inline
+std::vector<std::string> read_lines(std::string const& path) {
+    std::ifstream in(path);
+    if (!in) {
+        throw std::runtime_error("Failed to open file: " + path);
+    }
+    return read_lines(in);
 }

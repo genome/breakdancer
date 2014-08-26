@@ -28,6 +28,11 @@ int main(int argc, char** argv) {
             dist_out.reset(new std::ofstream(params.dist_out_path));
         }
 
+        std::vector<std::string> regions;
+        if (!params.regions_path.empty()) {
+            regions = read_lines(params.regions_path);
+        }
+
         ConfigBuilder cfg_builder(
               *out
             , dist_out.get()
@@ -37,6 +42,8 @@ int main(int argc, char** argv) {
             , params.num_devs
             , params.num_mads
             , params.no_progress_limit
+            , params.skip
+            , regions
             , params.verbose
             );
 

@@ -13,6 +13,8 @@ struct Params {
     std::size_t no_progress_limit;
     std::string out_path;
     std::string dist_out_path;
+    std::string regions_path;
+    std::size_t skip;
     bool verbose;
 };
 

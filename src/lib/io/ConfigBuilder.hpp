@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/CountsDistribution.hpp"
+#include "io/BamReaderBase.hpp"
 
 #include <boost/unordered_map.hpp>
 
@@ -23,13 +24,17 @@ public:
             , double n_devs
             , double n_mads
             , std::size_t no_progress_limit
+            , std::size_t skip
+            , std::vector<std::string> regions
             , bool verbose = false
             );
 
     void execute();
 
 protected:
-    void process_bam(std::string const& path);
+    std::unique_ptr<BamReaderBase> open_bam(std::string const& path);
+
+    void process_bam(BamReaderBase& reader);
     void write_distribution(
           std::string const& bam_file
         , std::string const& read_group
@@ -47,5 +52,7 @@ private:
     double n_devs_;
     double n_mads_;
     std::size_t no_progress_limit_;
+    std::size_t skip_;
+    std::vector<std::string> regions_;
     bool verbose_;
 };
