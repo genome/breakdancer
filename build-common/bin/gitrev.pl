@@ -54,12 +54,13 @@ sub parse_rev {
     my $commit = $rev;
     my $dirty = is_dirty;
 
-    if ($rev =~ /^([0-9]+)\.([0-9]+)\.([0-9]+)-([0-9]+)-g(.*)/) {
+    if ($rev =~ /^([0-9]+)\.([0-9]+)\.([0-9]+)(\.[0-9]+)*-([0-9]+)-g(.*)/) {
         $exe_suffix = "$1.$2";
         $full_version = "$1.$2.$3";
-        $commit = $5;
+        my $ignored_version_components = $4;
+        my $commits_past_tag = $5;
+        $commit = $6;
 
-        my $commits_past_tag = $4;
         if ($commits_past_tag > 0) {
             $exe_suffix = "$1.$2.$3-$commits_past_tag-unstable";
             $full_version = "$1.$2.$3-unstable-$commits_past_tag-$commit";
