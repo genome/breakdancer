@@ -107,7 +107,7 @@ TEST_F(TestBam, bamWriter) {
     size_t size = in.tellg();
     in.seekg(0, std::ios::beg);
     std::vector<char> buf(size);
-    ASSERT_TRUE(in.read(buf.data(), size));
+    ASSERT_TRUE((bool)in.read(buf.data(), size));
     buf.push_back(0); // make sure buffer is null terminated
     EXPECT_STREQ(samData.c_str(), buf.data());
 
