@@ -4,6 +4,7 @@
 
 #include <boost/array.hpp>
 #include <cassert>
+#include <string>
 
 enum strand_e {
     FWD = 0,
