@@ -10,6 +10,7 @@ using boost::format;
 using namespace std;
 
 const int BamConfig::DEFAULT_MAX_READ_WINDOW_SIZE(1e8);
+const std::string BamConfig::EMPTY_STRING("");
 
 BamConfig::BamConfig()
     : _max_read_window_size(DEFAULT_MAX_READ_WINDOW_SIZE)

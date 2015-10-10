@@ -12,9 +12,11 @@
 #include <istream>
 #include <vector>
 
+
 class BamConfig {
 public:
     static const int DEFAULT_MAX_READ_WINDOW_SIZE;
+    static const std::string EMPTY_STRING; //Want to occasionally return an empty string
 
 public:
     friend class boost::serialization::access;
@@ -67,7 +69,7 @@ std::string const& BamConfig::readgroup_library(std::string const& rg) const {
     }
     else {
         assert(!_bam_library.empty());
-        return _bam_library.begin()->second;
+        return EMPTY_STRING;
     }
 }
 
