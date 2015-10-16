@@ -147,6 +147,10 @@ void BreakDancer::run() {
 void BreakDancer::push_read(Alignment::Ptr const& alnptr) {
     auto& aln = *alnptr;
 
+    if (aln.lib_index() == (std::size_t) -1) {
+        return;
+    }
+    
     LibraryConfig const& lib_config = _lib_info._cfg.library_config(aln.lib_index());
 
     // XXX: this value can be missing in the config (indicated by a value of -1),

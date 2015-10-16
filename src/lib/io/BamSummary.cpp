@@ -67,6 +67,10 @@ void BamSummary::_analyze_bam(
     // FIXME: test with no read groups
     while (Alignment::Ptr alnptr = src.next()) {
         auto& aln = *alnptr;
+        if (aln.lib_index() == (std::size_t) -1) {
+            continue;
+        }
+
         if (last_tid >= 0 && last_tid == aln.tid())
             ref_len += aln.pos() - last_pos;
 

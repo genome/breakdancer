@@ -127,7 +127,7 @@ void Alignment::set_lib_index(std::size_t const& index) {
 
 inline
 std::size_t Alignment::lib_index() const {
-    assert(_lib_index != ~0ull);
+    //assert(_lib_index != ~0ull);
     return _lib_index;
 }
 
