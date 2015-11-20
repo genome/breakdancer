@@ -35,7 +35,7 @@ void BedWriter::write(SvBuilder const& sv) {
         Alignment const& y = **i;
         if(!y.has_sequence() || y.bdflag() != sv.flag)
             continue;
-        int aln_end = y.pos() + y.query_length() - 1;
+        int aln_end = y.pos() + y.query_length();
         string color = y.ori() == FWD ? "0,0,255" : "255,0,0";
 
         if (strncmp("chr", seq_name, 3) != 0)
