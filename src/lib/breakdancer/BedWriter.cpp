@@ -42,7 +42,7 @@ void BedWriter::write(SvBuilder const& sv) {
             _stream << "chr";
 
         std::string const& lib_name = _lib_info._cfg.library_config(y.lib_index()).name;
-        _stream << seq_name
+        _stream << _bam_header->target_name[y.tid()]
             << "\t" << y.pos()
             << "\t" << aln_end
             << "\t" << y.query_name() << "|" << lib_name
