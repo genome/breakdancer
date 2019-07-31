@@ -13,14 +13,15 @@ use AlnParser;
 
 $| = 1; # enable AUTOFLUSH modE
 
-my %opts = (q=>35, n=>10000, v=>1, c=>4, b=>50, s=>50);
-getopts('q:n:c:b:p:s:hmf:gCv:', \%opts);
+my %opts = (q=>35, n=>10000, v=>1, c=>4, b=>50, s=>50, r=>'');
+getopts('q:n:c:b:p:s:hmf:gCv:r:', \%opts);
 die("
 Usage:   bam2cfg.pl <bam files>
 Options:
          -q INT    Minimum mapping quality [$opts{q}]
          -m        Using mapping quality instead of alternative mapping quality
          -s        Minimal mean insert size [$opts{s}]
+	 -r        Region to analyze for read statistics (chr:start-end) [$opts{r}]
          -C        Change default system from Illumina to SOLiD
          -c FLOAT  Cutoff in unit of standard deviation [$opts{c}]
          -n INT    Number of observation required to estimate mean and s.d. insert size [$opts{n}]
@@ -63,7 +64,7 @@ foreach my $fbam(@ARGV){
   my $ppos = 0;
   my $lastchr = "";
   stderr_log('Processing bam: ', $fbam);
-  my $samtools_pid = open(my $bam, "samtools view -h $fbam |")
+  my $samtools_pid = open(my $bam, "samtools view -h $fbam $opts{r} |")
     || die "unable to open $fbam\n";
 
   while(<$bam>){
